@@ -22,8 +22,6 @@ def evaluate(args):
 
 def main():
     args = parser.parse_args()
-    data = Path(args.data)
-    output = Path(args.output)
     config = yaml.load(open(args.config), Loader=yaml.Loader)
     process = config['process']
     if process == 'preprocess':
