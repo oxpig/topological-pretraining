@@ -2,3 +2,4 @@
 .servers.yaml
 run.py
 bin/cache/
+/temp
