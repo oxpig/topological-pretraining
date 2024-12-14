@@ -80,8 +80,9 @@ class Biogen(BaseDataset):
             'LOG MDR1-MDCK ER (B-A/A-B)': 'efflux',
         }
 
-    def __init__(self, root: str|None = None):
-        csv = os.path.join(root, 'biogen.csv') if root is not None else None
+    def __init__(self, root: str|None = None, compression: bool = True):
+        suffix = 'csv.gz' if compression else 'csv'
+        csv = os.path.join(root, f'biogen.{suffix}') if root is not None else None
         
         super(Biogen, self).__init__(csv=csv, url=self.url)
         self.rename(columns=self.col_names, inplace=True)
@@ -161,28 +162,57 @@ class BiogenSubset(pd.DataFrame):
         task: Literal[
             'human_clint', 'rat_clint', 'human_ppb',
             'rat_ppb', 'solu', 'efflux'
-        ] = 'human_clint'
+        ] = 'human_clint',
+        compression: bool = True
     ):
-        csv = os.path.join(root, f'{task}.csv') if root is not None else None
+        suffix = 'csv.gz' if compression else 'csv'
+        compression = 'gzip' if compression else None
+        assert task in [
+            'human_clint', 'rat_clint', 'human_ppb',
+            'rat_ppb', 'solu', 'efflux'
+        ], 'Invalid task, must be one of: human_clint, rat_clint, human_ppb, rat_ppb, solu, efflux'
+        csv = os.path.join(root, f'{task}.{suffix}') if root is not None else None
         
         if csv is None or not os.path.exists(csv):
-            df = Biogen(root=root)
+            df = Biogen(root=root, compression=compression)
             data = df.subset(task)
             if csv is not None:
-                data.to_csv(csv, index=False)
+                data.to_csv(csv, index=False, compression=compression)
         else:
             data = pd.read_csv(csv)
 
         super(BiogenSubset, self).__init__(data=data)
+        self.compression = compression
+        self.csv = csv
         self.root = root
         self.task = task
         
     
-    def save(self):
+    def save(self, root: str|None = None):
         """
         Saves the dataset to disk.
         """
-        self.to_csv(os.path.join(self.root, f'{self.task}.csv'), index=False)
+        if root is not None:
+            self.root = root
+        assert self.root is not None, 'Root directory must be provided'
+        self.to_csv(self.csv, index=False, compression=self.compression)
+
+    def units(self, task: str):
+        """
+        Returns the units of the target values for the tasks.
+        """
+        return {
+            'human_clint': 'log$_{10}$(mL/min/kg)',
+            'rat_clint': 'log$_{10}$(mL/min/kg)',
+            'human_ppb': 'log$_{10}$(% Unbound)',
+            'rat_ppb': 'log$_{10}$(% Unbound)',
+            'solu': 'log$_{10}$(ug/mL)',
+            'efflux': 'log([B-A]/[A-B])',
+        }
+    
+    @property
+    def unit(self):
+        return self.units(self.task)
 
 
 class HPPB(BiogenSubset):
@@ -233,7 +263,7 @@ class Solu(BiogenSubset):
 
     For inherited attributes and methods, see the pandas.DataFrame:
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
-    
+    HP
     """
     def __init__(self, root: str|None = None):
         super(Solu, self).__init__(root=root, task='solu')
@@ -272,3 +302,19 @@ class RClint(BiogenSubset):
     def __init__(self, root: str|None = None):
         super(RClint, self).__init__(root=root, task='rat_clint')
     
+class Efflux(BiogenSubset):
+    """
+    Efflux ratio subset of the Biogen dataset.
+
+    Target: LOG MDR1-MDCK ER (B-A/A-B)
+
+    Parameters:
+    -----------
+    root: str|None
+        Optional root directory where the dataset will be stored or retrieved from.
+
+    For inherited attributes and methods, see the pandas.DataFrame:
+        https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
+    """
+    def __init__(self, root: str|None = None):
+        super(Efflux, self).__init__(root=root, task='efflux')
