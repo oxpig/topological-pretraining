@@ -9,6 +9,171 @@ from rdkit.ML.Cluster import Butina
 from tqdm import tqdm
 import warnings
 
+
+class MorganGenerator:
+    """
+    Python wrapper for Morgan fingerprint generator.
+    """
+    def __init__(
+        self,
+        generator: GetMorganGenerator = GetMorganGenerator(
+            radius=2,
+            includeChirality=True,
+            useBondTypes=True,
+            includeRingMembership=True,
+            fpSize=2048,
+        ),
+    ):
+        self.generator = GetMorganGenerator(
+            radius=2,
+            includeChirality=True,
+            useBondTypes=True,
+            includeRingMembership=True,
+        )
+
+    def dense(
+        self, mol: Chem.Mol|str, array: bool = False
+    ) -> DataStructs.ExplicitBitVect|np.ndarray:
+        """
+        Generate a dense Morgan fingerprint for a molecule.
+
+        Parameters
+        ----------
+        mol : rdkit.Chem.rdchem.Mol
+            The molecule.
+        array : bool, optional
+            Whether to return as an array. Defaults to False.
+
+        Returns
+        -------
+        rdkit.DataStructs.cDataStructs.ExplicitBitVect
+            The dense Morgan fingerprint.
+        """
+        if array:
+            return self.generator.GetFingerprintAsNumPy(mol)
+        else:
+            return self.generator.GetFingerprint(mol)
+              
+    def sparse(self, mol: Chem.Mol) -> DataStructs.ExplicitBitVect:
+        """
+        Generate a sparse Morgan fingerprint for a molecule.
+
+        Parameters
+        ----------
+        mol : rdkit.Chem.rdchem.Mol
+            The molecule.
+
+        Returns
+        -------
+        rdkit.DataStructs.ExplicitBitVect
+            The sparse Morgan fingerprint.
+        """
+        return self.generator.GetSparseFingerprint(mol)
+    
+    def bitinfo(self, mol: Chem.Mol) -> dict:
+        """
+        Get hashed identifiers mapped to atom indices and radii.
+
+        Parameters
+        ----------
+        mol : rdkit.Chem.rdchem.Mol
+            The molecule.
+
+        Returns
+        -------
+        dict
+            Identifier map of molecule. Keys are hashed identifiers.
+            Values are tuples of (atom index, radius).
+        """
+        ao = AdditionalOutput()
+        ao.AllocateBitInfoMap()
+        self.generator.GetSparseFingerprint(mol, additionalOutput=ao)
+        return ao.GetBitInfoMap()
+    
+    def env_map(self, mol: Chem.Mol) -> dict:
+        """
+        Get array of hashed substructure identifiers mapped to atom indices and radii.
+
+        Parameters
+        ----------
+        mol : rdkit.Chem.rdchem.Mol
+        
+        Returns
+        -------
+        np.ndarray
+            Array of sparse hashed identifiers mapped to atom indices and radii.
+            Rows are atom indices and columns are radii.
+
+        """
+        out = {}
+        bitmap = self.bitinfo(mol)
+        num_radii = range(self.radius + 1)
+        num_atoms = range(mol.GetNumAtoms())
+        out = np.zeros((num_atoms, num_radii))
+        for bit, info in bitmap.items():
+            for (atom, r) in info:
+                out[atom, r] = bit
+        
+        inci = get_incidence(mol, radius=self.radius)
+        missing_envs = np.where(out == 0)
+
+        if len(missing_envs) > 0:
+            for atom, radius in missing_envs:
+                env = inci[radius, atom, :]
+                env_matches = env[np.where((np.all(inci == env, axis=-1)))]
+                env_matches = env_matches[np.where(env_matches != 0)]
+                out[atom, radius] = env_matches[0] if len(env_matches) > 0 else 0
+
+        return out
+
+    @property
+    def radius(self):
+        return self.generator.GetOptions().radius
+    
+    @radius.setter
+    def radius(self, value):
+        self.generator.GetOptions().radius = value
+
+    @property
+    def fpsize(self):
+        return self.generator.GetOptions().fpSize
+    
+    @fpsize.setter
+    def fpsize(self, value):
+        self.generator.GetOptions().fpSize = value
+
+    @property
+    def chirality(self):
+        return self.generator.GetOptions().includeChirality
+    
+    @chirality.setter
+    def chirality(self, value):
+        self.generator.GetOptions().includeChirality = value
+
+    @property
+    def redundant_envs(self):
+        return self.generator.GetOptions().includeRedundantEnvironments
+    
+    @redundant_envs.setter
+    def redundant_envs(self, value):
+        self.generator.GetOptions().includeRedundantEnvironments = value
+
+    @property
+    def counts(self):
+        return self.generator.GetOptions().countSimulation
+    
+    @counts.setter
+    def counts(self, value):
+        self.generator.GetOptions().countSimulation = value
+
+    @property
+    def non_zero_invariants(self):
+        return self.generator.GetOptions().nonZeroInvariants
+    
+    @non_zero_invariants.setter
+    def non_zero_invariants(self, value):
+        self.generator.GetOptions().nonZeroInvariants = value
+
 class SortAndSlice:
     """
     Class to sort and slice substructure identifiers from molecules.
@@ -423,7 +588,7 @@ class FPOperations:
 
         return molecule_clusters
     
-def incidence_array(mol: Chem.Mol, radius: int = 2) -> np.ndarray:
+def get_incidence(mol: Chem.Mol, radius: int = 2) -> np.ndarray:
     """
     Get the incidence array of a molecule.
     Denotes atoms within cicular subgraphs of a given radius around each node.
