@@ -4,6 +4,7 @@ from rdkit.Chem.rdFingerprintGenerator import (
     AdditionalOutput, FingeprintGenerator64, GetMorganGenerator
 )
 from rdkit.Chem.MolStandardize import rdMolStandardize
+from rdkit import DataStructs
 from tqdm import tqdm
 import warnings
 
@@ -318,3 +319,77 @@ class Standardizer:
         """
         return rdMolStandardize.Reionize(mol)
 
+class FPOperations:
+
+    def tanimoto(fp1: DataStructs.ExplicitBitVect, fp2: DataStructs.ExplicitBitVect) -> float:
+        """
+        Calculates the Tanimoto similarity between two fingerprints.
+
+        Parameters:
+        ----------
+            fp1 (Data): Fingerprint 1.
+            fp2 (np.ndarray): Fingerprint 2.
+
+        Returns:
+        -------
+            float: Tanimoto similarity.
+        """
+        return DataStructs.TanimotoSimilarity(fp1, fp2)
+    
+    def bulk_tanimoto(
+        fp: DataStructs.ExplicitBitVect,
+        fp_list: list[DataStructs.ExplicitBitVect]
+    ):
+        """
+        Calculates the Tanimoto similarity between a fingerprint and a list of
+        fingerprints.
+
+        Parameters:
+        ----------
+            fp (DataStructs.ExplicitBitVect): Fingerprint.
+            fp_list (list[DataStructs.ExplicitBitVect]): List of fingerprints.
+
+        Returns:
+        -------
+            list[float]: Tanimoto similarities between the fingerprint and the list of
+            fingerprints.
+        """
+        return DataStructs.BulkTanimotoSimilarity(fp, fp_list)
+    
+    def list_tanimoto(fps1, fps2):
+        """
+        Calculates the Tanimoto similarity between two lists of fingerprints.
+
+        Parameters:
+        ----------
+            fps1 (np.ndarray): Set of fingerprints 1.
+            fps2 (np.ndarray): Set of fingerprints 2.
+
+        Returns:
+        -------
+            np.ndarray: Tanimoto similarities. Dims = len(fps1) x len(fps2).
+        """
+        similarities = np.zeros((len(fps1), len(fps2)))
+        for i, fp1 in enumerate(fps1):
+            similarities[i] = DataStructs.BulkTanimotoSimilarity(fp1, fps2)
+        return similarities
+    
+    def pairwise_tanimoto(fps):
+        """
+        Calculates the pairwise Tanimoto similarity within a list of fingerprints.
+
+        Parameters:
+        ----------
+            fps (np.ndarray): List of fingerprints.
+        
+        Returns:
+        -------
+            np.ndarray: Pairwise Tanimoto similarities. Dims = len(fps) x len(fps).
+        """
+        similarities = np.zeros((len(fps), len(fps)))
+        for i in range(len(fps)):
+            sims = DataStructs.BulkTanimotoSimilarity(fps[i], fps[:i])
+            similarities[i,:i], similarities[:i,i] = sims, sims
+        return similarities
+    
+    
