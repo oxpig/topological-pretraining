@@ -53,7 +53,7 @@ class QMugs(BaseDataset):
         self.csv = csv
 
         # obtain canonical smiles from CHEMBL v.27
-        if 'canonical_smiles' not in self.columns:
+        if 'SMILES' not in self.columns:
             # Drop all columns except 'chembl_id' and 'smiles'
             self.drop(
                 self.columns.difference(['chembl_id', 'smiles']),
@@ -65,10 +65,15 @@ class QMugs(BaseDataset):
 
             # Download CHEMBL v.27 chemreps file
             chembl_url = "https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_27/chembl_27_chemreps.txt.gz"
-            chemble_v27 = pd.read_csv(chembl_url, sep='\t', usecols=['chembl_id', 'canonical_smiles'])
+            chemble_v27 = pd.read_csv(chembl_url, sep='\t', usecols=['chembl_id', 'SMILES'])
 
             # Map CHEMBL IDs to canonical SMILES
-            self['canonical_smiles'] = self['chembl_id'].map(chemble_v27.set_index('chembl_id')['canonical_smiles'])
+            self['SMILES'] = self['chembl_id'].map(chemble_v27.set_index('chembl_id')['SMILES'])
+
+            # Drop rows where canonical SMILES are duplicates
+            # This is to account for cases where multiple CHEMBL IDs map to the same canonical SMILES
+            # 32 molecules are removed by this step
+            self.drop_duplicates(subset='SMILES', inplace=True) 
 
             # Reset the index and save the dataset
             self.reset_index(drop=True, inplace=True)
