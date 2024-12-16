@@ -173,7 +173,6 @@ class Standardizer:
     Attributes:
     ----------
         sanitize (bool): Whether to sanitize the molecule.
-        cleanup (bool): Whether to cleanup the molecule.
         fragment_parent (bool): Whether to fragment the molecule.
         neutralize (bool): Whether to neutralize the molecule.
         reionize (bool): Whether to reionize the molecule after neutralization.
@@ -189,14 +188,12 @@ class Standardizer:
     def __init__(
         self,
         sanitize: bool = True,
-        cleanup: bool = True,
         fragment_parent: bool = True,
         neutralize: bool = True,
         reionize: bool = False,
         canonical_tautomer: bool = True,
     ):
         self.sanitize = sanitize
-        self.cleanup = cleanup
         self.fragment_parent = fragment_parent
         self.neutralize = neutralize
         self.reionize = reionize
@@ -218,9 +215,6 @@ class Standardizer:
         if self.sanitize:
             mol = self.run_sanitize(mol)
 
-        if self.cleanup:
-            mol = self.run_cleanup(mol)
-        
         if self.fragment_parent:
             mol = self.run_fragment_parent(mol)
         
@@ -254,6 +248,7 @@ class Standardizer:
     def run_sanitize(self, mol: Chem.Mol) -> Chem.Mol:
         """
         Sanitizes a molecule.
+        See: https://sourceforge.net/p/rdkit/mailman/message/31897681/
 
         Parameters:
         ----------
@@ -265,23 +260,10 @@ class Standardizer:
         """
         return Chem.SanitizeMol(mol)
     
-    def run_cleanup(self, mol: Chem.Mol) -> Chem.Mol:
-        """
-        Cleans up a molecule.
-
-        Parameters:
-        ----------
-            mol (Chem.Mol): RDKit molecule.
-
-        Returns:
-        -------
-            Chem.Mol: Cleaned up RDKit molecule.
-        """
-        return rdMolStandardize.Cleanup(mol)
     
     def run_fragment_parent(self, mol: Chem.Mol) -> Chem.Mol:
         """
-        Fragments a molecule.
+        For molecules with multiple fragments, chooses the largest fragment.
 
         Parameters:
         ----------
