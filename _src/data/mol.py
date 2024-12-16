@@ -8,7 +8,39 @@ from tqdm import tqdm
 import warnings
 
 class SortAndSlice:
+    """
+    Class to sort and slice substructure identifiers from molecules.
+    See:
+        Dablander, M., Hanser, T., Lambiotte, R., Morris, G.M., 2024.
+        Sort & Slice: a simple and superior alternative to hash-based folding for
+        extended-connectivity fingerprints. Journal of Cheminformatics 16, 135.
+        https://doi.org/10.1186/s13321-024-00932-y
 
+    Parameters:
+    ----------
+        molecules (list[Chem.Mol]): List of RDKit molecules.
+        generator (FingeprintGenerator64): RDKit fingerprint generator.
+        fpsize (int): Length of the output vector.
+        verbose (bool): Whether to print progress.
+
+    Attributes:
+    ----------
+        generator (FingeprintGenerator64): RDKit fingerprint generator.
+        ao (AdditionalOutput): RDKit fingerprint additional output.
+        verbose (bool): Whether to print progress.
+        identifiers (dict[str, int]): Dictionary of identifiers and their counts.
+        encoder (dict[str, int]): Dictionary of identifiers and their enumerated values.
+
+    Example:
+    -------
+    >>> from rdkit import Chem
+    >>> from rdkit.Chem.rdFingerprintGenerator import GetMorganGenerator
+    >>> smiles = ['CCO', 'CCN', 'CCC']
+    >>> molecules = [Chem.MolFromSmiles(s) for s in smiles]
+    >>> generator = GetMorganGenerator()
+    >>> sas = SortAndSlice(molecules, generator, fpsize=128, verbose=True)
+    >>> encoded_moleculess = sas(molecules)
+    """
     def __init__(
         self,
         molecules: list[Chem.Mol],
@@ -123,7 +155,6 @@ class SortAndSlice:
     
     def __repr__(self):
         return f'SortAndSlice(fpsize={len(self.encoder)})'
-
 
 
 class Standardizer:
