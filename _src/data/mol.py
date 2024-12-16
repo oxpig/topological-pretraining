@@ -158,7 +158,6 @@ class SortAndSlice:
     def __repr__(self):
         return f'SortAndSlice(fpsize={len(self.encoder)})'
 
-
 class Standardizer:
     """
     Class to standardize rdkit molecules.
@@ -357,14 +356,17 @@ class FPOperations:
         """
         return DataStructs.BulkTanimotoSimilarity(fp, fp_list)
     
-    def list_tanimoto(fps1, fps2):
+    def list_tanimoto(
+        fps1: list[DataStructs.ExplicitBitVect],
+        fps2: list[DataStructs.ExplicitBitVect],
+    ):
         """
         Calculates the Tanimoto similarity between two lists of fingerprints.
 
         Parameters:
         ----------
-            fps1 (np.ndarray): Set of fingerprints 1.
-            fps2 (np.ndarray): Set of fingerprints 2.
+            fps1 (list[DataStructs.ExplicitBitVect]): Set of fingerprints 1.
+            fps2 (list[DataStructs.ExplicitBitVect]): Set of fingerprints 2.
 
         Returns:
         -------
@@ -375,13 +377,13 @@ class FPOperations:
             similarities[i] = DataStructs.BulkTanimotoSimilarity(fp1, fps2)
         return similarities
     
-    def pairwise_tanimoto(fps):
+    def pairwise_tanimoto(fps: list[DataStructs.ExplicitBitVect]):
         """
         Calculates the pairwise Tanimoto similarity within a list of fingerprints.
 
         Parameters:
         ----------
-            fps (np.ndarray): List of fingerprints.
+            fps (list[DataStructs.ExplicitBitVect],): List of fingerprints.
         
         Returns:
         -------
@@ -390,20 +392,21 @@ class FPOperations:
         similarities = np.zeros((len(fps), len(fps)))
         for i in range(len(fps)):
             sims = DataStructs.BulkTanimotoSimilarity(fps[i], fps[:i])
-            similarities[i,:i], similarities[:i,i] = sims, sims
+            similarities[i, :i], similarities[:i, i] = sims, sims
         return similarities
     
-    def butina(fps, threshold: float = 0.65):
+    def butina(fps: list[DataStructs.ExplicitBitVect], threshold: float = 0.65):
         """
         Performs the Butina clustering algorithm.
 
         Parameters:
         ----------
+            fps (list[DataStructs.ExplicitBitVect]): List of fingerprints.
             threshold (float): Tanimoto similarity threshold.
 
         Returns:
         -------
-            list[list[int]]: List of clusters.
+            np.ndarray: Cluster assignments for each fingerprint.
         """
         assert threshold >= 0 and threshold <= 1, 'Threshold must be between 0 and 1.'
         distances = 1 - FPOperations.pairwise_tanimoto(fps)
