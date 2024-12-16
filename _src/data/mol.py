@@ -123,4 +123,185 @@ class SortAndSlice:
     
     def __repr__(self):
         return f'SortAndSlice(fpsize={len(self.encoder)})'
+
+
+
+class Standardizer:
+    """
+    Class to standardize rdkit molecules.
+
+    Parameters:
+    ----------
+        sanitize (bool): Whether to sanitize the molecule.
+        cleanup (bool): Whether to cleanup the molecule.
+        fragment_parent (bool): Whether to fragment the molecule.
+        neutralize (bool): Whether to neutralize the molecule.
+        reionize (bool): Whether to reionize the molecule after neutralization.
+        canonical_tautomer (bool): Whether to canonicalize the tautomer.
+
+    Attributes:
+    ----------
+        sanitize (bool): Whether to sanitize the molecule.
+        cleanup (bool): Whether to cleanup the molecule.
+        fragment_parent (bool): Whether to fragment the molecule.
+        neutralize (bool): Whether to neutralize the molecule.
+        reionize (bool): Whether to reionize the molecule after neutralization.
+        canonical_tautomer (bool): Whether to canonicalize the tautomer.
+
+    Example:
+    -------
+        >>> from rdkit import Chem
+        >>> mol = Chem.MolFromSmiles('c1ccccc1')
+        >>> standardizer = Standardizer()
+        >>> mol = standardizer(mol)
+    """
+    def __init__(
+        self,
+        sanitize: bool = True,
+        cleanup: bool = True,
+        fragment_parent: bool = True,
+        neutralize: bool = True,
+        reionize: bool = False,
+        canonical_tautomer: bool = True,
+    ):
+        self.sanitize = sanitize
+        self.cleanup = cleanup
+        self.fragment_parent = fragment_parent
+        self.neutralize = neutralize
+        self.reionize = reionize
+        self.canonical_tautomer = canonical_tautomer
+
+    def standardize(self, mol: Chem.Mol) -> Chem.Mol:
+        """
+        Standardizes a molecule.
+
+        Parameters:
+        ----------
+            mol (Chem.Mol|str): RDKit molecule or a SMILES string.
+
+        Returns:
+        -------
+            Chem.Mol: Standardized RDKit molecule.
+        """
+        mol.UpdatePropertyCache()
+        if self.sanitize:
+            mol = self.run_sanitize(mol)
+
+        if self.cleanup:
+            mol = self.run_cleanup(mol)
+        
+        if self.fragment_parent:
+            mol = self.run_fragment_parent(mol)
+        
+        if self.neutralize:
+            mol = self.run_neutralize(mol)
+
+        if self.reionize:
+            self.run_reionize(mol)
+        
+        if self.canonical_tautomer:
+            mol = self.run_canonical_tautomer(mol)
+        
+        mol.UpdatePropertyCache()
+        return mol
+        
+
+    def __call__(self, mol: Chem.Mol|str) -> Chem.Mol:
+        """
+        Standardizes a molecule.
+
+        Parameters:
+        ----------
+            mol (Chem.Mol): RDKit molecule.
+
+        Returns:
+        -------
+            Chem.Mol: Standardized RDKit molecule.
+        """
+        return self.standardize(mol)
+
+    def run_sanitize(self, mol: Chem.Mol) -> Chem.Mol:
+        """
+        Sanitizes a molecule.
+
+        Parameters:
+        ----------
+            mol (Chem.Mol): RDKit molecule.
+
+        Returns:
+        -------
+            Chem.Mol: Sanitized RDKit molecule.
+        """
+        return Chem.SanitizeMol(mol)
     
+    def run_cleanup(self, mol: Chem.Mol) -> Chem.Mol:
+        """
+        Cleans up a molecule.
+
+        Parameters:
+        ----------
+            mol (Chem.Mol): RDKit molecule.
+
+        Returns:
+        -------
+            Chem.Mol: Cleaned up RDKit molecule.
+        """
+        return rdMolStandardize.Cleanup(mol)
+    
+    def run_fragment_parent(self, mol: Chem.Mol) -> Chem.Mol:
+        """
+        Fragments a molecule.
+
+        Parameters:
+        ----------
+            mol (Chem.Mol): RDKit molecule.
+
+        Returns:
+        -------
+            Chem.Mol: Fragmented RDKit molecule.
+        """
+        return rdMolStandardize.FragmentParent(mol)
+
+    def run_neutralize(self, mol: Chem.Mol) -> Chem.Mol:
+        """
+        Neutralizes a molecule.
+
+        Parameters:
+        ----------
+            mol (Chem.Mol): RDKit molecule.
+
+        Returns:
+        -------
+            Chem.Mol: Neutralized RDKit molecule.
+        """
+        uncharger = rdMolStandardize.Uncharger()
+        return uncharger.uncharge(mol)
+    
+    def run_canonical_tautomer(self, mol: Chem.Mol) -> Chem.Mol:
+        """
+        Canonicalizes a tautomer.
+
+        Parameters:
+        ----------
+            mol (Chem.Mol): RDKit molecule.
+
+        Returns:
+        -------
+            Chem.Mol: Canonicalized RDKit molecule.
+        """
+        return rdMolStandardize.CanonicalTautomer(mol)
+
+    def run_reionize(self, mol: Chem.Mol) -> Chem.Mol:
+        """
+        Reionizes a molecule.
+
+        Parameters:
+        ----------
+            mol (Chem.Mol): RDKit molecule.
+
+        Returns:
+        -------
+            Chem.Mol: Reionized RDKit molecule.
+        """
+        return rdMolStandardize.Reionize(mol)
+
