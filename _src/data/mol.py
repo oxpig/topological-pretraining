@@ -5,6 +5,7 @@ from rdkit.Chem.rdFingerprintGenerator import (
 )
 from rdkit.Chem.MolStandardize import rdMolStandardize
 from rdkit import DataStructs
+from rdkit.ML.Cluster import Butina
 from tqdm import tqdm
 import warnings
 
@@ -392,4 +393,25 @@ class FPOperations:
             similarities[i,:i], similarities[:i,i] = sims, sims
         return similarities
     
-    
+    def butina(fps, threshold: float = 0.65):
+        """
+        Performs the Butina clustering algorithm.
+
+        Parameters:
+        ----------
+            threshold (float): Tanimoto similarity threshold.
+
+        Returns:
+        -------
+            list[list[int]]: List of clusters.
+        """
+        assert threshold >= 0 and threshold <= 1, 'Threshold must be between 0 and 1.'
+        distances = 1 - FPOperations.pairwise_tanimoto(fps)
+        clusters = Butina.ClusterData(distances, distThresh=threshold, isDistData=True, nPts=len(fps))
+        
+        molecule_clusters = np.zeros(len(fps))
+        for i, cluster in enumerate(clusters):
+            for j in cluster:
+                molecule_clusters[j] = i
+
+        return molecule_clusters
