@@ -71,6 +71,7 @@ class SortAndSlice:
             identifiers (dict[str, int]): Dictionary of identifiers and their counts.
         """
         identifiers = {}
+        radius = self.generator.GetOptions().radius
         pbar = tqdm(total=len(molecules), desc='Collecting identifiers', disable=not self.verbose)
         for mol in molecules:
             self.generator.GetSparseFingerprint(mol, additionalOutput=self.ao)
@@ -232,7 +233,7 @@ class Standardizer:
         return mol
         
 
-    def __call__(self, mol: Chem.Mol|str) -> Chem.Mol:
+    def __call__(self, mol: Chem.Mol) -> Chem.Mol:
         """
         Standardizes a molecule.
 
@@ -320,6 +321,9 @@ class Standardizer:
         return rdMolStandardize.Reionize(mol)
 
 class FPOperations:
+    """
+    Functions that operate on Morgan fingerprints.
+    """
 
     def tanimoto(fp1: DataStructs.ExplicitBitVect, fp2: DataStructs.ExplicitBitVect) -> float:
         """
@@ -418,3 +422,50 @@ class FPOperations:
                 molecule_clusters[j] = i
 
         return molecule_clusters
+    
+def incidence_array(mol: Chem.Mol, radius: int = 2) -> np.ndarray:
+    """
+    Get the incidence array of a molecule.
+    Denotes atoms within cicular subgraphs of a given radius around each node.
+
+    Parameters:
+    ----------
+        mol (Chem.Mol): RDKit molecule.
+        radius (int): Radius of the incidence array.
+    
+    Returns:
+    -------
+        np.ndarray: Incidence array. Dims = radius x num_atoms x num_atoms.
+        At each radius, the indexes of circular substructures around each atom are stored.
+        E.g.,
+            radius = 0: Identity matrix.
+            radius = 1: Adjacency matrix.
+            radius = 2: Adjacency matrix + 2nd degree neighbors.
+            radius = 3: Adjacency matrix + 2nd and 3rd degree neighbors.
+    """
+    adjacency = Chem.GetAdjacencyMatrix(mol)
+    inc = np.eye(adjacency.shape[0], dtype=int)
+    if radius == 0:
+        return inc
+
+    inc = np.stack([inc, adjacency + inc], axis=0)
+    if radius == 1:
+        return inc
+
+    to_add = inc[1]
+    r = 2
+
+    while True:
+        pow_adj = np.linalg.matrix_power(adjacency, r)
+        to_add = pow_adj + to_add
+        inc = np.concatenate([inc, np.expand_dims(to_add, axis=0)], axis=0)
+        if r == radius:
+            break
+        elif radius == -1 and np.all(to_add > 0):
+            break
+        else:
+            r += 1
+            continue
+
+    inc = np.where(inc > 0, 1, 0)
+    return inc
