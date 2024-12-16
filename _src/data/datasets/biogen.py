@@ -214,7 +214,6 @@ class BiogenSubset(pd.DataFrame):
     def unit(self):
         return self.units(self.task)
 
-
 class HPPB(BiogenSubset):
     """
     Human plasma protein binding subset of the Biogen dataset.
