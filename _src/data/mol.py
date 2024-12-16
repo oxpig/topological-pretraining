@@ -31,8 +31,11 @@ class MorganGenerator:
             includeRingMembership=True,
         )
 
+    def __call__(self, mol: Chem.Mol):
+        return self.dense(mol, array=True)
+
     def dense(
-        self, mol: Chem.Mol|str, array: bool = False
+        self, mol: Chem.Mol, array: bool = False
     ) -> DataStructs.ExplicitBitVect|np.ndarray:
         """
         Generate a dense Morgan fingerprint for a molecule.
@@ -90,7 +93,7 @@ class MorganGenerator:
         self.generator.GetSparseFingerprint(mol, additionalOutput=ao)
         return ao.GetBitInfoMap()
     
-    def env_map(self, mol: Chem.Mol) -> dict:
+    def environments(self, mol: Chem.Mol) -> dict:
         """
         Get array of hashed substructure identifiers mapped to atom indices and radii.
 
@@ -107,20 +110,22 @@ class MorganGenerator:
         """
         out = {}
         bitmap = self.bitinfo(mol)
-        num_radii = range(self.radius + 1)
-        num_atoms = range(mol.GetNumAtoms())
-        out = np.zeros((num_atoms, num_radii))
+        out = np.zeros((mol.GetNumAtoms(), self.radius + 1))
         for bit, info in bitmap.items():
             for (atom, r) in info:
                 out[atom, r] = bit
         
         inci = get_incidence(mol, radius=self.radius)
-        missing_envs = np.where(out == 0)
 
+        # Fill in missing environments for atoms with duplicate environments.
+        # This needs to be performed regardless, as includeRedundantEnvironments
+        # assigns duplicate environments different identifiers.
+        missing_envs = np.vstack(np.where(out == 0)).T
         if len(missing_envs) > 0:
-            for atom, radius in missing_envs:
+            for (atom, radius) in missing_envs:
                 env = inci[radius, atom, :]
-                env_matches = env[np.where((np.all(inci == env, axis=-1)))]
+                radii, atoms = np.where((np.all(inci == env, axis=-1)))
+                env_matches = out[(atoms, radii)]
                 env_matches = env_matches[np.where(env_matches != 0)]
                 out[atom, radius] = env_matches[0] if len(env_matches) > 0 else 0
 
@@ -192,8 +197,7 @@ class SortAndSlice:
 
     Attributes:
     ----------
-        generator (FingeprintGenerator64): RDKit fingerprint generator.
-        ao (AdditionalOutput): RDKit fingerprint additional output.
+        generator (MorganGenerator): Morgan fingerprint generator.
         verbose (bool): Whether to print progress.
         identifiers (dict[str, int]): Dictionary of identifiers and their counts.
         encoder (dict[str, int]): Dictionary of identifiers and their enumerated values.
@@ -211,13 +215,11 @@ class SortAndSlice:
     def __init__(
         self,
         molecules: list[Chem.Mol],
-        generator: FingeprintGenerator64,
+        generator: MorganGenerator,
         fpsize: int = 2048,
         verbose: bool = False,
     ):
         self.generator = generator
-        self.ao = AdditionalOutput()
-        self.ao.AllocateBitInfoMap()
         self.verbose = verbose
 
         self.get_identifiers(molecules)
@@ -239,8 +241,7 @@ class SortAndSlice:
         radius = self.generator.GetOptions().radius
         pbar = tqdm(total=len(molecules), desc='Collecting identifiers', disable=not self.verbose)
         for mol in molecules:
-            self.generator.GetSparseFingerprint(mol, additionalOutput=self.ao)
-            bitmap = self.ao.GetBitInfoMap()
+            bitmap = self.generator.bitinfo(mol)
             for identifier in bitmap:
                 count = identifiers.get(identifier, 0)
                 identifiers[identifier] = count + 1
@@ -291,8 +292,7 @@ class SortAndSlice:
         -------
             np.ndarray: Binary vector indicating substructure presence.
         """
-        self.generator.GetSparseFingerprint(mol, additionalOutput=self.ao)
-        bitmap = self.ao.GetBitInfoMap()
+        bitmap = self.generator.bitinfo(mol)
         out = np.zeros(len(self.encoder))
         for identifier in bitmap:
             if identifier in self.encoder:
