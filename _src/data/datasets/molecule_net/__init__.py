@@ -5,6 +5,7 @@ from .esol import ESOL
 from .freesolv import FreeSolv
 from .hiv import HIV
 from .lipo import Lipo
+from .molecule_net import MoleculeNet
 from .muv import MUV
 from .sider import SIDER
 from .tox21 import Tox21
