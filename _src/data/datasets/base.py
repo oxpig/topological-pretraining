@@ -2,8 +2,6 @@ import os
 import pandas as pd
 from pathlib import Path
 
-from ..mol import Sanitzer
-
 class BaseDataset(pd.DataFrame):
     """
     Base pandas DataFrame class for datasets.
@@ -28,7 +26,6 @@ class BaseDataset(pd.DataFrame):
     compression: bool
         Whether the saved csv is compressed or not.
     """
-
     def __init__(self, csv: str|None = None, url: str|None = None, compression: bool = True):
 
         # Check if csv or url is provided
