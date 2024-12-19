@@ -3,3 +3,5 @@
 run.py
 bin/cache/
 /temp
+*.ipynb
+*__pycache__/
