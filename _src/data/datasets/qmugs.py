@@ -65,15 +65,24 @@ class QMugs(BaseDataset):
 
             # Download CHEMBL v.27 chemreps file
             chembl_url = "https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_27/chembl_27_chemreps.txt.gz"
-            chemble_v27 = pd.read_csv(chembl_url, sep='\t', usecols=['chembl_id', 'SMILES'])
+            chemble_v27 = pd.read_csv(chembl_url, sep='\t')
 
             # Map CHEMBL IDs to canonical SMILES
-            self['SMILES'] = self['chembl_id'].map(chemble_v27.set_index('chembl_id')['SMILES'])
+            self['SMILES'] = self['chembl_id'].map(chemble_v27.set_index('chembl_id')['canonical_smiles'])
 
-            # Drop rows where canonical SMILES are duplicates
-            # This is to account for cases where multiple CHEMBL IDs map to the same canonical SMILES
-            # 32 molecules are removed by this step
-            self.drop_duplicates(subset='SMILES', inplace=True) 
+            # Drop rows where canonical SMILES are duplicates.
+            # This is to account for cases where multiple CHEMBL IDs map to the same
+            # canonical SMILES.
+            # The inchi keys are different; when read into RDKit the molecules are the same
+            # Differences between inchi keys are due to stereocenters being identified in one
+            # molecule and not in the other; type of stereochemistry is not specified,
+            # hence why the molecules are the same.
+            # 32 molecules are removed by this step.
+            self.drop_duplicates(subset='SMILES', inplace=True)
+            self.drop(
+                self.columns.difference(['chembl_id', 'SMILES']),
+                axis=1, inplace=True
+            )
 
             # Reset the index and save the dataset
             self.reset_index(drop=True, inplace=True)
