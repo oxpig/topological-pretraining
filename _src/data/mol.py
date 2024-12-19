@@ -1,7 +1,8 @@
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem.rdFingerprintGenerator import (
-    AdditionalOutput, FingeprintGenerator64, GetMorganGenerator
+    AdditionalOutput, AtomInvariantsGenerator, BondInvariantsGenerator,
+    FingeprintGenerator64, GetMorganGenerator
 )
 from rdkit.Chem.MolStandardize import rdMolStandardize
 from rdkit import DataStructs
@@ -9,6 +10,9 @@ from rdkit.ML.Cluster import Butina
 from tqdm import tqdm
 import warnings
 
+"""
+TODO: change print statements to logging
+"""
 
 class MorganGenerator:
     """
@@ -16,23 +20,40 @@ class MorganGenerator:
     """
     def __init__(
         self,
-        generator: FingeprintGenerator64 = GetMorganGenerator(
-            radius=2,
-            includeChirality=True,
-            useBondTypes=True,
-            includeRingMembership=True,
-            fpSize=2048,
-        ),
+        radius: int = 2,
+        fpsize: int = 2048,
+        chirality: bool = True,
+        count_sim: bool = False,
+        bond_types: bool = True,
+        non_zero_inv: bool = False,
+        rings: bool = True,
+        count_bounds = None,
+        atom_inv = None,
+        bond_inv = None,
+        redundant_envs: bool = False
     ):
         self.generator = GetMorganGenerator(
-            radius=2,
-            includeChirality=True,
-            useBondTypes=True,
-            includeRingMembership=True,
+            radius=radius,
+            countSimulation=count_sim,
+            includeChirality=chirality,
+            useBondTypes=bond_types,
+            onlyNonzeroInvariants=non_zero_inv,
+            includeRingMembership=rings,
+            countBounds=count_bounds,
+            fpSize=fpsize,
+            atomInvariantsGenerator=atom_inv,
+            bondInvariantsGenerator=bond_inv,
+            includeRedundantEnvironments=redundant_envs
         )
 
-    def __call__(self, mol: Chem.Mol):
-        return self.dense(mol, array=True)
+    def __call__(self, mol: Chem.Mol|list[Chem.Mol]) -> np.ndarray:
+        if isinstance(mol, Chem.Mol):
+            return self.dense(mol, array=True)
+        else:
+            out = np.zeros((len(mol), self.fpsize))
+            for i, m in enumerate(mol):
+                out[i] = self.dense(m, array=True)
+            return out
 
     def dense(
         self, mol: Chem.Mol, array: bool = False
@@ -173,13 +194,6 @@ class MorganGenerator:
     def counts(self, value):
         self.generator.GetOptions().countSimulation = value
 
-    @property
-    def non_zero_invariants(self):
-        return self.generator.GetOptions().nonZeroInvariants
-    
-    @non_zero_invariants.setter
-    def non_zero_invariants(self, value):
-        self.generator.GetOptions().nonZeroInvariants = value
 
 class SortAndSlice:
     """
@@ -211,22 +225,24 @@ class SortAndSlice:
     >>> smiles = ['CCO', 'CCN', 'CCC']
     >>> molecules = [Chem.MolFromSmiles(s) for s in smiles]
     >>> generator = GetMorganGenerator()
-    >>> sas = SortAndSlice(molecules, generator, fpsize=128, verbose=True)
+    >>> sas = SortAndSlice(molecules, generator, fpsize=128)
     >>> encoded_moleculess = sas(molecules)
     """
     def __init__(
         self,
-        molecules: list[Chem.Mol],
         generator: MorganGenerator,
+        molecules: list[Chem.Mol] = None,
         fpsize: int = 2048,
         verbose: bool = False,
     ):
         self.generator = generator
         self.verbose = verbose
         self.identifiers = {}
-
-        self.update(molecules)
-        self.slice(fpsize)
+        self.encoder = None
+        self.fpsize = fpsize
+        if molecules is not None:
+            self.update(molecules)
+            self.slice(fpsize)
 
     def append(self, mol: Chem.Mol):
         """
@@ -278,7 +294,7 @@ class SortAndSlice:
             self.identifiers.items(), key=lambda x: tuple(x[1]['num_mols'], x[1]['count']), reverse=True,
         ))
 
-    def slice(self, fpsize: int):
+    def slice(self, fpsize: int|None = None):
         """
         Slices substructure identifiers to a specific length enumerates them.
         Sets the encoder attribute to the enumerated identifiers.
@@ -291,6 +307,8 @@ class SortAndSlice:
         ------
             encoder (dict[str, int]): Dictionary of identifiers and their enumerated values.
         """
+        if fpsize is None:
+            fpsize = self.fpsize
         if self.verbose:
             print(f'Setting bit length of encoder to a max of {fpsize}.')
         encoder = {}
@@ -340,9 +358,17 @@ class SortAndSlice:
         -------
             np.ndarray: Binary matrix indicating substructure presence.
         """
+        if self.encoder is None:
+            print('No encoder found, updating identifiers and slicing.') if self.verbose else None
+            self.update(molecules)
+            self.slice()
         if isinstance(molecules, Chem.Mol):
             molecules = [molecules]
-        pbar = tqdm(total=len(molecules), desc='Encoding molecules', disable=not self.verbose)
+        pbar = tqdm(
+            total=len(molecules),
+            desc='Encoding molecules',
+            disable=not self.verbose
+        )
         out = np.zeros((len(molecules), len(self.encoder)))
         for i, mol in enumerate(molecules):
             out[i] = self.encode(mol)
@@ -594,7 +620,10 @@ class FPOperations:
             similarities[i] = DataStructs.BulkTanimotoSimilarity(fp1, fps2)
         return similarities
     
-    def pairwise_tanimoto(fps: list[DataStructs.ExplicitBitVect]):
+    def pairwise_tanimoto(
+        fps: list[DataStructs.ExplicitBitVect],
+        verbose: bool = False
+    ):
         """
         Calculates the pairwise Tanimoto similarity within a list of fingerprints.
 
@@ -607,12 +636,22 @@ class FPOperations:
             np.ndarray: Pairwise Tanimoto similarities. Dims = len(fps) x len(fps).
         """
         similarities = np.zeros((len(fps), len(fps)))
+        pbar = tqdm(
+            total=len(fps), disable=not verbose,
+            desc='Calculating Tanimoto similarities'
+        )
         for i in range(len(fps)):
             sims = DataStructs.BulkTanimotoSimilarity(fps[i], fps[:i])
             similarities[i, :i], similarities[:i, i] = sims, sims
+            pbar.update(1)
+        pbar.close()
         return similarities
     
-    def butina(fps: list[DataStructs.ExplicitBitVect], threshold: float = 0.65):
+    def butina(
+        fps: list[DataStructs.ExplicitBitVect],
+        threshold: float = 0.65,
+        verbose: bool = False,
+    ):
         """
         Performs the Butina clustering algorithm.
 
@@ -626,7 +665,8 @@ class FPOperations:
             np.ndarray: Cluster assignments for each fingerprint.
         """
         assert threshold >= 0 and threshold <= 1, 'Threshold must be between 0 and 1.'
-        distances = 1 - FPOperations.pairwise_tanimoto(fps)
+        distances = 1 - FPOperations.pairwise_tanimoto(fps, verbose=verbose)
+        print('Calculating clusters...') if verbose else None
         clusters = Butina.ClusterData(distances, distThresh=threshold, isDistData=True, nPts=len(fps))
         
         molecule_clusters = np.zeros(len(fps))
