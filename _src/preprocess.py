@@ -9,7 +9,7 @@ from rdkit.Chem.rdFingerprintGenerator import (
 from tqdm import tqdm
 
 from .data.datasets import BaseDataset
-from .data.mol import FPOperations, Standardizer
+from .data.mol import FPOperations, Standardizer, MorganGenerator
 
 def max_tanimoto(
     fps_1: list[DataStructs.ExplicitBitVect],
@@ -35,6 +35,7 @@ def max_tanimoto(
         sims = FPOperations.bulk_tanimoto(fp_1, fps_2)
         out[i] = np.max(sims)
         pbar.update(1)
+    pbar.close()
     return out
 
 def float_to_binary(
@@ -68,11 +69,47 @@ def tanimoto_filter(
     out = max_tanimoto(fp_1, fp_2)
     return float_to_binary(out, threshold=threshold, below=True)
 
+def batch_tanimoto_filter(
+    fp_1: list[DataStructs.ExplicitBitVect],
+    fp_2: list[list[DataStructs.ExplicitBitVect]],
+    threshold: float = 0.5
+) -> np.ndarray:
+    """
+    Apply Tanimoto filter to multiple sets of fingerprints.
+    Useful for filtering pretraining data based on multiple benchmark sets.
+
+    Parameters
+    ----------
+    fp_1: list[DataStructs.ExplicitBitVect]
+        List of fingerprints to compare. (e.g. pretraining data)
+    fp_2: list[list[DataStructs.ExplicitBitVect]]
+        List of fingerprints to compare against. (e.g. list of benchmark data)
+    threshold: float
+        The threshold for Tanimoto similarity. Labels values below the threshold with 1 and values
+        above with 0. Default is 0.5.
+
+    Returns
+    -------
+    out: np.ndarray
+        Array of filters. Each column represents a list in fp_2.
+        Each row represents a data point in fp_1.
+        Array is binary, where 1 indicates that the data point is dissimilar to the fp_2 set and
+        0 indicates that the data point is similar to at least one molecule in fp_2 set.
+        The last column represents an aggregate filter for all fp_2 sets.
+
+    """
+    out = np.zeros((len(fp_1), len(fp_2)+1))
+    for i, fps in enumerate(fp_2):
+        out[:, i] = tanimoto_filter(fp_1, fps, threshold=threshold)
+    out[:, -1] = np.where(np.sum(out, axis=1) > 0, 1, 0)
+    return out
+
 def repeat_groupkfold(
     data: np.ndarray,
     groups: np.ndarray,
     kfolds: int = 5,
     repeats: int = 1,
+    verbose: bool = True
 ):
     """
     Repeat GroupKFold splits.
@@ -98,15 +135,22 @@ def repeat_groupkfold(
     """
     total_splits = kfolds * repeats
     out = np.zeros((data.shape[0], total_splits), dtype=int)
+    pbar = tqdm(
+        total=total_splits, disable=not verbose, desc='Generating splits'
+    )
     for i in range(repeats):
         gkf = GroupKFold(n_splits=kfolds, shuffle=True, random_state=i)
-        for j, (train_index, test_index) in enumerate(gkf.split(data, groups=groups)):
+        for j, (train_index, test_index) in enumerate(
+            gkf.split(data, groups=groups)
+        ):
             out[test_index, i * kfolds + j] = 1
+            pbar.update(1)
+    pbar.close()
     return out
 
 def butina_splitting(
     fps: list[DataStructs.ExplicitBitVect], threshold: float = 0.65,
-    repeats: int = 1, kfolds: int = 5,
+    repeats: int = 1, kfolds: int = 5, verbose: bool = True
 ) -> np.ndarray:
     """
     Split the data using Butina clustering and GroupKFold.
@@ -131,8 +175,8 @@ def butina_splitting(
         Array of splits. Each column represents a split, where 1 is the test set and 0 is the
         train set. Each row represents a data point. Total number of splits is kfolds * repeats.
     """
-    clusters = FPOperations.butina(fps, threshold=threshold)
-    return repeat_groupkfold(fps, clusters, kfolds=kfolds, repeats=repeats)
+    clusters = FPOperations.butina(fps, threshold=threshold, verbose=verbose)
+    return repeat_groupkfold(fps, clusters, kfolds=kfolds, repeats=repeats, verbose=verbose)
 
 def subset_indices(total: int, n: int) -> np.ndarray:
     """
@@ -169,3 +213,57 @@ def indices_to_binary(indices: np.ndarray, total: int) -> np.ndarray:
     out = np.zeros(total, dtype=int)
     out[indices] = 1
     return out
+
+def preprocess(args):
+    """
+    Preprocess the data.
+    """
+    pretrain_data: BaseDataset = None
+    benchmark_data: list[BaseDataset] = None
+    morgan_generator: MorganGenerator = None
+    standardizer: Standardizer = None
+    repeats: int = 1
+    kfolds: int = 5
+    butina_threshold: float = 0.65
+    verbose: bool = True
+
+    benchmark_data: dict = {
+        i.name: i for i in benchmark_data
+    }
+
+    benchmark_fps = {}
+    for key, value in benchmark_data.items():
+        print(f'Processing {key}') if verbose else None
+        smiles = value['SMILES'].tolist()
+        mols = [
+            standardizer(Chem.MolFromSmiles(i))
+            for i in tqdm(smiles, disable=not verbose, desc='Standardizing molecules')
+        ]
+        # add mol checker
+        fps = [
+            morgan_generator.dense(i)
+            for i in tqdm(mols, disable=not verbose, desc='Generating fingerprints')
+        ]
+        butina_splits = butina_splitting(
+            value, threshold=butina_threshold, repeats=repeats,
+            kfolds=kfolds, verbose=verbose
+        )
+        butina_splits = pd.DataFrame(
+            butina_splits, columns=[f'split_{i}'
+            for i in range(butina_splits.shape[1])
+        ])
+        benchmark_data[key].join(butina_splits)
+        benchmark_data[key].save()
+        benchmark_fps[key] = fps
+
+    pretrain_smiles = pretrain_data['SMILES'].tolist()
+    pretrain_mols = [standardizer(Chem.MolFromSmiles(i)) for i in pretrain_smiles]
+    
+    pretrain_fps = [morgan_generator.dense(i) for i in pretrain_mols]
+    pretrain_filter = batch_tanimoto_filter(
+        pretrain_fps, benchmark_fps.values(), threshold=0.5
+    )
+    cols = [f'{key}_filter' for key in benchmark_fps.keys()] + ['aggregate']
+    pretrain_filter = pd.DataFrame(pretrain_filter, columns=cols)
+    pretrain_data.join(pretrain_filter)
+    pretrain_data.save()
