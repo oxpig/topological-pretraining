@@ -134,3 +134,38 @@ def butina_splitting(
     clusters = FPOperations.butina(fps, threshold=threshold)
     return repeat_groupkfold(fps, clusters, kfolds=kfolds, repeats=repeats)
 
+def subset_indices(total: int, n: int) -> np.ndarray:
+    """
+    Choose a subset of indices.
+
+    Parameters
+    ----------
+    total: int
+        The total number of indices.
+    n: int
+        The number of indices to choose.
+
+    Returns
+    -------
+    out: pd.DataFrame
+        The subset of the data.
+    """
+    return np.random.choice(total, n, replace=False)
+    
+def indices_to_binary(indices: np.ndarray, total: int) -> np.ndarray:
+    """
+    Convert indices to binary array.
+
+    Parameters
+    ----------
+    indices: np.ndarray
+        The indices to convert.
+
+    Returns
+    -------
+    out: np.ndarray
+        The binary array.
+    """
+    out = np.zeros(total, dtype=int)
+    out[indices] = 1
+    return out
