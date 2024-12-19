@@ -93,13 +93,16 @@ class MorganGenerator:
         self.generator.GetSparseFingerprint(mol, additionalOutput=ao)
         return ao.GetBitInfoMap()
     
-    def environments(self, mol: Chem.Mol) -> dict:
+    def environments(self, mol: Chem.Mol, tally: bool = False) -> dict:
         """
         Get array of hashed substructure identifiers mapped to atom indices and radii.
 
         Parameters
         ----------
         mol : rdkit.Chem.rdchem.Mol
+            The molecule.
+        tally : bool, optional
+            Whether to return the tally of substructures. Defaults to False.
         
         Returns
         -------
@@ -108,7 +111,6 @@ class MorganGenerator:
             Rows are atom indices and columns are radii.
 
         """
-        out = {}
         bitmap = self.bitinfo(mol)
         out = np.zeros((mol.GetNumAtoms(), self.radius + 1))
         for bit, info in bitmap.items():
@@ -221,13 +223,37 @@ class SortAndSlice:
     ):
         self.generator = generator
         self.verbose = verbose
+        self.identifiers = {}
 
-        self.get_identifiers(molecules)
-        self.set_encoder(fpsize)
+        self.update(molecules)
+        self.slice(fpsize)
 
-    def get_identifiers(self, molecules: list[Chem.Mol]) -> dict[str, int]:
+    def append(self, mol: Chem.Mol):
         """
-        Gets and sorts identifiers from molecule data. Sets the identifiers attribute.
+        Adds identifiers from a molecule to the identifiers attribute.
+        """
+        radius = self.generator.radius
+        envs = self.generator.environments(mol)
+        starter = {r: 0 for r in range(radius + 1)}
+        starter['num_mols'] = 0
+        starter['count'] = 0
+        done = {}
+        for r in range(radius + 1):
+            identifiers, counts = envs[:,r].unique(return_counts=True)
+            for j in range(len(identifiers)):
+                id = int(identifiers[j])
+                count = int(counts[j])
+                value = self.identifiers.get(id, starter.copy())
+                value['count'] += count
+                value[r] += count
+                if id not in done:
+                    value['num_mols'] += 1
+                    done[id] = True
+                self.identifiers[id] = value
+
+    def update(self, molecules: list[Chem.Mol]):
+        """
+        Updates the identifiers attribute with identifiers from new molecules.
         
         Parameters:
         ----------
@@ -237,19 +263,22 @@ class SortAndSlice:
         ------
             identifiers (dict[str, int]): Dictionary of identifiers and their counts.
         """
-        identifiers = {}
-        radius = self.generator.GetOptions().radius
         pbar = tqdm(total=len(molecules), desc='Collecting identifiers', disable=not self.verbose)
+
         for mol in molecules:
-            bitmap = self.generator.bitinfo(mol)
-            for identifier in bitmap:
-                count = identifiers.get(identifier, 0)
-                identifiers[identifier] = count + 1
+            self.append(mol)
             pbar.update(1)
         pbar.close()
-        self.identifiers = dict(sorted(identifiers.items(), key=lambda x: x[1], reverse=True))
 
-    def set_encoder(self, fpsize: int):
+    def sort(self):
+        """
+        Sorts the identifiers by the number of molecules they appear in and their total count.
+        """                
+        self.identifiers = dict(sorted(
+            self.identifiers.items(), key=lambda x: tuple(x[1]['num_mols'], x[1]['count']), reverse=True,
+        ))
+
+    def slice(self, fpsize: int):
         """
         Slices substructure identifiers to a specific length enumerates them.
         Sets the encoder attribute to the enumerated identifiers.
@@ -321,8 +350,26 @@ class SortAndSlice:
         pbar.close()
         return out
     
-    def __repr__(self):
-        return f'SortAndSlice(fpsize={len(self.encoder)})'
+    def __repr__(self) -> str:
+        return f'SortAndSlice(num_envs={len(self.identifiers)}, fpsize={len(self.encoder)})'
+    
+    def __str__(self) -> str:
+        return self.__repr__()
+    
+    def __getitem__(self, item):
+        return self.identifiers[item]
+    
+    def get(self, key, default=None):
+        return self.identifiers.get(key, default)
+    
+    def items(self):
+        return self.identifiers.items()
+    
+    def keys(self) -> list:
+        return self.identifiers.keys()
+    
+    def values(self) -> list:
+        return self.identifiers.values()
 
 class Standardizer:
     """
@@ -459,7 +506,7 @@ class Standardizer:
     
     def run_canonical_tautomer(self, mol: Chem.Mol) -> Chem.Mol:
         """
-        Canonicalizes a tautomer.
+        Canonicalizes tautomers.
 
         Parameters:
         ----------
@@ -469,7 +516,8 @@ class Standardizer:
         -------
             Chem.Mol: Canonicalized RDKit molecule.
         """
-        return rdMolStandardize.CanonicalTautomer(mol)
+        te = rdMolStandardize.TautomerEnumerator()
+        return te.Canonicalize(mol)
 
     def run_reionize(self, mol: Chem.Mol) -> Chem.Mol:
         """
