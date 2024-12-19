@@ -68,3 +68,39 @@ def tanimoto_filter(
     out = max_tanimoto(fp_1, fp_2)
     return float_to_binary(out, threshold=threshold, below=True)
 
+def repeat_groupkfold(
+    data: np.ndarray,
+    groups: np.ndarray,
+    kfolds: int = 5,
+    repeats: int = 1,
+):
+    """
+    Repeat GroupKFold splits.
+
+    Parameters
+    ----------
+    data: np.ndarray
+        The data to split.
+    groups: np.ndarray
+        The groups to split the data.
+    kfolds: int
+        The number of folds to split the data into.
+        Default is 5.
+    repeats: int
+        The number of times to repeat the splits.
+        Default is 1.
+
+    Returns
+    -------
+    out: np.ndarray
+        Array of splits. Each column represents a split, where 1 is the test set and 0 is the
+        train set. Each row represents a data point. Total number of splits is kfolds * repeats.
+    """
+    total_splits = kfolds * repeats
+    out = np.zeros((data.shape[0], total_splits), dtype=int)
+    for i in range(repeats):
+        gkf = GroupKFold(n_splits=kfolds, shuffle=True, random_state=i)
+        for j, (train_index, test_index) in enumerate(gkf.split(data, groups=groups)):
+            out[test_index, i * kfolds + j] = 1
+    return out
+
