@@ -42,9 +42,29 @@ def float_to_binary(
     threshold: float = 0.5,
     below: bool = True
 ) -> np.ndarray:
-    assert 0 <= threshold <= 1, 'Threshold must be between 0 and 1'
     if below:
         return np.where(array < threshold, 1, 0)
     else:
         return np.where(array > threshold, 1, 0)
+
+def tanimoto_filter(
+    fp_1: list[DataStructs.ExplicitBitVect],
+    fp_2: list[DataStructs.ExplicitBitVect],
+    threshold: float = 0.5
+) -> np.ndarray:
+    """
+    Get fingerprint filter for fp_1 based on Tanimoto similarity to fp_2.
+
+    Parameters
+    ----------
+    fp_1: list[DataStructs.ExplicitBitVect]
+        List of fingerprints to compare.
+    fp_2: list[DataStructs.ExplicitBitVect]
+        List of fingerprints to compare against.
+    threshold: float
+        The threshold for Tanimoto similarity. Labels values below the threshold with 1 and values
+        above with 0. Default is 0.5.
+    """
+    out = max_tanimoto(fp_1, fp_2)
+    return float_to_binary(out, threshold=threshold, below=True)
 
