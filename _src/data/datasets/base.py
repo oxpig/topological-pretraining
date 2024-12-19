@@ -26,22 +26,32 @@ class BaseDataset(pd.DataFrame):
     compression: bool
         Whether the saved csv is compressed or not.
     """
-    def __init__(self, csv: str|None = None, url: str|None = None, compression: bool = True):
+    def __init__(
+        self,
+        data: pd.DataFrame|None = None,
+        csv: str|None = None,
+        url: str|None = None,
+        compression: bool = True
+    ):
 
         # Check if csv or url is provided
-        if csv is None and url is None:
-            raise ValueError('Either path or url must be provided')
+        if csv is None and url is None and data is None:
+            raise ValueError('Either csv, url, or data must be provided')
         
-        if csv is None or not os.path.exists(csv):
+        if data is not None:
+            df = data
+        
+        elif csv is None or not os.path.exists(csv):
             # Download the csv file
             assert url is not None, 'URL must be provided if CSV does not exist'
             df = pd.read_csv(url)
-            if csv is not None:
-                # Save the csv file
-                df.to_csv(csv, index=False, compression=compression)
         else:
-            # Load the csv filex
             df = pd.read_csv(csv)
+
+        if csv is not None and not os.path.exists(csv):
+            # Save the csv file
+            df.to_csv(csv, index=False, compression=compression)
+        
 
         # Initialize the DataFrame
         super(BaseDataset, self).__init__(data=df)
@@ -50,6 +60,24 @@ class BaseDataset(pd.DataFrame):
         self.url = url
         self.compression = compression
 
+    @property
+    def name(self):
+        """
+        Get the name of the dataset.
+        """
+        return self.__class__.__name__
+    
+    def save(self, csv: str|None = None, compression: bool|None = None):
+        """
+        Save the dataset to a csv file.
+        """
+        if csv is not None:
+            self.csv = csv
+        if compression is not None:
+            self.compression = compression
+        if self.csv is None:
+            raise ValueError('csv is not provided')
+        self.to_csv(self.csv, index=False, compression=self.compression)
 
     def sanitize(self):
         """
