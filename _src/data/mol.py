@@ -16,7 +16,7 @@ class MorganGenerator:
     """
     def __init__(
         self,
-        generator: GetMorganGenerator = GetMorganGenerator(
+        generator: FingeprintGenerator64 = GetMorganGenerator(
             radius=2,
             includeChirality=True,
             useBondTypes=True,
