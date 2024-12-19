@@ -1,6 +1,9 @@
+from _src.data.mol import MorganGenerator, Standardizer
+
 import argparse
 from pathlib import Path
 import yaml
+from rdkit.Chem.rdFingerprintGenerator import GetMorganGenerator
 
 parser = argparse.ArgumentParser(description='Topological Pretraining')
 parser.add_argument('--config', '-C', type=str, required=True, help='Path to the config file')
@@ -23,6 +26,17 @@ def evaluate(args):
 def main():
     args = parser.parse_args()
     config = yaml.load(open(args.config), Loader=yaml.Loader)
+
+    # Set ECFP Morgan generator
+    morgan_settings = config['morgan'] if 'morgan' in config else {'radius': 2, 'fpSize': 2048, 'includeChirality': True}
+    ecfp_generator = GetMorganGenerator(**morgan_settings)
+    ecfp_generator = MorganGenerator(ecfp_generator)
+
+    # Set standardizer
+    standardizer = Standardizer()
+
+    # Get ECFP fingerprints of datasets
+
     process = config['process']
     if process == 'preprocess':
         preprocess(args)
