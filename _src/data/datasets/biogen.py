@@ -144,7 +144,7 @@ class Biogen(BaseDataset):
     def efflux(self):
         return self.subset('efflux')
 
-class BiogenSubset(pd.DataFrame):
+class BiogenSubset(BaseDataset):
     """
     Subset of the Biogen dataset.
     
@@ -176,12 +176,10 @@ class BiogenSubset(pd.DataFrame):
         if csv is None or not os.path.exists(csv):
             df = Biogen(root=root, compression=compression)
             data = df.subset(task)
-            if csv is not None:
-                data.to_csv(csv, index=False, compression=compression)
         else:
-            data = pd.read_csv(csv)
+            data = None
 
-        super(BiogenSubset, self).__init__(data=data)
+        super(BiogenSubset, self).__init__(data=data, csv=csv, compression=compression)
         self.compression = compression
         self.csv = csv
         self.root = root
