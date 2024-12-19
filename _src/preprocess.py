@@ -36,3 +36,15 @@ def max_tanimoto(
         out[i] = np.max(sims)
         pbar.update(1)
     return out
+
+def float_to_binary(
+    array: np.ndarray,
+    threshold: float = 0.5,
+    below: bool = True
+) -> np.ndarray:
+    assert 0 <= threshold <= 1, 'Threshold must be between 0 and 1'
+    if below:
+        return np.where(array < threshold, 1, 0)
+    else:
+        return np.where(array > threshold, 1, 0)
+
