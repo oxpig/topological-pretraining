@@ -104,3 +104,33 @@ def repeat_groupkfold(
             out[test_index, i * kfolds + j] = 1
     return out
 
+def butina_splitting(
+    fps: list[DataStructs.ExplicitBitVect], threshold: float = 0.65,
+    repeats: int = 1, kfolds: int = 5,
+) -> np.ndarray:
+    """
+    Split the data using Butina clustering and GroupKFold.
+    
+    Parameters
+    ----------
+    fps: list[DataStructs.ExplicitBitVect]
+        List of fingerprints to split.
+    threshold: float
+        The threshold for clustering.
+        Default is 0.65.
+    repeats: int
+        The number of times to repeat the splits.
+        Default is 1.
+    kfolds: int
+        The number of folds to split the data into.
+        Default is 5.
+
+    Returns
+    -------
+    out: np.ndarray
+        Array of splits. Each column represents a split, where 1 is the test set and 0 is the
+        train set. Each row represents a data point. Total number of splits is kfolds * repeats.
+    """
+    clusters = FPOperations.butina(fps, threshold=threshold)
+    return repeat_groupkfold(fps, clusters, kfolds=kfolds, repeats=repeats)
+
