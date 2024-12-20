@@ -1,8 +1,9 @@
 from . import datasets
 from .mol import Standardizer
 
+import numpy as np
 import pandas as pd
-from rdkit import Chem
+from rdkit import Chem, DataStructs
 from tqdm import tqdm
 from typing import Literal
 
@@ -60,3 +61,24 @@ def load_molecules(
         for i in tqdm(smiles, desc='Loading molecules', disable=not verbose)
     ]
     return mols
+
+def numpy_to_rdkit(array: np.ndarray):
+    """
+    Function to convert a numpy array to an RDKit explicit bit vector.
+
+    Parameters
+    ----------
+    array: np.ndarray
+        The binary array.
+    
+    Returns
+    -------
+    out: DataStructs.ExplicitBitVect
+        The RDKit explicit bit vector.
+    """
+    assert array.ndim == 1, 'Array must be 1D.'
+    assert ((array[0]==0) | (array[0]==1)).all(), 'Array must be binary.'
+    out = DataStructs.ExplicitBitVect(len(array))
+    indexes = np.where(array)[0].tolist()
+    out.SetBitsFromList(indexes)
+    return out
