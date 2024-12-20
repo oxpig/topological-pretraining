@@ -37,3 +37,26 @@ def load_dataset(
     return datasets.__dict__[name](root=root, compression=compression)
 
 
+def load_molecules(
+    dataset: datasets.BaseDataset|pd.DataFrame,
+    verbose: bool = False
+):
+    """
+    Load molecules from a dataset. Molecules are not standardized by this function.
+
+    Parameters
+    ----------
+    dataset: datasets.BaseDataset
+        The dataset to load molecules from. Must have a 'SMILES' column.
+
+    Returns
+    -------
+    out: list[Chem.Mol]
+        The molecules.
+    """
+    smiles = dataset['SMILES'].tolist()
+    mols = [
+        Chem.MolFromSmiles(i)
+        for i in tqdm(smiles, desc='Loading molecules', disable=not verbose)
+    ]
+    return mols
