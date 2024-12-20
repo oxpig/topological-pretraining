@@ -451,6 +451,7 @@ class Standardizer:
         -------
             Chem.Mol: Standardized RDKit molecule.
         """
+        if isinstance(mol, None): return None
         mol.UpdatePropertyCache()
         if self.sanitize:
             mol = self.run_sanitize(mol)
@@ -471,7 +472,7 @@ class Standardizer:
         return mol
         
 
-    def __call__(self, mol: Chem.Mol) -> Chem.Mol:
+    def __call__(self, mol: Chem.Mol|list[Chem.Mol]) -> Chem.Mol:
         """
         Standardizes a molecule.
 
@@ -483,7 +484,14 @@ class Standardizer:
         -------
             Chem.Mol: Standardized RDKit molecule.
         """
-        return self.standardize(mol)
+        if isinstance(mol, Chem.Mol):
+            return self.standardize(mol)
+        elif isinstance(mol, list):
+            return [self.standardize(m) for m in mol]
+        else:
+            raise ValueError(
+                'Input must be a RDKit molecule or a list of RDKit molecules.'
+            )
 
     def run_sanitize(self, mol: Chem.Mol) -> Chem.Mol:
         """
