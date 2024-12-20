@@ -9,6 +9,7 @@ from rdkit.Chem.rdFingerprintGenerator import (
 from tqdm import tqdm
 
 from .data.datasets import BaseDataset
+from .data.utils import load_dataset
 from .data.mol import FPOperations, Standardizer, MorganGenerator
 
 def max_tanimoto(
@@ -214,22 +215,32 @@ def indices_to_binary(indices: np.ndarray, total: int) -> np.ndarray:
     out[indices] = 1
     return out
 
-def preprocess(args):
+def preprocess(config: dict):
     """
     Preprocess the data.
     """
-    pretrain_data: BaseDataset = None
-    benchmark_data: list[BaseDataset] = None
-    morgan_generator: MorganGenerator = None
-    standardizer: Standardizer = None
-    repeats: int = 1
-    kfolds: int = 5
+    pretrain_data = config['pretrain']
+    data_path = config['data']
+    verbose = config['verbose']
+    
+    pretrain_data = load_dataset(
+        pretrain_data, root=data_path, compression=True,
+        verbose=verbose
+    )
+    benchmark_data = config['benchmark']
+    benchmark_data = {
+        name: load_dataset(
+            name, root=data_path, compression=True, verbose=verbose
+        ) for name in benchmark_data
+    }
+
+    morgan_generator = MorganGenerator(**config['morgan'])
+    standardizer: Standardizer = Standardizer(**config['standardizer'])
+    repeats: int = config['repeats']
+    kfolds: int = config['kfolds']
     butina_threshold: float = 0.65
     verbose: bool = True
 
-    benchmark_data: dict = {
-        i.name: i for i in benchmark_data
-    }
 
     benchmark_fps = {}
     for key, value in benchmark_data.items():
@@ -263,7 +274,12 @@ def preprocess(args):
     pretrain_filter = batch_tanimoto_filter(
         pretrain_fps, benchmark_fps.values(), threshold=0.5
     )
-    cols = [f'{key}_filter' for key in benchmark_fps.keys()] + ['aggregate']
+    num_keep = np.sum(pretrain_filter[:, -1])
+    random_indices = subset_indices(pretrain_data.shape[0], num_keep)
+    random_indices = indices_to_binary(random_indices, pretrain_data.shape[0])
+    pretrain_filter = np.concatenate([pretrain_filter, ], axis=1)
+    
+    cols = [f'{key}_filter' for key in benchmark_fps.keys()] + ['aggregate', 'random']
     pretrain_filter = pd.DataFrame(pretrain_filter, columns=cols)
     pretrain_data.join(pretrain_filter)
     pretrain_data.save()
