@@ -71,13 +71,12 @@ class BaseDataset(pd.DataFrame):
         """
         Save the dataset to a csv file.
         """
-        if csv is not None:
-            self.csv = csv
         if compression is not None:
             self.compression = compression
-        if self.csv is None:
-            raise ValueError('csv is not provided')
-        self.to_csv(self.csv, index=False, compression=self.compression)
+        if csv is not None:
+            self.csv = csv
+        if self.csv is not None:
+            self.to_csv(self.csv, index=False, compression=self.compression)
 
     def sanitize(self):
         """
