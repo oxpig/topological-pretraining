@@ -451,27 +451,29 @@ class Standardizer:
         -------
             Chem.Mol: Standardized RDKit molecule.
         """
-        if isinstance(mol, None): return None
-        mol.UpdatePropertyCache()
-        if self.sanitize:
-            mol = self.run_sanitize(mol)
+        try:
+            mol.UpdatePropertyCache()
+            if self.sanitize:
+                mol = self.run_sanitize(mol)
 
-        if self.fragment_parent:
-            mol = self.run_fragment_parent(mol)
-        
-        if self.neutralize:
-            mol = self.run_neutralize(mol)
+            if self.fragment_parent:
+                mol = self.run_fragment_parent(mol)
+            
+            if self.neutralize:
+                mol = self.run_neutralize(mol)
 
-        if self.reionize:
-            self.run_reionize(mol)
+            if self.reionize:
+                self.run_reionize(mol)
+            
+            if self.canonical_tautomer:
+                mol = self.run_canonical_tautomer(mol)
+            
+            mol.UpdatePropertyCache()
+            return mol
+        except Exception as e:
+            print(f'Error standardizing molecule: {e}')
+            return None
         
-        if self.canonical_tautomer:
-            mol = self.run_canonical_tautomer(mol)
-        
-        mol.UpdatePropertyCache()
-        return mol
-        
-
     def __call__(self, mol: Chem.Mol|list[Chem.Mol]) -> Chem.Mol:
         """
         Standardizes a molecule.
@@ -488,6 +490,8 @@ class Standardizer:
             return self.standardize(mol)
         elif isinstance(mol, list):
             return [self.standardize(m) for m in mol]
+        elif isinstance(mol, None): 
+            return None
         else:
             raise ValueError(
                 'Input must be a RDKit molecule or a list of RDKit molecules.'
@@ -506,7 +510,8 @@ class Standardizer:
         -------
             Chem.Mol: Sanitized RDKit molecule.
         """
-        return Chem.SanitizeMol(mol)
+        Chem.SanitizeMol(mol ,sanitizeOps=Chem.SanitizeFlags.SANITIZE_ALL, catchErrors=True)
+        return mol
     
     
     def run_fragment_parent(self, mol: Chem.Mol) -> Chem.Mol:
