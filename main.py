@@ -11,13 +11,25 @@ parser.add_argument('--data', '-D', type=str, required=True, help='Path to the d
 parser.add_argument('--output', '-o', type=str, default='output', help='Path to save')
 
 
-def preprocess(args):
+def preprocess(config):
     pass
 
-def pretrain(args):
+def pretrain(config):
     pass
 
 def benchmark(args):
+    # Load the data
+
+    # Load the model / featurizer
+
+    # Featurize the data
+
+    # Hyperparameter tuning
+
+    # Loop over splits
+    ## PCA / dimensionality reduction
+    ## Train the model
+    ## Test the model
     pass
 
 def evaluate(args):
@@ -25,7 +37,10 @@ def evaluate(args):
 
 def main():
     args = parser.parse_args()
-    config = yaml.load(open(args.config), Loader=yaml.Loader)
+    config: dict = yaml.load(open(args.config), Loader=yaml.Loader)
+    config['data'] = Path(args.data)
+    config['output'] = Path(args.output)
+    exit()
 
     # Set ECFP Morgan generator
     morgan_settings = config['morgan'] if 'morgan' in config else {'radius': 2, 'fpSize': 2048, 'includeChirality': True}
