@@ -9,7 +9,7 @@ from rdkit.Chem.rdFingerprintGenerator import (
 from tqdm import tqdm
 
 from .data.datasets import BaseDataset
-from .data.utils import load_dataset
+from .data.utils import load_dataset, load_molecules
 from .data.mol import FPOperations, Standardizer, MorganGenerator
 
 def max_tanimoto(
@@ -135,7 +135,7 @@ def repeat_groupkfold(
         train set. Each row represents a data point. Total number of splits is kfolds * repeats.
     """
     total_splits = kfolds * repeats
-    out = np.zeros((data.shape[0], total_splits), dtype=int)
+    out = np.full((data.shape[0], total_splits), fill_value='Train')
     pbar = tqdm(
         total=total_splits, disable=not verbose, desc='Generating splits'
     )
@@ -144,7 +144,7 @@ def repeat_groupkfold(
         for j, (train_index, test_index) in enumerate(
             gkf.split(data, groups=groups)
         ):
-            out[test_index, i * kfolds + j] = 1
+            out[test_index, i * kfolds + j] = 'Test'
             pbar.update(1)
     pbar.close()
     return out
@@ -181,7 +181,7 @@ def butina_splitting(
 
 def subset_indices(total: int, n: int) -> np.ndarray:
     """
-    Choose a subset of indices.
+    Choose a random subset of indices.
 
     Parameters
     ----------
@@ -215,6 +215,15 @@ def indices_to_binary(indices: np.ndarray, total: int) -> np.ndarray:
     out[indices] = 1
     return out
 
+def splitters(name: str):
+    """
+    Get the splitter function by name.
+    """
+    splitters = {
+        'butina': butina_splitting
+    }
+    return splitters[name]
+
 def preprocess(config: dict):
     """
     Preprocess the data.
@@ -222,7 +231,7 @@ def preprocess(config: dict):
     pretrain_data = config['pretrain']
     data_path = config['data']
     verbose = config['verbose']
-    
+
     pretrain_data = load_dataset(
         pretrain_data, root=data_path, compression=True,
         verbose=verbose
@@ -236,50 +245,63 @@ def preprocess(config: dict):
 
     morgan_generator = MorganGenerator(**config['morgan'])
     standardizer: Standardizer = Standardizer(**config['standardizer'])
-    repeats: int = config['repeats']
-    kfolds: int = config['kfolds']
-    butina_threshold: float = 0.65
+    splitter = config['splitting']['kind']
+    splitter = splitters(splitter)
+    splitter_params = config['splitting']['params']
     verbose: bool = True
-
 
     benchmark_fps = {}
     for key, value in benchmark_data.items():
         print(f'Processing {key}') if verbose else None
-        smiles = value['SMILES'].tolist()
+        mols = value['SMILES'].tolist()
+        mols = load_molecules(mols, verbose=verbose)
         mols = [
-            standardizer(Chem.MolFromSmiles(i))
-            for i in tqdm(smiles, disable=not verbose, desc='Standardizing molecules')
+            standardizer(i)
+            for i in tqdm(mols, disable=not verbose, desc='Standardizing molecules')
         ]
+        fail_and_pass = np.where(np.array(mols) != None, True, False)
+        value['pass_rdkit_standardization'] = fail_and_pass
+
+
         # add mol checker
+
+        # fps as explicitbitvect
         fps = [
             morgan_generator.dense(i)
-            for i in tqdm(mols, disable=not verbose, desc='Generating fingerprints')
+            for i in tqdm(
+                mols, disable=not verbose, desc='Generating fingerprints'
+            ) if i is not None
         ]
-        butina_splits = butina_splitting(
-            value, threshold=butina_threshold, repeats=repeats,
-            kfolds=kfolds, verbose=verbose
+
+        splits = splitter(
+            fps, verbose=verbose, **splitter_params
         )
-        butina_splits = pd.DataFrame(
-            butina_splits, columns=[f'split_{i}'
-            for i in range(butina_splits.shape[1])
+        # add rows of -1 for failed molecules
+        splits = np.insert(splits, np.where(~fail_and_pass)[0], axis=0, values='Fail')
+        splits = pd.DataFrame(
+            splits, columns=[f'split_{i}'
+            for i in range(splits.shape[1])
         ])
-        benchmark_data[key].join(butina_splits)
-        benchmark_data[key].save()
+        value.join(splits)
+        value.save()
         benchmark_fps[key] = fps
 
-    pretrain_smiles = pretrain_data['SMILES'].tolist()
-    pretrain_mols = [standardizer(Chem.MolFromSmiles(i)) for i in pretrain_smiles]
+    pretrain_mols = pretrain_data['SMILES'].tolist()
+    pretrain_mols = load_molecules(pretrain_mols, verbose=verbose)
+    pretrain_mols = [standardizer(i) for i in pretrain_mols]
     
+    # fps as explicitbitvect
     pretrain_fps = [morgan_generator.dense(i) for i in pretrain_mols]
+
     pretrain_filter = batch_tanimoto_filter(
-        pretrain_fps, benchmark_fps.values(), threshold=0.5
+        pretrain_fps, benchmark_fps.values(), threshold=config['filter_threshold']
     )
     num_keep = np.sum(pretrain_filter[:, -1])
     random_indices = subset_indices(pretrain_data.shape[0], num_keep)
     random_indices = indices_to_binary(random_indices, pretrain_data.shape[0])
     pretrain_filter = np.concatenate([pretrain_filter, ], axis=1)
     
-    cols = [f'{key}_filter' for key in benchmark_fps.keys()] + ['aggregate', 'random']
+    cols = [f'{key}_filter' for key in benchmark_fps.keys()] + ['aggregate_filter', 'random_filter']
     pretrain_filter = pd.DataFrame(pretrain_filter, columns=cols)
     pretrain_data.join(pretrain_filter)
     pretrain_data.save()
