@@ -6,3 +6,10 @@ class FactorXA(BaseDataset):
 
     def __init__(self, csv: str|None = None, compression: bool = True):
         super(FactorXA, self).__init__(csv=csv, url=self.url, compression=compression)
+        self.rename(
+            columns={
+                'Ki [nM]': 'y'
+            },
+            inplace=True,
+        )
+        self.save()
