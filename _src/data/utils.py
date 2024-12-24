@@ -8,11 +8,7 @@ from tqdm import tqdm
 from typing import Literal
 
 def load_dataset(
-    name: Literal[
-        'Biogen', 'Efflux', 'HClint',
-        'HPPB', 'RClint', 'RPPB',
-        'Solu', 'MoleculeNet', 'QMugs'
-    ],
+    name: str,
     root: str|None = None,
     compression: bool = True
 ) -> datasets.BaseDataset:
@@ -21,11 +17,7 @@ def load_dataset(
 
     Parameters
     ----------
-    name: Literal[
-        'Biogen', 'Efflux', 'HClint',
-        'HPPB', 'RClint', 'RPPB',
-        'Solu', 'MoleculeNet', 'QMugs'
-    ]
+    name: str
         The name of the dataset to load.
     root: Optional[str]
         The path to the dataset. Default is None.
