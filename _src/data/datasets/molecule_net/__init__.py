@@ -6,7 +6,14 @@ from .freesolv import FreeSolv
 from .hiv import HIV
 from .lipo import Lipo
 from .molecule_net import MoleculeNet
-from .muv import MUV
+from .muv import (
+    MUV, MUV466, MUV548,
+    MUV600, MUV644, MUV652,
+    MUV689, MUV692, MUV712,
+    MUV713, MUV733, MUV737,
+    MUV810, MUV832, MUV846,
+    MUV852, MUV858, MUV859,
+)
 from .sider import SIDER
 from .tox21 import Tox21
 from .toxcast import ToxCast
@@ -39,7 +46,9 @@ Unused datasets:
 -   ClinTox. Qualitative toxicity endpoints, not very specitic.
 
 Used datasets:
--   MUV. Risk of overfitting, but should be reduced by Butina split.
+-   MUV. Risk of overfitting, but should be reduced by Butina split. Also derived from PCBA, but
+    is separated into individual assays each for a specific target. For each assay, each active
+    label should consistently represent the same type of activity.
 -   Lipo (Lipophilicity).
 -   Tox21. (Endpoints are from cell rather than biophysical assays; risk of noise.)
 -   FreeSolv. Not particularly relevant to drug discovery but still useful for indicating
