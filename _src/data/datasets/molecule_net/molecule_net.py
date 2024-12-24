@@ -21,57 +21,46 @@ class MoleculeNet:
 
     @property
     def BACE(self):
-        csv = Path(self.root) / f'bace.{self.suffix}'
-        return BACE(csv=csv, compression=self.compression)
+        return BACE(root=self.root, compression=self.compression)
     
     @property
     def BBBP(self):
-        csv = Path(self.root) / f'bbbp.{self.suffix}'
-        return BBBP(csv=csv, compression=self.compression)
+        return BBBP(root=self.root, compression=self.compression)
     
     @property
     def ClinTox(self):
-        csv = Path(self.root) / f'clintox.{self.suffix}'
-        return ClinTox(csv=csv, compression=self.compression)
+        return ClinTox(root=self.root, compression=self.compression)
     
     @property
     def ESOL(self):
-        csv = Path(self.root) / f'esol.{self.suffix}'
-        return ESOL(csv=csv, compression=self.compression)
+        return ESOL(root=self.root, compression=self.compression)
     
     @property
     def FreeSolv(self):
-        csv = Path(self.root) / f'freesolv.{self.suffix}'
-        return FreeSolv(csv=csv, compression=self.compression)
+        return FreeSolv(root=self.root, compression=self.compression)
 
     @property
     def HIV(self):
-        csv = Path(self.root) / f'hiv.{self.suffix}'
-        return HIV(csv=csv, compression=self.compression)
+        return HIV(root=self.root, compression=self.compression)
 
     @property
     def Lipo(self):
-        csv = Path(self.root) / f'lipo.{self.suffix}'
-        return Lipo(csv=csv, compression=self.compression)
-
+        return Lipo(root=self.root, compression=self.compression)
+    
     @property
     def MUV(self):
-        csv = Path(self.root) / f'muv.{self.suffix}'
-        return MUV(csv=csv, compression=self.compression)
+        return MUV(root=self.root, compression=self.compression)
 
     @property
     def SIDER(self):
-        csv = Path(self.root) / f'sider.{self.suffix}'
-        return SIDER(csv=csv, compression=self.compression)
-
+        return SIDER(root=self.root, compression=self.compression)
+    
     @property
     def Tox21(self):
-        csv = Path(self.root) / f'tox21.{self.suffix}'
-        return Tox21(csv=csv, compression=self.compression)
+        return Tox21(root=self.root, compression=self.compression)
 
     @property
     def ToxCast(self):
-        csv = Path(self.root) / f'toxcast.{self.suffix}'
-        return ToxCast(csv=csv, compression=self.compression)
+        return ToxCast(root=self.root, compression=self.compression)
 
     
