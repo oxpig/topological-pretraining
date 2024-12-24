@@ -1,11 +1,13 @@
 from ..base import BaseDataset
-import numpy as np
+from pathlib import Path
 
 class ESOL(BaseDataset):
     url = 'https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/delaney-processed.csv'
 
-    def __init__(self, csv: str|None = None):
-        super(ESOL, self).__init__(csv=csv, url=self.url)
+    def __init__(self, root: str|None = None, compression: bool = True):
+        suffix = 'csv' if compression else 'csv.gz'
+        csv = Path(root) / f'esol.{suffix}' if root else None
+        super(ESOL, self).__init__(csv=csv, url=self.url, compression=compression)
         self.rename(
             columns={
                 'smiles': 'SMILES',
