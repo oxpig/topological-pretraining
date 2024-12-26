@@ -152,14 +152,14 @@ class BiogenSubset(BaseDataset):
     -----------
     root: str|None
         Optional root directory where the dataset will be stored or retrieved from.
-    task: Literal['human_clint', 'rat_clint', 'human_ppb', 'rat_ppb', 'solu', 'efflux']
-        The name of the task. Default is 'human_clint'.
+    subset: Literal['human_clint', 'rat_clint', 'human_ppb', 'rat_ppb', 'solu', 'efflux']
+        The name of the subset. Default is 'human_clint'.
         """
     
     def __init__(
         self,
         root: str|None = None,
-        task: Literal[
+        subset: Literal[
             'human_clint', 'rat_clint', 'human_ppb',
             'rat_ppb', 'solu', 'efflux'
         ] = 'human_clint',
@@ -167,15 +167,15 @@ class BiogenSubset(BaseDataset):
     ):
         suffix = 'csv.gz' if compression else 'csv'
         compression = 'gzip' if compression else None
-        assert task in [
+        assert subset in [
             'human_clint', 'rat_clint', 'human_ppb',
             'rat_ppb', 'solu', 'efflux'
         ], 'Invalid task, must be one of: human_clint, rat_clint, human_ppb, rat_ppb, solu, efflux'
-        csv = os.path.join(root, f'{task}.{suffix}') if root is not None else None
+        csv = os.path.join(root, f'{subset}.{suffix}') if root is not None else None
         
         if csv is None or not os.path.exists(csv):
             df = Biogen(root=root, compression=compression)
-            data = df.subset(task)
+            data = df.subset(subset)
         else:
             data = None
 
@@ -183,7 +183,7 @@ class BiogenSubset(BaseDataset):
         self.compression = compression
         self.csv = csv
         self.root = root
-        self.task = task
+        self.subset = subset
         
     
     def save(self, root: str|None = None):
@@ -195,9 +195,19 @@ class BiogenSubset(BaseDataset):
         assert self.root is not None, 'Root directory must be provided'
         self.to_csv(self.csv, index=False, compression=self.compression)
 
-    def units(self, task: str):
+    def units(self, subset: str|None = None):
         """
-        Returns the units of the target values for the tasks.
+        Returns the units of the target values for a subset.
+
+        Parameters:
+        -----------
+        subset: str|None
+            The name of the subset. Default is None.
+        
+        Returns:
+        --------
+        str
+            The units of the target values.
         """
         return {
             'human_clint': 'log$_{10}$(mL/min/kg)',
@@ -206,11 +216,12 @@ class BiogenSubset(BaseDataset):
             'rat_ppb': 'log$_{10}$(% Unbound)',
             'solu': 'log$_{10}$(ug/mL)',
             'efflux': 'log([B-A]/[A-B])',
-        }
+        }[subset]
     
     @property
     def unit(self):
-        return self.units(self.task)
+        return self.units(self.subset)
+    
 
 class HPPB(BiogenSubset):
     """
