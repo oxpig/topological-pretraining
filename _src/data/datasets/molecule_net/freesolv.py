@@ -5,7 +5,7 @@ class FreeSolv(BaseDataset):
     url = 'https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/SAMPL.csv'
 
     def __init__(self, root: str|None = None, compression: bool = True):
-        suffix = 'csv' if compression else 'csv.gz'
+        suffix = 'csv.gz' if compression else 'csv'
         csv = Path(root) / f'freesolv.{suffix}' if root else None
         super(FreeSolv, self).__init__(csv=csv, url=self.url, compression=compression)
         self.rename(
@@ -17,3 +17,7 @@ class FreeSolv(BaseDataset):
             axis=1, inplace=True
         )
         self.save()
+
+    @property
+    def tasks(self):
+        return 'regression'
