@@ -15,7 +15,13 @@ from .muv import (
     MUV852, MUV858, MUV859,
 )
 from .sider import SIDER
-from .tox21 import Tox21
+from .tox21 import (
+    Tox21, NR_AR, NR_AR_LBD,
+    NR_AhR, NR_Aromatase, NR_ER,
+    NR_ER_LBD, NR_PPAR_gamma, SR_ARE,
+    SR_ATAD5, SR_HSE, SR_MMP,
+    SR_p53
+)
 from .toxcast import ToxCast
 
 """
@@ -47,8 +53,14 @@ Unused datasets:
 
 Used datasets:
 -   MUV. Risk of overfitting, but should be reduced by Butina split. Also derived from PCBA, but
-    is separated into individual assays each for a specific target. For each assay, each active
-    label should consistently represent the same type of activity.
+    is separated into individual assays, each for a specific target. For each assay, each active
+    label should consistently represent the same type of activity. Effectively, MUV is 17 separate
+    datasets, with similar but non-identical binary classification tasks. Each assay has ~15000
+    decoy ligands (labelled 0) and ~30 actives (labelled 1). This ratio of actives to decoys is
+    useful, as it reflects the sparcity of real-world drug discovery screening. Assays SHOULD NOT
+    be aggregated into one multi-classification task, as NaN values in the dataset != inactive;
+    NaN == not necessarily tested. Aggregation increases the risk of false negatives which is
+    detrimental accurate benchmarking, particulary given how sparse the dataset is!
 -   Lipo (Lipophilicity).
 -   Tox21. (Endpoints are from cell rather than biophysical assays; risk of noise.)
 -   FreeSolv. Not particularly relevant to drug discovery but still useful for indicating

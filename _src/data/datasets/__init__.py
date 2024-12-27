@@ -15,6 +15,10 @@ from .molecule_net import (
     MUV733, MUV737, MUV810,
     MUV832, MUV846, MUV852,
     MUV858, MUV859, SIDER,
-    Tox21, ToxCast,
+    Tox21, NR_AR, NR_AR_LBD,
+    NR_AhR, NR_Aromatase, NR_ER,
+    NR_ER_LBD, NR_PPAR_gamma, SR_ARE,
+    SR_ATAD5, SR_HSE, SR_MMP,
+    SR_p53, ToxCast
 )
 from .qmugs import QMugs
