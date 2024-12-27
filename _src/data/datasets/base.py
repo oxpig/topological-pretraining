@@ -50,7 +50,9 @@ class BaseDataset(pd.DataFrame):
 
         if csv is not None and not os.path.exists(csv):
             # Save the csv file
-            df.to_csv(csv, index=False, compression=compression)
+            df.to_csv(
+                csv, index=False, compression='gzip' if compression else None
+            )
         
 
         # Initialize the DataFrame
@@ -76,10 +78,15 @@ class BaseDataset(pd.DataFrame):
         if csv is not None:
             self.csv = csv
         if self.csv is not None:
-            self.to_csv(self.csv, index=False, compression=self.compression)
+            self.to_csv(
+                self.csv,
+                index=False,
+                compression='infer' if self.compression else None
+            )
 
-    def sanitize(self):
+    @property
+    def task(self):
         """
-        TODO: Check SMILES validity and canonicalize them.
+        Get the task of the dataset as string, e.g., 'regression'.
         """
-        pass
+        raise NotImplementedError
