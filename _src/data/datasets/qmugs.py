@@ -45,7 +45,7 @@ class QMugs(BaseDataset):
         csv = (Path(root) / f'qmugs.{suffix}').as_posix()
 
         # Initialize the BaseDataset
-        super(QMugs, self).__init__(csv=csv, url=self.url)
+        super(QMugs, self).__init__(csv=csv, url=self.url, compression=compression)
 
         # Set the root directory and csv file
         self.root = root
