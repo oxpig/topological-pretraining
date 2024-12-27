@@ -40,13 +40,12 @@ class QMugs(BaseDataset):
         """
         # Set the suffix and compression
         suffix = 'csv.gz' if compression else 'csv'
-        compression = 'gzip' if compression else None
 
         # Set the path to the csv file
         csv = (Path(root) / f'qmugs.{suffix}').as_posix()
 
         # Initialize the BaseDataset
-        super(QMugs, self).__init__(csv=csv, url=self.url, compression=compression)
+        super(QMugs, self).__init__(csv=csv, url=self.url)
 
         # Set the root directory and csv file
         self.root = root
@@ -64,7 +63,7 @@ class QMugs(BaseDataset):
             self.drop_duplicates(subset='chembl_id', inplace=True)
 
             # Download CHEMBL v.27 chemreps file
-            chembl_url = "https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_27/chembl_27_chemreps.txt.gz"
+            chembl_url = "https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_27/chembl_27_chemreps.txt.gzip"
             chemble_v27 = pd.read_csv(chembl_url, sep='\t')
 
             # Map CHEMBL IDs to canonical SMILES
