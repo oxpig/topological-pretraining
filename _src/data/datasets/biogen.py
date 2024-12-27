@@ -222,6 +222,9 @@ class BiogenSubset(BaseDataset):
     def unit(self):
         return self.units(self.subset)
     
+    @property
+    def task(self):
+        return 'regression'
 
 class HPPB(BiogenSubset):
     """
