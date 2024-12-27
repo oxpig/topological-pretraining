@@ -51,7 +51,7 @@ class BaseDataset(pd.DataFrame):
         if csv is not None and not os.path.exists(csv):
             # Save the csv file
             df.to_csv(
-                csv, index=False, compression='gzip' if compression else None
+                csv, index=False, compression='infer' if compression else None
             )
         
 
