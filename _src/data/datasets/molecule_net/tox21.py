@@ -93,7 +93,6 @@ class SR_HSE(Tox21_Subset):
     def __init__(self, root: str|None = None, compression: bool = True):
         super(SR_HSE, self).__init__(root=root, compression=compression)
 
-
 class SR_MMP(Tox21_Subset):
     def __init__(self, root: str|None = None, compression: bool = True):
         super(SR_MMP, self).__init__(root=root, compression=compression)
