@@ -16,10 +16,10 @@ class MUV(BaseDataset):
     avoided, as each SMILES with a NaN value has not been assessed on that target; presuming
     inactivity without a known experimental result will introduce noise. 
     """
-    url = 'https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/muv.csv.gz'
+    url = 'https://github.com/deepchem/deepchem/raw/refs/heads/master/datasets/muv.csv.gz'
 
     def __init__(self, root: str|None = None, compression: bool = True):
-        suffix = 'csv' if compression else 'csv.gz'
+        suffix = 'csv.gz' if compression else 'csv'
         csv = Path(root) / f'muv.{suffix}' if root else None
         super(MUV, self).__init__(csv=csv, url=self.url, compression=compression)
         self.rename(
@@ -28,7 +28,33 @@ class MUV(BaseDataset):
         )
         self.save()
 
-class MUV466(MUV):
+    @property
+    def tasks(self):
+        return 'binary classification'
+        
+class MUV_Subset(MUV, BaseDataset):
+
+    aid_number = None
+
+    def __init__(self, root: str|None = None, compression: bool = True):
+        compression = '.gz' if compression else ''
+        csv = Path(root) / f'muv{self.aid_number}.csv{compression}' if root else None
+        if csv is None or not csv.exists():
+            MUV.__init__(self, root=root, compression=compression)
+            self.rename(
+                columns={f'MUV-{self.aid_number}': 'y'},
+                inplace=True
+            )
+            self.drop(
+                self.columns.difference(['SMILES', 'y']),
+                axis=1, inplace=True
+            )
+            self.dropna(subset=['y'], inplace=True)
+            self.save(csv)
+        else:
+            BaseDataset.__init__(self, csv=csv, compression=compression)
+
+class MUV466(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 466; S1P1 Agonists. 
 
@@ -36,19 +62,11 @@ class MUV466(MUV):
 
     This is a subset of the MUV dataset, with only the S1P1 Agonists assay.
     """
+    aid_number = 466
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV466, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-466': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV548(MUV):
+class MUV548(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 548; protein kinase A (PKA) inhibitors.
 
@@ -56,19 +74,11 @@ class MUV548(MUV):
 
     This is a subset of the MUV dataset, with only the PKA inhibitors assay.
     """
+    aid_number = 548
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV548, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-548': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV600(MUV):
+class MUV600(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 600; nuclear receptor Steroidogenic Factor 1 (SF-1) inhibitors.
 
@@ -76,19 +86,11 @@ class MUV600(MUV):
 
     This is a subset of the MUV dataset, with only the SF-1 inhibitors assay.
     """
+    aid_number = 600
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV600, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-600': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV644(MUV):
+class MUV644(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 644; Rho kinase 2 (Rock2) inhibitors.
 
@@ -96,19 +98,11 @@ class MUV644(MUV):
 
     This is a subset of the MUV dataset, with only the Rock2 inhibitors assay.
     """
+    aid_number = 644
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV644, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-644': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV652(MUV):
+class MUV652(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 652; HIV-1 RT-RNase H inhibitors.
 
@@ -116,19 +110,11 @@ class MUV652(MUV):
 
     This is a subset of the MUV dataset, with only the RT-RNH inhibitors assay.
     """
+    aid_number = 652
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV652, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-652': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV689(MUV):
+class MUV689(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 689; ephrin type-A receptor 4 precursor antagonists.
 
@@ -136,19 +122,11 @@ class MUV689(MUV):
 
     This is a subset of the MUV dataset, with only the EphA4 receptor antagonists assay.
     """
+    aid_number = 689
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV689, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-689': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV692(MUV):
+class MUV692(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 692; nuclear receptor Steroidogenic Factor 1 (SF-1) activators.
 
@@ -156,19 +134,11 @@ class MUV692(MUV):
 
     This is a subset of the MUV dataset, with only the SF-1 activators assay.
     """
+    aid_number = 692
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV692, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-692': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV712(MUV):
+class MUV712(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 712; tumor Hsp90 inhibitors.
 
@@ -176,19 +146,11 @@ class MUV712(MUV):
 
     This is a subset of the MUV dataset, with only the Hsp90 inhibitors assay.
     """
+    aid_number = 712
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV712, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-712': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV713(MUV):
+class MUV713(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 713; Estrogen Receptor-alpha Coactivator Binding Inhibitors
 
@@ -196,19 +158,11 @@ class MUV713(MUV):
 
     This is a subset of the MUV dataset, with only the ER-alpha inhibitors assay.
     """
+    aid_number = 713
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV713, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-713': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV733(MUV):
+class MUV733(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 733; Estrogen Receptor-beta Coactivator Binding Inhibitors
 
@@ -216,19 +170,11 @@ class MUV733(MUV):
 
     This is a subset of the MUV dataset, with only the ER-beta inhibitors assay.
     """
+    aid_number = 733
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV733, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-733': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV737(MUV):
+class MUV737(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 737; Estrogen Receptor-alpha Coactivator Binding Potentiators.
 
@@ -236,19 +182,11 @@ class MUV737(MUV):
 
     This is a subset of the MUV dataset, with only the ER-alpha potentiators assay.
     """
+    aid_number = 737
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV737, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-737': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV810(MUV):
+class MUV810(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 810; Focal Adhesion Kinase (FAK) inhibitors.
 
@@ -256,19 +194,11 @@ class MUV810(MUV):
 
     This is a subset of the MUV dataset, with only the FAK inhibitors assay.
     """
+    aid_number = 810
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV810, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-810': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV832(MUV):
+class MUV832(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 832; Cathepsin G inhibitors.
 
@@ -276,19 +206,11 @@ class MUV832(MUV):
 
     This is a subset of the MUV dataset, with only the Cathepsin G inhibitors assay.
     """
+    aid_number = 832
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV832, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-832': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV846(MUV):
+class MUV846(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 846; Factor XIa inhibitors.
 
@@ -296,19 +218,11 @@ class MUV846(MUV):
 
     This is a subset of the MUV dataset, with only the Factor XIa inhibitors assay.
     """
+    aid_number = 846
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV846, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-846': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV852(MUV):
+class MUV852(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 852; Factor XIIa inhibitors.
 
@@ -316,19 +230,11 @@ class MUV852(MUV):
 
     This is a subset of the MUV dataset, with only the Factor XIIa inhibitors assay.
     """
+    aid_number = 852
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV852, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-852': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV858(MUV):
+class MUV858(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 858; DRD1 allosteric modulators.
 
@@ -336,19 +242,11 @@ class MUV858(MUV):
 
     This is a subset of the MUV dataset, with only the DRD1 allosteric modulators assay.
     """
+    aid_number = 858
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV858, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-858': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
 
-class MUV859(MUV):
+class MUV859(MUV_Subset):
     """
     MUV dataset for PCBA assay AID 859; M1 muscarinic acetylcholine receptor antagonists.
 
@@ -356,14 +254,6 @@ class MUV859(MUV):
 
     This is a subset of the MUV dataset, with only the mAChR antagonists assay.
     """
+    aid_number = 859
     def __init__(self, root: str|None = None, compression: bool = True):
         super(MUV859, self).__init__(root=root, compression=compression)
-        self.rename(
-            columns={'MUV-859': 'y'},
-            inplace=True
-        )
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.dropna(subset=['y'], inplace=True)
