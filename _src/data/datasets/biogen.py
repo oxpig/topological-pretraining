@@ -2,6 +2,7 @@ from .base import BaseDataset
 import pandas as pd
 import os
 from typing import Literal
+from pathlib import Path
 
 class Biogen(BaseDataset):
     """
@@ -83,117 +84,38 @@ class Biogen(BaseDataset):
     def __init__(self, root: str|None = None, compression: bool = True):
         suffix = 'csv.gz' if compression else 'csv'
         csv = os.path.join(root, f'biogen.{suffix}') if root is not None else None
-        
+        changes = os.path.exists(changes) if csv is not None else True
         super(Biogen, self).__init__(csv=csv, url=self.url)
-        self.rename(columns=self.col_names, inplace=True)
-        self.root = root
-
-    def get_subsets(self):
-        """
-        Returns the subsets of the dataset.
-
-        Yields:
-        --------
-        pd.DataFrame:
-            The subsets of the dataset.
-        """
-        for task in self.col_names.values():
-            yield self.subset(task)
-
-    def subset(self, name: str):
-        """
-        Returns the subset of the dataset.
-
-        Parameters:
-        -----------
-        name: str
-            The name of the subset to return.
-        
-        Returns:
-        --------
-        pd.DataFrame
-            The subset of the dataset.
-        """
-        data = self[self[name].notna()]
-        data = data.reset_index()
-        data = data.rename(columns={name: 'y', 'index': 'biogen_index'})
-        
-        return data[['biogen_index', 'SMILES','y']]
-
-    @property
-    def rat_ppb(self):
-        return self.subset('rat_ppb')
-
-    @property
-    def human_ppb(self):
-        return self.subset('human_ppb')
-
-    @property
-    def solu(self):
-        return self.subset('solu')
-
-    @property
-    def human_clint(self):
-        return self.subset('human_clint')
-
-    @property
-    def rat_clint(self):
-        return self.subset('rat_clint')
-
-    @property
-    def efflux(self):
-        return self.subset('efflux')
-
-class BiogenSubset(BaseDataset):
-    """
-    Subset of the Biogen dataset.
-    
-    Parameters:
-    -----------
-    root: str|None
-        Optional root directory where the dataset will be stored or retrieved from.
-    subset: Literal['human_clint', 'rat_clint', 'human_ppb', 'rat_ppb', 'solu', 'efflux']
-        The name of the subset. Default is 'human_clint'.
-        """
-    
-    def __init__(
-        self,
-        root: str|None = None,
-        subset: Literal[
-            'human_clint', 'rat_clint', 'human_ppb',
-            'rat_ppb', 'solu', 'efflux'
-        ] = 'human_clint',
-        compression: bool = True
-    ):
-        suffix = 'csv.gz' if compression else 'csv'
-        compression = 'gzip' if compression else None
-        assert subset in [
-            'human_clint', 'rat_clint', 'human_ppb',
-            'rat_ppb', 'solu', 'efflux'
-        ], 'Invalid task, must be one of: human_clint, rat_clint, human_ppb, rat_ppb, solu, efflux'
-        csv = os.path.join(root, f'{subset}.{suffix}') if root is not None else None
-        
-        if csv is None or not os.path.exists(csv):
-            df = Biogen(root=root, compression=compression)
-            data = df.subset(subset)
-        else:
-            data = None
-
-        super(BiogenSubset, self).__init__(data=data, csv=csv, compression=compression)
-        self.compression = compression
-        self.csv = csv
-        self.root = root
-        self.subset = subset
-        
-    
-    def save(self, root: str|None = None):
-        """
-        Saves the dataset to disk.
-        """
-        if root is not None:
+        if changes:
+            self.rename(columns=self.col_names, inplace=True)
             self.root = root
-        assert self.root is not None, 'Root directory must be provided'
-        self.to_csv(self.csv, index=False, compression=self.compression)
+            self.mol_standardize_check()
+            self.save(csv)
+        
+class Biogen_Subset(Biogen, BaseDataset):
+
+    def __init__(self, root: str|None = None, compression: bool = True):
+        compression = '.gz' if compression else ''
+        csv = Path(root) / f'biogen_{self.name.lower()}.csv{compression}' if root else None
+        if csv is None or not csv.exists():
+            Biogen.__init__(self, root=root, compression=compression)
+            col = self.name
+            self.rename(
+                columns={col: 'y'},
+                inplace=True
+            )
+            self.drop(
+                self.columns.difference(['SMILES', 'y', 'rdkit_pass']),
+                axis=1, inplace=True
+            )
+            self.dropna(subset=['y'], inplace=True)
+            self.save(csv)
+        else:
+            BaseDataset.__init__(self, csv=csv, compression=compression)
+
+    @property
+    def task(self):
+        return 'regression'
 
     def units(self, subset: str|None = None):
         """
@@ -216,17 +138,16 @@ class BiogenSubset(BaseDataset):
             'rat_ppb': 'log$_{10}$(% Unbound)',
             'solu': 'log$_{10}$(ug/mL)',
             'efflux': 'log([B-A]/[A-B])',
+            'biogen_subset': None
         }[subset]
-    
+
     @property
     def unit(self):
-        return self.units(self.subset)
-    
-    @property
-    def task(self):
-        return 'regression'
+        return self.units(self.name.lower())
 
-class HPPB(BiogenSubset):
+
+
+class Human_PPB(Biogen_Subset):
     """
     Human plasma protein binding subset of the Biogen dataset.
 
@@ -240,10 +161,10 @@ class HPPB(BiogenSubset):
     For inherited attributes and methods, see the pandas.DataFrame:
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
     """
-    def __init__(self, root: str|None = None):
-        super(HPPB, self).__init__(root=root, task='human_ppb')
+    def __init__(self, root: str|None = None, compression: bool = True):
+        super(Human_PPB, self).__init__(root=root, compression=compression)
 
-class RPPB(BiogenSubset):
+class Rat_PPB(Biogen_Subset):
     """
     Rat plasma protein binding subset of the Biogen dataset.
     
@@ -258,10 +179,10 @@ class RPPB(BiogenSubset):
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
     
     """
-    def __init__(self, root: str|None = None):
-        super(RPPB, self).__init__(root=root, task='rat_ppb')
+    def __init__(self, root: str|None = None, compression: bool = True):
+        super(Rat_PPB, self).__init__(root=root, compression=compression)
 
-class Solu(BiogenSubset):
+class Solu(Biogen_Subset):
     """
     Solubility subset of the Biogen dataset.
     
@@ -276,10 +197,10 @@ class Solu(BiogenSubset):
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
     HP
     """
-    def __init__(self, root: str|None = None):
-        super(Solu, self).__init__(root=root, task='solu')
+    def __init__(self, root: str|None = None, compression: bool = True):
+        super(Solu, self).__init__(root=root, compression=compression)
     
-class HClint(BiogenSubset):
+class Human_CLint(Biogen_Subset):
     """
     Human clearance subset of the Biogen dataset.
 
@@ -293,10 +214,10 @@ class HClint(BiogenSubset):
     For inherited attributes and methods, see the pandas.DataFrame:
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
     """
-    def __init__(self, root: str|None = None):
-        super(HClint, self).__init__(root=root, task='human_clint')
+    def __init__(self, root: str|None = None, compression: bool = True):
+        super(Human_CLint, self).__init__(root=root, compression=compression)
 
-class RClint(BiogenSubset):
+class Rat_CLint(Biogen_Subset):
     """
     Rat clearance subset of the Biogen dataset.
 
@@ -310,10 +231,10 @@ class RClint(BiogenSubset):
     For inherited attributes and methods, see the pandas.DataFrame:
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
     """
-    def __init__(self, root: str|None = None):
-        super(RClint, self).__init__(root=root, task='rat_clint')
+    def __init__(self, root: str|None = None, compression: bool = True):
+        super(Rat_CLint, self).__init__(root=root, compression=compression)
     
-class Efflux(BiogenSubset):
+class Efflux(Biogen_Subset):
     """
     Efflux ratio subset of the Biogen dataset.
 
@@ -327,5 +248,5 @@ class Efflux(BiogenSubset):
     For inherited attributes and methods, see the pandas.DataFrame:
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
     """
-    def __init__(self, root: str|None = None):
-        super(Efflux, self).__init__(root=root, task='efflux')
+    def __init__(self, root: str|None = None, compression: bool = True):
+        super(Efflux, self).__init__(root=root, compression=compression)
