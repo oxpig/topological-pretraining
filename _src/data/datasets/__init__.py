@@ -1,7 +1,7 @@
 from .base import BaseDataset
 from .biogen import (
-    Biogen, Efflux, HClint,
-    HPPB, RClint, RPPB,
+    Biogen, Efflux, Human_CLint,
+    Human_PPB, Rat_CLint, Rat_PPB,
     Solu,
 )
 from .chembl_affinity import DRD2, FactorXA
