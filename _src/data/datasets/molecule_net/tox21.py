@@ -10,24 +10,13 @@ class Tox21(BaseDataset):
         suffix = 'csv.gz' if compression else 'csv'
         csv = Path(root) / f'tox21.{suffix}' if root else None
         super(Tox21, self).__init__(csv=csv, url=self.url, compression=compression)
-
-        self.rename(
-            columns={'smiles': 'SMILES'},
-            inplace=True
-        )
-        self.save()
-
-    @property
-    def tasks(self):
-        return 'binary classification'
-    
-    def save_subset(self, name: str, compression: bool = True):
-        if self.csv is None:
-            return None
-        csv = Path(self.csv)
-        suffixes = ''.join(csv.suffixes)
-        csv = csv.parent / f'{name}{suffixes}'
-        self.save(csv=csv, compression=compression)
+        if 'SMILES' not in self.columns:
+            self.rename(
+                columns={'smiles': 'SMILES'},
+                inplace=True
+            )
+            self.mol_standardize_check()
+            self.save()
 
 class Tox21_Subset(Tox21, BaseDataset):
 
@@ -42,13 +31,17 @@ class Tox21_Subset(Tox21, BaseDataset):
                 inplace=True
             )
             self.drop(
-                self.columns.difference(['SMILES', 'y']),
+                self.columns.difference(['SMILES', 'y', 'rdkit_pass']),
                 axis=1, inplace=True
             )
             self.dropna(subset=['y'], inplace=True)
             self.save(csv)
         else:
             BaseDataset.__init__(self, csv=csv, compression=compression)
+
+    @property
+    def tasks(self):
+        return 'binary classification'
 
 class NR_AR(Tox21_Subset):
 

@@ -9,10 +9,12 @@ class DRD2(BaseDataset):
     def __init__(self, root: str|None = None, compression: bool = True):
         csv = Path(root) / 'drd2.csv' if root else None
         super(DRD2, self).__init__(csv=csv, url=self.url, compression=compression)
-        self.rename(
-            columns={
-                'Ki [nM]': 'y'
-            },
-            inplace=True,
-        )
-        self.save()
+        if 'y' not in self.columns:
+            self.rename(
+                columns={
+                    'Ki [nM]': 'y'
+                },
+                inplace=True,
+            )
+            self.mol_standardize_check()
+            self.save()

@@ -22,11 +22,13 @@ class MUV(BaseDataset):
         suffix = 'csv.gz' if compression else 'csv'
         csv = Path(root) / f'muv.{suffix}' if root else None
         super(MUV, self).__init__(csv=csv, url=self.url, compression=compression)
-        self.rename(
-            columns={'smiles': 'SMILES'},
-            inplace=True
-        )
-        self.save()
+        if 'SMILES' not in self.columns:
+            self.rename(
+                columns={'smiles': 'SMILES'},
+                inplace=True
+            )
+            self.mol_standardize_check()
+            self.save()
 
     @property
     def tasks(self):
@@ -46,7 +48,7 @@ class MUV_Subset(MUV, BaseDataset):
                 inplace=True
             )
             self.drop(
-                self.columns.difference(['SMILES', 'y']),
+                self.columns.difference(['SMILES', 'y', 'rdkit_pass']),
                 axis=1, inplace=True
             )
             self.dropna(subset=['y'], inplace=True)

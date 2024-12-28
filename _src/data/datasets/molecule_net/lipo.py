@@ -10,13 +10,14 @@ class Lipo(BaseDataset):
         suffix = 'csv.gz' if compression else 'csv'
         csv = Path(root) / f'Lipophilicity.{suffix}' if root else None
         super(Lipo, self).__init__(csv=csv, url=self.url, compression=compression)
-
-        self.rename(columns={'smiles': 'SMILES', 'exp': 'y'}, inplace=True)
-        self.drop(
-            self.columns.difference(['SMILES', 'y']),
-            axis=1, inplace=True
-        )
-        self.save()
+        if 'SMILES' not in self.columns:
+            self.rename(columns={'smiles': 'SMILES', 'exp': 'y'}, inplace=True)
+            self.drop(
+                self.columns.difference(['SMILES', 'y']),
+                axis=1, inplace=True
+            )
+            self.mol_standardize_check()
+            self.save()
 
     @property
     def tasks(self):
