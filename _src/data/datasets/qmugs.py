@@ -42,8 +42,7 @@ class QMugs(BaseDataset):
         suffix = 'csv.gz' if compression else 'csv'
 
         # Set the path to the csv file
-        csv = (Path(root) / f'qmugs.{suffix}').as_posix()
-
+        csv = Path(root) / f'qmugs.{suffix}'
         # Initialize the BaseDataset
         super(QMugs, self).__init__(csv=csv, url=self.url, compression=compression)
 
@@ -82,7 +81,7 @@ class QMugs(BaseDataset):
                 self.columns.difference(['chembl_id', 'SMILES']),
                 axis=1, inplace=True
             )
-
+            self.mol_standardize_check()
             # Reset the index and save the dataset
             self.reset_index(drop=True, inplace=True)
             self.to_csv(csv, index=False, compression=compression)
