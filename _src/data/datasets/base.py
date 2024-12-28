@@ -1,6 +1,10 @@
+import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
+from rdkit import Chem
+
+from ..mol import Standardizer
 
 class BaseDataset(pd.DataFrame):
     """
@@ -90,3 +94,27 @@ class BaseDataset(pd.DataFrame):
         Get the task of the dataset as string, e.g., 'regression'.
         """
         raise NotImplementedError
+    
+    def mol_standardize_check(self):
+        """
+        Standardize the dataset.
+        """
+        if 'rdkit_pass' in self.columns:
+            return
+        if 'SMILES' in self.columns:
+            mols = self['SMILES'].values
+            mols = [Chem.MolFromSmiles(m) for m in mols]
+            std = Standardizer(
+                sanitize=True,
+                fragment_parent=True,
+                neutralize=True,
+                reionize=True,
+                canonical_tautomer=True,
+            )
+            mols = std(mols)
+            out = np.where(np.array(mols) == None, False, True)
+            self['rdkit_pass'] = out
+            self.save()
+        else:
+            raise ValueError('SMILES column not found in the dataset')
+
