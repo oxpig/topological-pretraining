@@ -35,25 +35,29 @@ class BaseDataset(pd.DataFrame):
         data: pd.DataFrame|None = None,
         csv: str|None = None,
         url: str|None = None,
-        compression: bool = True
+        compression: bool = True,
+        verbose: bool = False
     ):
-
         # Check if csv or url is provided
         if csv is None and url is None and data is None:
             raise ValueError('Either csv, url, or data must be provided')
         
         if data is not None:
+            print('Setting input data as DataFrame.') if verbose else None
             df = data
         
         elif csv is None or not os.path.exists(csv):
             # Download the csv file
             assert url is not None, 'URL must be provided if CSV does not exist'
+            print(f'Downloading csv from url...') if verbose else None
             df = pd.read_csv(url)
         else:
+            print(f'Reading csv from path...') if verbose else None
             df = pd.read_csv(csv)
 
         if csv is not None and not os.path.exists(csv):
             # Save the csv file
+            print(f'Saving csv to path...') if verbose else None
             df.to_csv(
                 csv, index=False, compression='infer' if compression else None
             )
@@ -65,6 +69,7 @@ class BaseDataset(pd.DataFrame):
         self.csv = csv
         self.url = url
         self.compression = compression
+        self.verbose = verbose
 
     @property
     def name(self):
@@ -102,14 +107,16 @@ class BaseDataset(pd.DataFrame):
         if 'rdkit_pass' in self.columns:
             return
         if 'SMILES' in self.columns:
+            print('Running standardization check of molecules') if self.verbose else None
             mols = self['SMILES'].values
             mols = [Chem.MolFromSmiles(m) for m in mols]
             std = Standardizer(
                 sanitize=True,
                 fragment_parent=True,
                 neutralize=True,
-                reionize=True,
                 canonical_tautomer=True,
+                keep_chirality=True,
+                verbose=self.verbose
             )
             mols = std(mols)
             out = np.where(np.array(mols) == None, False, True)
