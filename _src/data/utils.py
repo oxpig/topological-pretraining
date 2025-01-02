@@ -10,7 +10,8 @@ from typing import Literal
 def load_dataset(
     name: str,
     root: str|None = None,
-    compression: bool = True
+    compression: bool = True,
+    verbose: bool = False
 ) -> datasets.BaseDataset:
     """
     Load a dataset from dataset module.
@@ -27,7 +28,26 @@ def load_dataset(
     out: datasets.BaseDataset
         The dataset.
     """
-    return datasets.__dict__[name](root=root, compression=compression)
+    available_datasets = [
+        "BaseDataset", "Biogen", "Efflux",
+        "HClint", "HPPB", "RClint",
+        "RPPB", "Solu", "DRD2",
+        "FactorXA", "BACE",
+        "BBBP", "ClinTox", "ESOL",
+        "FreeSolv", "HIV", "Lipo",
+        "MoleculeNet", "MUV", "MUV466",
+        "MUV548", "MUV600", "MUV644", 
+        "MUV652", "MUV689", "MUV692",
+        "MUV712", "MUV713", "MUV733",
+        "MUV737", "MUV810", "MUV832",
+        "MUV846", "MUV852", "MUV858",
+        "MUV859", "SIDER", "Tox21",
+        "ToxCast", "QMugs"
+    ]
+    # assert name in available_datasets, f'Invalid dataset name. \
+    #     Must be one of {available_datasets}.'
+    print(f'Loading {name}...') if verbose else None
+    return datasets.__dict__[name](root=root, compression=compression, verbose=verbose)
 
 
 def load_molecules(
