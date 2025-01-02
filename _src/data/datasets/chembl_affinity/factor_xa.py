@@ -6,9 +6,10 @@ class FactorXA(BaseDataset):
 
     url = 'https://raw.githubusercontent.com/MarkusFerdinandDablander/QSAR-activity-cliff-experiments/refs/heads/main/data/chembl_factor_xa/molecule_data_clean.csv'
 
-    def __init__(self, root: str|None = None, compression: bool = True):
-        csv = Path(root) / 'factor_xa.csv' if root else None
-        super(FactorXA, self).__init__(csv=csv, url=self.url, compression=compression)
+    def __init__(self, root: str|None = None, compression: bool = True, verbose: bool = False):
+        suffix = 'csv.gz' if compression else 'csv'
+        csv = Path(root) / f'factor_xa.{suffix}' if root else None
+        super(FactorXA, self).__init__(csv=csv, url=self.url, compression=compression, verbose=verbose)
         if 'y' not in self.columns:
             self.rename(
                 columns={
