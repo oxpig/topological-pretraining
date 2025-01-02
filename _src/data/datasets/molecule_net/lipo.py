@@ -6,10 +6,15 @@ from pathlib import Path
 class Lipo(BaseDataset):
     url = 'https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/Lipophilicity.csv'
 
-    def __init__(self, root: str|None = None, compression: bool = True):
+    def __init__(
+        self, root: str|None = None, compression: bool = True,
+        verbose: bool = True
+    ):
         suffix = 'csv.gz' if compression else 'csv'
         csv = Path(root) / f'Lipophilicity.{suffix}' if root else None
-        super(Lipo, self).__init__(csv=csv, url=self.url, compression=compression)
+        super(Lipo, self).__init__(
+            csv=csv, url=self.url, compression=compression, verbose=verbose
+        )
         if 'SMILES' not in self.columns:
             self.rename(columns={'smiles': 'SMILES', 'exp': 'y'}, inplace=True)
             self.drop(

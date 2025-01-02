@@ -81,11 +81,14 @@ class Biogen(BaseDataset):
             'LOG MDR1-MDCK ER (B-A/A-B)': 'efflux',
         }
 
-    def __init__(self, root: str|None = None, compression: bool = True):
+    def __init__(
+        self, root: str|None = None, compression: bool = True,
+        verbose: bool = True
+    ):
         suffix = 'csv.gz' if compression else 'csv'
-        csv = os.path.join(root, f'biogen.{suffix}') if root is not None else None
-        changes = os.path.exists(changes) if csv is not None else True
-        super(Biogen, self).__init__(csv=csv, url=self.url)
+        csv = Path(root) /  f'biogen.{suffix}' if root is not None else None
+        changes = not csv.exists() if csv is not None else True
+        super(Biogen, self).__init__(csv=csv, url=self.url, verbose=verbose)
         if changes:
             self.rename(columns=self.col_names, inplace=True)
             self.root = root
@@ -94,12 +97,15 @@ class Biogen(BaseDataset):
         
 class Biogen_Subset(Biogen, BaseDataset):
 
-    def __init__(self, root: str|None = None, compression: bool = True):
+    def __init__(
+        self, root: str|None = None, compression: bool = True,
+        verbose: bool = True
+    ):
         compression = '.gz' if compression else ''
         csv = Path(root) / f'biogen_{self.name.lower()}.csv{compression}' if root else None
         if csv is None or not csv.exists():
-            Biogen.__init__(self, root=root, compression=compression)
-            col = self.name
+            Biogen.__init__(self, root=root, compression=compression, verbose=verbose)
+            col = self.name.lower()
             self.rename(
                 columns={col: 'y'},
                 inplace=True
@@ -111,7 +117,7 @@ class Biogen_Subset(Biogen, BaseDataset):
             self.dropna(subset=['y'], inplace=True)
             self.save(csv)
         else:
-            BaseDataset.__init__(self, csv=csv, compression=compression)
+            BaseDataset.__init__(self, csv=csv, compression=compression, verbose=verbose)
 
     @property
     def task(self):
@@ -161,8 +167,11 @@ class Human_PPB(Biogen_Subset):
     For inherited attributes and methods, see the pandas.DataFrame:
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
     """
-    def __init__(self, root: str|None = None, compression: bool = True):
-        super(Human_PPB, self).__init__(root=root, compression=compression)
+    def __init__(
+        self, root: str|None = None, compression: bool = True,
+        verbose: bool = True
+    ):
+        super(Human_PPB, self).__init__(root=root, compression=compression, verbose=verbose)
 
 class Rat_PPB(Biogen_Subset):
     """
@@ -179,8 +188,11 @@ class Rat_PPB(Biogen_Subset):
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
     
     """
-    def __init__(self, root: str|None = None, compression: bool = True):
-        super(Rat_PPB, self).__init__(root=root, compression=compression)
+    def __init__(
+        self, root: str|None = None, compression: bool = True,
+        verbose: bool = True
+    ):
+        super(Rat_PPB, self).__init__(root=root, compression=compression, verbose=verbose)
 
 class Solu(Biogen_Subset):
     """
@@ -197,8 +209,11 @@ class Solu(Biogen_Subset):
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
     HP
     """
-    def __init__(self, root: str|None = None, compression: bool = True):
-        super(Solu, self).__init__(root=root, compression=compression)
+    def __init__(
+        self, root: str|None = None, compression: bool = True,
+        verbose: bool = True
+    ):
+        super(Solu, self).__init__(root=root, compression=compression, verbose=verbose)
     
 class Human_CLint(Biogen_Subset):
     """
@@ -214,8 +229,11 @@ class Human_CLint(Biogen_Subset):
     For inherited attributes and methods, see the pandas.DataFrame:
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
     """
-    def __init__(self, root: str|None = None, compression: bool = True):
-        super(Human_CLint, self).__init__(root=root, compression=compression)
+    def __init__(
+        self, root: str|None = None, compression: bool = True,
+        verbose: bool = True
+    ):
+        super(Human_CLint, self).__init__(root=root, compression=compression, verbose=verbose)
 
 class Rat_CLint(Biogen_Subset):
     """
@@ -231,8 +249,11 @@ class Rat_CLint(Biogen_Subset):
     For inherited attributes and methods, see the pandas.DataFrame:
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
     """
-    def __init__(self, root: str|None = None, compression: bool = True):
-        super(Rat_CLint, self).__init__(root=root, compression=compression)
+    def __init__(
+        self, root: str|None = None, compression: bool = True,
+        verbose: bool = True
+    ):
+        super(Rat_CLint, self).__init__(root=root, compression=compression, verbose=verbose)
     
 class Efflux(Biogen_Subset):
     """
@@ -248,5 +269,8 @@ class Efflux(Biogen_Subset):
     For inherited attributes and methods, see the pandas.DataFrame:
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
     """
-    def __init__(self, root: str|None = None, compression: bool = True):
-        super(Efflux, self).__init__(root=root, compression=compression)
+    def __init__(
+        self, root: str|None = None, compression: bool = True,
+        verbose: bool = True
+    ):
+        super(Efflux, self).__init__(root=root, compression=compression, verbose=verbose)

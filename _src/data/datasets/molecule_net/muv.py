@@ -18,10 +18,15 @@ class MUV(BaseDataset):
     """
     url = 'https://github.com/deepchem/deepchem/raw/refs/heads/master/datasets/muv.csv.gz'
 
-    def __init__(self, root: str|None = None, compression: bool = True):
+    def __init__(
+        self, root: str|None = None, compression: bool = True,
+        verbose: bool = True
+    ):
         suffix = 'csv.gz' if compression else 'csv'
         csv = Path(root) / f'muv.{suffix}' if root else None
-        super(MUV, self).__init__(csv=csv, url=self.url, compression=compression)
+        super(MUV, self).__init__(
+            csv=csv, url=self.url, compression=compression, verbose=verbose
+        )
         if 'SMILES' not in self.columns:
             self.rename(
                 columns={'smiles': 'SMILES'},
@@ -33,6 +38,18 @@ class MUV(BaseDataset):
     @property
     def tasks(self):
         return 'binary classification'
+    
+    @property
+    def subsets(self):
+        return [
+            'MUV466', 'MUV548', 'MUV600',
+            'MUV644', 'MUV652', 'MUV689',
+            'MUV692', 'MUV712', 'MUV713',
+            'MUV733', 'MUV737', 'MUV810',
+            'MUV832', 'MUV846', 'MUV852',
+            'MUV858', 'MUV859',
+        ]
+
         
 class MUV_Subset(MUV, BaseDataset):
 

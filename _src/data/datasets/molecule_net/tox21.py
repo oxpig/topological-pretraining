@@ -18,6 +18,15 @@ class Tox21(BaseDataset):
             self.mol_standardize_check()
             self.save()
 
+    @property
+    def subsets(self):
+        return [
+            'NR_AR', 'NR_AR_LBD', 'NR_AhR',
+            'NR_Aromatase', 'NR_ER', 'NR_ER_LBD',
+            'NR_PPAR_gamma', 'SR_ARE', 'SR_ATAD5',
+            'SR_HSE', 'SR_MMP', 'SR_p53'
+        ]
+
 class Tox21_Subset(Tox21, BaseDataset):
 
     def __init__(self, root: str|None = None, compression: bool = True):

@@ -34,7 +34,10 @@ class QMugs(BaseDataset):
 
     url = "https://libdrive.ethz.ch/index.php/s/X5vOBNSITAG5vzM/download?path=%2F&files=summary.csv"
 
-    def __init__(self, root: str, compression: bool = True):
+    def __init__(
+        self, root: str|None = None, compression: bool = True,
+        verbose: bool = True
+    ):
         """
         Initialize the QMugs dataset.
         """
@@ -44,7 +47,7 @@ class QMugs(BaseDataset):
         # Set the path to the csv file
         csv = Path(root) / f'qmugs.{suffix}'
         # Initialize the BaseDataset
-        super(QMugs, self).__init__(csv=csv, url=self.url, compression=compression)
+        super(QMugs, self).__init__(csv=csv, url=self.url, compression=compression, verbose=verbose)
 
         # Set the root directory and csv file
         self.root = root
