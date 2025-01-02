@@ -7,12 +7,15 @@ from rdkit.Chem.rdFingerprintGenerator import (
 from rdkit.Chem.MolStandardize import rdMolStandardize
 from rdkit import DataStructs
 from rdkit.ML.Cluster import Butina
+from rdkit import RDLogger
 from tqdm import tqdm
 import warnings
 
 """
 TODO: change print statements to logging
 """
+
+RDLogger.DisableLog('rdApp.*')
 
 class MorganGenerator:
     """
@@ -30,7 +33,8 @@ class MorganGenerator:
         count_bounds = None,
         atom_inv = None,
         bond_inv = None,
-        redundant_envs: bool = False
+        redundant_envs: bool = False,
+        asarray: bool = True
     ):
         self.generator = GetMorganGenerator(
             radius=radius,
@@ -45,14 +49,18 @@ class MorganGenerator:
             bondInvariantsGenerator=bond_inv,
             includeRedundantEnvironments=redundant_envs
         )
+        self.asarray = asarray
 
-    def __call__(self, mol: Chem.Mol|list[Chem.Mol]) -> np.ndarray:
+
+    def __call__(self, mol: Chem.Mol|list[Chem.Mol]) -> DataStructs.ExplicitBitVect|np.ndarray:
         if isinstance(mol, Chem.Mol):
-            return self.dense(mol, array=True)
+            return self.dense(mol, array=self.asarray)
         else:
-            out = np.zeros((len(mol), self.fpsize))
-            for i, m in enumerate(mol):
-                out[i] = self.dense(m, array=True)
+            out = []
+            for m in mol:
+                out.append(self.dense(m, array=self.asarray))
+            if self.asarray:
+                out = np.array(out)
             return out
 
     def dense(
@@ -193,7 +201,6 @@ class MorganGenerator:
     @counts.setter
     def counts(self, value):
         self.generator.GetOptions().countSimulation = value
-
 
 class SortAndSlice:
     """
@@ -428,16 +435,22 @@ class Standardizer:
     def __init__(
         self,
         sanitize: bool = True,
+        cleanup: bool = True,
         fragment_parent: bool = True,
         neutralize: bool = True,
         reionize: bool = False,
         canonical_tautomer: bool = True,
+        keep_chirality: bool = True,
+        verbose: bool = False,
     ):
         self.sanitize = sanitize
+        self.cleanup = cleanup
         self.fragment_parent = fragment_parent
         self.neutralize = neutralize
         self.reionize = reionize
         self.canonical_tautomer = canonical_tautomer
+        self.tautomer_keep_chirality = keep_chirality
+        self.verbose = verbose
 
     def standardize(self, mol: Chem.Mol) -> Chem.Mol:
         """
@@ -451,10 +464,14 @@ class Standardizer:
         -------
             Chem.Mol: Standardized RDKit molecule.
         """
+        print('Running standardizer') if self.verbose else None
         try:
             mol.UpdatePropertyCache()
             if self.sanitize:
                 mol = self.run_sanitize(mol)
+
+            if self.cleanup:
+                mol = self.run_cleanup(mol)
 
             if self.fragment_parent:
                 mol = self.run_fragment_parent(mol)
@@ -486,16 +503,43 @@ class Standardizer:
         -------
             Chem.Mol: Standardized RDKit molecule.
         """
+        print(f'Standardizer: {self}') if self.verbose else None
         if isinstance(mol, Chem.Mol):
             return self.standardize(mol)
         elif isinstance(mol, list):
-            return [self.standardize(m) for m in mol]
-        elif isinstance(mol, None): 
-            return None
+            verb = self.verbose
+            self.verbose = False
+            out = []
+            pbar = tqdm(mol, disable=not verb, desc='Standardizing molecules')
+            for m in mol:
+                assert isinstance(m, Chem.Mol), 'Input must be an RDKit molecule.'
+                m = self.standardize(m)
+                out.append(m)
+                pbar.update()
+            pbar.close()
+            self.verbose = verb
+            return out
         else:
             raise ValueError(
                 'Input must be a RDKit molecule or a list of RDKit molecules.'
             )
+        
+    @property
+    def settings(self):
+        return {
+            'sanitize': self.sanitize,
+            'cleanup': self.cleanup,
+            'fragment_parent': self.fragment_parent,
+            'neutralize': self.neutralize,
+            'reionize': self.reionize,
+            'canonical_tautomer': self.canonical_tautomer,
+            'tautomer_keep_chirality': self.tautomer_keep_chirality
+        }
+    
+    def __repr__(self):
+        settings = [f'{k}={v}' for k, v in self.settings.items()]
+        settings = ', '.join(settings)
+        return f'Standardizer({settings})'
 
     def run_sanitize(self, mol: Chem.Mol) -> Chem.Mol:
         """
@@ -510,10 +554,12 @@ class Standardizer:
         -------
             Chem.Mol: Sanitized RDKit molecule.
         """
-        Chem.SanitizeMol(mol ,sanitizeOps=Chem.SanitizeFlags.SANITIZE_ALL, catchErrors=True)
+        Chem.SanitizeMol(mol)
         return mol
-    
-    
+
+    def run_cleanup(self, mol: Chem.Mol) -> Chem.Mol:
+        return rdMolStandardize.Cleanup(mol)
+
     def run_fragment_parent(self, mol: Chem.Mol) -> Chem.Mol:
         """
         For molecules with multiple fragments, chooses the largest fragment.
@@ -526,7 +572,7 @@ class Standardizer:
         -------
             Chem.Mol: Fragmented RDKit molecule.
         """
-        return rdMolStandardize.FragmentParent(mol)
+        return rdMolStandardize.FragmentParent(mol, skipStandardize=False)
 
     def run_neutralize(self, mol: Chem.Mol) -> Chem.Mol:
         """
@@ -547,6 +593,8 @@ class Standardizer:
         """
         Canonicalizes tautomers.
 
+        Can remove chirality: https://github.com/rdkit/rdkit/issues/5531
+
         Parameters:
         ----------
             mol (Chem.Mol): RDKit molecule.
@@ -556,6 +604,8 @@ class Standardizer:
             Chem.Mol: Canonicalized RDKit molecule.
         """
         te = rdMolStandardize.TautomerEnumerator()
+        if self.tautomer_keep_chirality:
+            te.SetRemoveSp3Stereo(False)
         return te.Canonicalize(mol)
 
     def run_reionize(self, mol: Chem.Mol) -> Chem.Mol:
@@ -572,7 +622,7 @@ class Standardizer:
         """
         return rdMolStandardize.Reionize(mol)
 
-class FPOperations:
+class FPOps:
     """
     Functions that operate on Morgan fingerprints.
     """
@@ -678,11 +728,12 @@ class FPOperations:
             np.ndarray: Cluster assignments for each fingerprint.
         """
         assert threshold >= 0 and threshold <= 1, 'Threshold must be between 0 and 1.'
-        distances = 1 - FPOperations.pairwise_tanimoto(fps, verbose=verbose)
+        distances = 1 - FPOps.pairwise_tanimoto(fps, verbose=verbose)
+        distances = distances[np.tril_indices(len(distances), -1)]
         print('Calculating clusters...') if verbose else None
         clusters = Butina.ClusterData(distances, distThresh=threshold, isDistData=True, nPts=len(fps))
         
-        molecule_clusters = np.zeros(len(fps))
+        molecule_clusters = np.zeros(len(fps), dtype=int)
         for i, cluster in enumerate(clusters):
             for j in cluster:
                 molecule_clusters[j] = i
