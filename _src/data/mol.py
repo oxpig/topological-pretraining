@@ -2,7 +2,7 @@ import numpy as np
 from rdkit import Chem
 from rdkit.Chem.rdFingerprintGenerator import (
     AdditionalOutput, AtomInvariantsGenerator, BondInvariantsGenerator,
-    FingeprintGenerator64, GetMorganGenerator
+    GetMorganGenerator
 )
 from rdkit.Chem.MolStandardize import rdMolStandardize
 from rdkit import DataStructs
@@ -442,6 +442,7 @@ class Standardizer:
         canonical_tautomer: bool = True,
         keep_chirality: bool = True,
         verbose: bool = False,
+        break_at_none: bool = False
     ):
         self.sanitize = sanitize
         self.cleanup = cleanup
@@ -451,6 +452,7 @@ class Standardizer:
         self.canonical_tautomer = canonical_tautomer
         self.tautomer_keep_chirality = keep_chirality
         self.verbose = verbose
+        self.break_at_none = break_at_none
 
     def standardize(self, mol: Chem.Mol) -> Chem.Mol:
         """
@@ -511,11 +513,18 @@ class Standardizer:
             self.verbose = False
             out = []
             pbar = tqdm(mol, disable=not verb, desc='Standardizing molecules')
-            for m in mol:
+            for idx, m in enumerate(mol):
+                if m is None:
+                    print(f'None provide at: {idx}') if verb else None
+                    out.append(None)
+                    continue
                 assert isinstance(m, Chem.Mol), 'Input must be an RDKit molecule.'
                 m = self.standardize(m)
                 out.append(m)
                 pbar.update()
+                if self.break_at_none and m is None:
+                    print(f'Failed at: {idx}') if verb else None
+                    break
             pbar.close()
             self.verbose = verb
             return out
