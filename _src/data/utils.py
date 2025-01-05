@@ -11,7 +11,8 @@ def load_dataset(
     name: str,
     root: str|None = None,
     compression: bool = True,
-    verbose: bool = False
+    verbose: bool = False,
+    standardizer: Standardizer = Standardizer(),
 ) -> datasets.BaseDataset:
     """
     Load a dataset from dataset module.
@@ -47,7 +48,10 @@ def load_dataset(
     # assert name in available_datasets, f'Invalid dataset name. \
     #     Must be one of {available_datasets}.'
     print(f'Loading {name}...') if verbose else None
-    return datasets.__dict__[name](root=root, compression=compression, verbose=verbose)
+    return datasets.__dict__[name](
+        root=root, compression=compression, verbose=verbose,
+        standardizer=standardizer
+    )
 
 
 def load_molecules(
