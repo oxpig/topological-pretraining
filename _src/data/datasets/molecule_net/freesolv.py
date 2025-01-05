@@ -1,4 +1,5 @@
 from ..base import BaseDataset
+from ...mol import Standardizer
 from pathlib import Path
 
 class FreeSolv(BaseDataset):
@@ -6,12 +7,12 @@ class FreeSolv(BaseDataset):
 
     def __init__(
         self, root: str|None = None, compression: bool = True,
-        verbose: bool = True
+        verbose: bool = True, standardizer: Standardizer = Standardizer(),
     ):
         suffix = 'csv.gz' if compression else 'csv'
         csv = Path(root) / f'freesolv.{suffix}' if root else None
         super(FreeSolv, self).__init__(
-            csv=csv, url=self.url, compression=compression, verbose=verbose
+            csv=csv, url=self.url, compression=compression, verbose=verbose, standardizer=standardizer
         )
         if 'SMILES' not in self.columns:
             self.rename(

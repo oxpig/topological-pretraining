@@ -1,4 +1,5 @@
 from ..base import BaseDataset
+from ...mol import Standardizer
 
 from pathlib import Path
 
@@ -6,10 +7,16 @@ class FactorXA(BaseDataset):
 
     url = 'https://raw.githubusercontent.com/MarkusFerdinandDablander/QSAR-activity-cliff-experiments/refs/heads/main/data/chembl_factor_xa/molecule_data_clean.csv'
 
-    def __init__(self, root: str|None = None, compression: bool = True, verbose: bool = False):
+    def __init__(
+        self, root: str|None = None, compression: bool = True,
+        verbose: bool = False, standardizer: Standardizer = Standardizer()
+    ):
         suffix = 'csv.gz' if compression else 'csv'
         csv = Path(root) / f'factor_xa.{suffix}' if root else None
-        super(FactorXA, self).__init__(csv=csv, url=self.url, compression=compression, verbose=verbose)
+        super(FactorXA, self).__init__(
+            csv=csv, url=self.url, compression=compression,
+            verbose=verbose, standardizer=standardizer
+        )
         if 'y' not in self.columns:
             self.rename(
                 columns={
