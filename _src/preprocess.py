@@ -273,7 +273,7 @@ def preprocess(config: dict):
             print(f'Splits already generated for {benchmark}') if verbose else None
             continue
         rdkit_passes = df[df['rdkit_pass'] == True]
-        mols = df.rdkit_mols
+        mols = df.rdkit_mols[rdkit_passes.index]
         
         # fps as explicitbitvect
         morgan_generator.asarray = False
