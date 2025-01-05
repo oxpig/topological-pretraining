@@ -4,18 +4,13 @@ import argparse
 from pathlib import Path
 import yaml
 from rdkit.Chem.rdFingerprintGenerator import GetMorganGenerator
+from _src import preprocess
 
 parser = argparse.ArgumentParser(description='Topological Pretraining')
 parser.add_argument('--config', '-C', type=str, required=True, help='Path to the config file')
 parser.add_argument('--data', '-D', type=str, required=True, help='Path to the data')
 parser.add_argument('--output', '-o', type=str, default='output', help='Path to save')
 
-
-def preprocess(config):
-    pass
-
-def pretrain(config):
-    pass
 
 def benchmark(args):
     # Load the data
@@ -38,37 +33,21 @@ def evaluate(args):
 def main():
     args = parser.parse_args()
     config: dict = yaml.load(open(args.config), Loader=yaml.Loader)
+    process = config.pop('process')
     config['data'] = Path(args.data)
     config['output'] = Path(args.output)
-    exit()
-
-    # Set ECFP Morgan generator
-    morgan_settings = config['morgan'] if 'morgan' in config else {'radius': 2, 'fpSize': 2048, 'includeChirality': True}
-    ecfp_generator = GetMorganGenerator(**morgan_settings)
-    ecfp_generator = MorganGenerator(ecfp_generator)
-
-    # Set standardizer
-    standardizer = Standardizer()
-
-    # Get ECFP fingerprints of datasets
-
-    process = config['process']
+    if 'verbose' not in config:
+        config['verbose'] = False
     if process == 'preprocess':
-        preprocess(args)
+        preprocess.preprocess(config=config)
     elif process == 'pretrain':
-        pretrain(args)
+        pass
     elif process == 'benchmark':
-        benchmark(args)
+        pass
     elif process == 'evaluate':
-        evaluate(args)
-    elif process == 'unittest':
-        # run unit tests
         pass
     else:
-        raise ValueError(
-            'Invalid process in config file. Must be one of preprocess,\
-            pretrain, benchmark, evaluate, or unittest'
-        )
+        raise ValueError('Invalid process')
 
 
 if __name__ == "__main__":
