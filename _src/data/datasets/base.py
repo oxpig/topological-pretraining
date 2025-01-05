@@ -36,8 +36,10 @@ class BaseDataset(pd.DataFrame):
         csv: str|None = None,
         url: str|None = None,
         compression: bool = True,
-        verbose: bool = False
+        verbose: bool = False,
+        standardizer: Standardizer = Standardizer(),
     ):
+        standardizer.verbose = verbose
         # Check if csv or url is provided
         if csv is None and url is None and data is None:
             raise ValueError('Either csv, url, or data must be provided')
@@ -70,6 +72,7 @@ class BaseDataset(pd.DataFrame):
         self.url = url
         self.compression = compression
         self.verbose = verbose
+        self.standardizer = standardizer
 
     @property
     def name(self):
@@ -100,28 +103,41 @@ class BaseDataset(pd.DataFrame):
         """
         raise NotImplementedError
     
+    @property
+    def rdkit_mols(self):
+        if self.mols_path is not None and self.mols_path.exists():
+            mols = np.load(file=self.mols_path, allow_pickle=True)
+            mols = mols['arr_0']
+            return mols
+
+        elif 'SMILES' in self.columns:
+            print('Running standardization check of molecules') if self.verbose else None
+            mols = self['SMILES'].values
+            mols = [Chem.MolFromSmiles(m, sanitize=False) for m in mols]
+            mols = self.standardizer(mols)
+            
+            if self.mols_path is not None:
+                np.savez_compressed(self.mols_path, mols)
+            return mols
+        else:
+            raise ValueError('SMILES column not found in the dataset and no saved molecules')
+    
     def mol_standardize_check(self):
         """
         Standardize the dataset.
         """
         if 'rdkit_pass' in self.columns:
             return
-        if 'SMILES' in self.columns:
-            print('Running standardization check of molecules') if self.verbose else None
-            mols = self['SMILES'].values
-            mols = [Chem.MolFromSmiles(m) for m in mols]
-            std = Standardizer(
-                sanitize=True,
-                fragment_parent=True,
-                neutralize=True,
-                canonical_tautomer=True,
-                keep_chirality=True,
-                verbose=self.verbose
-            )
-            mols = std(mols)
-            out = np.where(np.array(mols) == None, False, True)
-            self['rdkit_pass'] = out
-            self.save()
-        else:
-            raise ValueError('SMILES column not found in the dataset')
+        mols = self.rdkit_mols
+        out = np.where(np.array(mols) == None, False, True)
+        self['rdkit_pass'] = out
+        self.save()
 
+    @property
+    def mols_path(self):
+        if self.csv is None:
+            return None
+        else:
+            mols_path = Path(self.csv)
+            mols_path = mols_path.parent / f'{mols_path.stem.split('.')[0]}.npz'
+            return mols_path
