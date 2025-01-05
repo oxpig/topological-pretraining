@@ -10,6 +10,7 @@ standardizer:
   neutralize: True
   reionize: False
   canonical_tautomer: True
+  keep_chirality: True
 pretrain: QMugs
 benchmark:
   - Efflux
