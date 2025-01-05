@@ -64,8 +64,8 @@ class Tox21_Subset(Tox21, BaseDataset):
             self.save(csv)
         else:
             BaseDataset.__init__(
-                csv=csv, compression=compression, verbose=verbose,
-                standardizer=standardizer
+                self, csv=csv, compression=compression, 
+                verbose=verbose, standardizer=standardizer
             )
 
     @property
