@@ -34,7 +34,8 @@ class MorganGenerator:
         atom_inv = None,
         bond_inv = None,
         redundant_envs: bool = False,
-        asarray: bool = True
+        asarray: bool = True,
+        verbose: bool = False
     ):
         self.generator = GetMorganGenerator(
             radius=radius,
@@ -50,6 +51,7 @@ class MorganGenerator:
             includeRedundantEnvironments=redundant_envs
         )
         self.asarray = asarray
+        self.verbose = verbose
 
 
     def __call__(self, mol: Chem.Mol|list[Chem.Mol]) -> DataStructs.ExplicitBitVect|np.ndarray:
@@ -57,8 +59,11 @@ class MorganGenerator:
             return self.dense(mol, array=self.asarray)
         else:
             out = []
+            pbar = tqdm(total=len(mol), disable=not self.verbose)
             for m in mol:
                 out.append(self.dense(m, array=self.asarray))
+                pbar.update()
+            pbar.close()
             if self.asarray:
                 out = np.array(out)
             return out
