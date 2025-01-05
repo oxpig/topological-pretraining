@@ -1,8 +1,10 @@
 from .base import BaseDataset
+from ..mol import Standardizer
 import pandas as pd
-import os
+import numpy as np
 from typing import Literal
 from pathlib import Path
+from rdkit import Chem
 
 class Biogen(BaseDataset):
     """
@@ -83,12 +85,14 @@ class Biogen(BaseDataset):
 
     def __init__(
         self, root: str|None = None, compression: bool = True,
-        verbose: bool = True
+        verbose: bool = True, standardizer: Standardizer = Standardizer()
     ):
         suffix = 'csv.gz' if compression else 'csv'
         csv = Path(root) /  f'biogen.{suffix}' if root is not None else None
         changes = not csv.exists() if csv is not None else True
-        super(Biogen, self).__init__(csv=csv, url=self.url, verbose=verbose)
+        super(Biogen, self).__init__(
+            csv=csv, url=self.url, verbose=verbose, standardizer=standardizer
+        )
         if changes:
             self.rename(columns=self.col_names, inplace=True)
             self.root = root
@@ -99,12 +103,12 @@ class Biogen_Subset(Biogen, BaseDataset):
 
     def __init__(
         self, root: str|None = None, compression: bool = True,
-        verbose: bool = True
+        verbose: bool = True, standardizer: Standardizer = Standardizer()
     ):
         compression = '.gz' if compression else ''
         csv = Path(root) / f'biogen_{self.name.lower()}.csv{compression}' if root else None
         if csv is None or not csv.exists():
-            Biogen.__init__(self, root=root, compression=compression, verbose=verbose)
+            Biogen.__init__(self, root=root, compression=compression, verbose=verbose, standardizer=standardizer)
             col = self.name.lower()
             self.rename(
                 columns={col: 'y'},
@@ -115,9 +119,36 @@ class Biogen_Subset(Biogen, BaseDataset):
                 axis=1, inplace=True
             )
             self.dropna(subset=['y'], inplace=True)
+            self['original_index'] = self.index
             self.save(csv)
         else:
-            BaseDataset.__init__(self, csv=csv, compression=compression, verbose=verbose)
+            BaseDataset.__init__(self, csv=csv, compression=compression, verbose=verbose, standardizer=standardizer)
+
+    @property
+    def mols_path(self):
+        if self.csv is not None:
+            return Path(self.csv).parent / f'biogen.npz'
+        return None
+
+    @property
+    def rdkit_mols(self):
+        if self.mols_path is not None and self.mols_path.exists():
+            mols = np.load(file=self.mols_path, allow_pickle=True)
+            mols = mols['arr_0']
+            mols = mols[self['original_index'].values]
+            return mols
+
+        elif 'SMILES' in self.columns:
+            print('Running standardization check of molecules') if self.verbose else None
+            mols = self['SMILES'].values
+            mols = [Chem.MolFromSmiles(m, sanitize=False) for m in mols]
+            mols = self.standardizer(mols)
+            if self.mols_path is not None:
+                np.savez_compressed(self.mols_path, mols)
+            return mols
+        else:
+            raise ValueError('SMILES column not found in the dataset and no saved molecules')
+        
 
     @property
     def task(self):
@@ -169,9 +200,9 @@ class Human_PPB(Biogen_Subset):
     """
     def __init__(
         self, root: str|None = None, compression: bool = True,
-        verbose: bool = True
+        verbose: bool = True, standardizer: Standardizer = Standardizer()
     ):
-        super(Human_PPB, self).__init__(root=root, compression=compression, verbose=verbose)
+        super(Human_PPB, self).__init__(root=root, compression=compression, verbose=verbose, standardizer=standardizer)
 
 class Rat_PPB(Biogen_Subset):
     """
@@ -190,9 +221,9 @@ class Rat_PPB(Biogen_Subset):
     """
     def __init__(
         self, root: str|None = None, compression: bool = True,
-        verbose: bool = True
+        verbose: bool = True, standardizer: Standardizer = Standardizer()
     ):
-        super(Rat_PPB, self).__init__(root=root, compression=compression, verbose=verbose)
+        super(Rat_PPB, self).__init__(root=root, compression=compression, verbose=verbose, standardizer=standardizer)
 
 class Solu(Biogen_Subset):
     """
@@ -211,9 +242,9 @@ class Solu(Biogen_Subset):
     """
     def __init__(
         self, root: str|None = None, compression: bool = True,
-        verbose: bool = True
+        verbose: bool = True, standardizer: Standardizer = Standardizer()
     ):
-        super(Solu, self).__init__(root=root, compression=compression, verbose=verbose)
+        super(Solu, self).__init__(root=root, compression=compression, verbose=verbose, standardizer=standardizer)
     
 class Human_CLint(Biogen_Subset):
     """
@@ -231,9 +262,9 @@ class Human_CLint(Biogen_Subset):
     """
     def __init__(
         self, root: str|None = None, compression: bool = True,
-        verbose: bool = True
+        verbose: bool = True, standardizer: Standardizer = Standardizer()
     ):
-        super(Human_CLint, self).__init__(root=root, compression=compression, verbose=verbose)
+        super(Human_CLint, self).__init__(root=root, compression=compression, verbose=verbose, standardizer=standardizer)
 
 class Rat_CLint(Biogen_Subset):
     """
@@ -251,9 +282,9 @@ class Rat_CLint(Biogen_Subset):
     """
     def __init__(
         self, root: str|None = None, compression: bool = True,
-        verbose: bool = True
+        verbose: bool = True, standardizer: Standardizer = Standardizer()
     ):
-        super(Rat_CLint, self).__init__(root=root, compression=compression, verbose=verbose)
+        super(Rat_CLint, self).__init__(root=root, compression=compression, verbose=verbose, standardizer=standardizer)
     
 class Efflux(Biogen_Subset):
     """
@@ -271,6 +302,6 @@ class Efflux(Biogen_Subset):
     """
     def __init__(
         self, root: str|None = None, compression: bool = True,
-        verbose: bool = True
+        verbose: bool = True, standardizer: Standardizer = Standardizer()
     ):
-        super(Efflux, self).__init__(root=root, compression=compression, verbose=verbose)
+        super(Efflux, self).__init__(root=root, compression=compression, verbose=verbose, standardizer=standardizer)
