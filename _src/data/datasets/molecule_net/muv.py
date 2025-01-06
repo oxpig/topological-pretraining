@@ -80,6 +80,7 @@ class MUV_Subset(MUV, BaseDataset):
             )
             self.dropna(subset=['y'], inplace=True)
             self['original_index'] = self.index
+            self.reset_index(drop=True, inplace=True)
             self.save(csv)
         else:
             BaseDataset.__init__(
