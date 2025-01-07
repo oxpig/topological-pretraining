@@ -66,7 +66,7 @@ class QMugs(BaseDataset):
             self.drop_duplicates(subset='chembl_id', inplace=True)
 
             # Download CHEMBL v.27 chemreps file
-            chembl_url = "https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_27/chembl_27_chemreps.txt.gzip"
+            chembl_url = "https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_27/chembl_27_chemreps.txt.gz"
             chemble_v27 = pd.read_csv(chembl_url, sep='\t')
 
             # Map CHEMBL IDs to canonical SMILES
