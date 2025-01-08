@@ -262,6 +262,8 @@ def preprocess(config: dict):
     splitter_params = config['splitting']['params']
 
     benchmark_fps = {}
+    # fps as explicitbitvect
+    morgan_generator.asarray = False
 
     for benchmark in benchmark_data:
         print(f'Processing {benchmark}') if verbose else None
@@ -275,8 +277,6 @@ def preprocess(config: dict):
         rdkit_passes = df[df['rdkit_pass'] == True]
         mols = df.rdkit_mols[rdkit_passes.index]
         
-        # fps as explicitbitvect
-        morgan_generator.asarray = False
         fps = morgan_generator(mols)
 
         splits, groups = splitter(
@@ -285,7 +285,7 @@ def preprocess(config: dict):
         if groups is not None:
             df[f'{splitter_kind}_cluster'] = np.nan
             df.loc[rdkit_passes.index, f'{splitter_kind}_cluster'] = groups
-        # add rows of -1 for failed molecules
+
         splits = pd.DataFrame(
             splits,
             columns=[f'split_{i}' for i in range(splits.shape[1])],
@@ -302,10 +302,11 @@ def preprocess(config: dict):
         pretrain_data, root=data_path, compression=True,
         verbose=verbose
     )
-    pretrain_mols = pretrain_data.rdkit_mols
+    rdkit_passes = pretrain_data[pretrain_data['rdkit_pass'] == True]
+    pretrain_mols = pretrain_data.rdkit_mols[rdkit_passes.index]
     
     # fps as explicitbitvect
-    pretrain_fps = [morgan_generator.dense(i) for i in pretrain_mols]
+    pretrain_fps = morgan_generator(pretrain_mols)
 
     pretrain_filter = batch_tanimoto_filter(
         pretrain_fps, benchmark_fps.values(), threshold=config['filter_threshold']
@@ -314,11 +315,12 @@ def preprocess(config: dict):
     num_keep = np.sum(pretrain_filter[:, -1])
     pretrain_filter = pretrain_filter[:, -1]
 
+
     random_indices = subset_indices(len(pretrain_data), num_keep)
     random_indices = indices_to_binary(random_indices, len(pretrain_data))
     pretrain_filter = np.concatenate([pretrain_filter.reshape(1,-1), random_indices.reshape(1,-1)])
     
-    cols = [f'{key}_filter' for key in benchmark_fps.keys()] + ['butina_filter', 'random_filter']
-    pretrain_filter = pd.DataFrame(pretrain_filter, columns=cols)
+    cols = ['butina_filter', 'random_filter']
+    pretrain_filter = pd.DataFrame(pretrain_filter, columns=cols, index=rdkit_passes.index)
     csv_path = pretrain_data.csv
     pretrain_data.join(pretrain_filter)
