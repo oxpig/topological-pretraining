@@ -312,7 +312,7 @@ def preprocess(config: dict):
         pretrain_fps, benchmark_fps.values(), threshold=config['filter_threshold']
     )
 
-    num_keep = np.sum(pretrain_filter[:, -1])
+    num_keep = int(np.sum(pretrain_filter[:, -1]))
     pretrain_filter = pretrain_filter[:, -1]
 
 
