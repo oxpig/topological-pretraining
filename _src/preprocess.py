@@ -314,13 +314,10 @@ def preprocess(config: dict):
 
     num_keep = int(np.sum(pretrain_filter[:, -1]))
     pretrain_filter = pretrain_filter[:, -1]
-
+    pretrain_filter = pd.DataFrame(pretrain_filter, columns=['butina_filter'], index=rdkit_passes.index)
 
     random_indices = subset_indices(len(pretrain_data), num_keep)
     random_indices = indices_to_binary(random_indices, len(pretrain_data))
-    pretrain_filter = np.concatenate([pretrain_filter.reshape(1,-1), random_indices.reshape(1,-1)])
-    
-    cols = ['butina_filter', 'random_filter']
-    pretrain_filter = pd.DataFrame(pretrain_filter, columns=cols, index=rdkit_passes.index)
+    pretrain_filter['random_filter'] = random_indices
     csv_path = pretrain_data.csv
     pretrain_data.join(pretrain_filter)
