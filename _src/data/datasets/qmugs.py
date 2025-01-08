@@ -50,10 +50,6 @@ class QMugs(BaseDataset):
         # Initialize the BaseDataset
         super(QMugs, self).__init__(csv=csv, url=self.url, compression=compression, verbose=verbose, standardizer=standardizer)
 
-        # Set the root directory and csv file
-        self.root = root
-        self.csv = csv
-
         # obtain canonical smiles from CHEMBL v.27
         if 'SMILES' not in self.columns:
             # Drop all columns except 'chembl_id' and 'smiles'
@@ -88,6 +84,6 @@ class QMugs(BaseDataset):
             self.mol_standardize_check()
             # Reset the index and save the dataset
             self.reset_index(drop=True, inplace=True)
-            self.to_csv(csv, index=False, compression=compression)
+            self.save()
 
     
