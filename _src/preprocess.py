@@ -302,8 +302,7 @@ def preprocess(config: dict):
         pretrain_data, root=data_path, compression=True,
         verbose=verbose
     )
-    pretrain_data = pretrain_data[:10]
-    pretrain_mols = pretrain_data.rdkit_mols[:10]
+    pretrain_mols = pretrain_data.rdkit_mols
     
     # fps as explicitbitvect
     pretrain_fps = [morgan_generator.dense(i) for i in pretrain_mols]
@@ -313,12 +312,13 @@ def preprocess(config: dict):
     )
 
     num_keep = np.sum(pretrain_filter[:, -1])
+    pretrain_filter = pretrain_filter[:, -1]
 
     random_indices = subset_indices(len(pretrain_data), num_keep)
     random_indices = indices_to_binary(random_indices, len(pretrain_data))
-    pretrain_filter = np.concatenate([pretrain_filter, ], axis=1)
+    pretrain_filter = np.concatenate([pretrain_filter.reshape(1,-1), random_indices.reshape(1,-1)])
     
-    cols = [f'{key}_filter' for key in benchmark_fps.keys()] + ['aggregate_filter', 'random_filter']
+    cols = [f'{key}_filter' for key in benchmark_fps.keys()] + ['butina_filter', 'random_filter']
     pretrain_filter = pd.DataFrame(pretrain_filter, columns=cols)
     csv_path = pretrain_data.csv
     pretrain_data.join(pretrain_filter)
