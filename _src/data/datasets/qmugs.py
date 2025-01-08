@@ -48,7 +48,10 @@ class QMugs(BaseDataset):
         # Set the path to the csv file
         csv = Path(root) / f'qmugs.{suffix}'
         # Initialize the BaseDataset
-        super(QMugs, self).__init__(csv=csv, url=self.url, compression=compression, verbose=verbose, standardizer=standardizer)
+        super(QMugs, self).__init__(
+            csv=csv, url=self.url, compression=compression,
+            verbose=verbose, standardizer=standardizer
+        )
 
         # obtain canonical smiles from CHEMBL v.27
         if 'SMILES' not in self.columns:
