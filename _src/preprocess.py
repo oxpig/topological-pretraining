@@ -303,7 +303,7 @@ def preprocess(config: dict):
         verbose=verbose
     )
     rdkit_passes = pretrain_data[pretrain_data['rdkit_pass'] == True]
-    rdkit_fails = pretrain_filter[pretrain_filter['rdkit_pass'] == False]
+    rdkit_fails = pretrain_data[pretrain_filter['rdkit_pass'] == False]
     pretrain_mols = pretrain_data.rdkit_mols[rdkit_passes.index]
     
     # fps as explicitbitvect
