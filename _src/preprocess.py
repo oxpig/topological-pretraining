@@ -271,37 +271,38 @@ def preprocess(config: dict):
             benchmark, root=data_path, compression=True,
             verbose=verbose, standardizer=standardizer
         )
-        if 'split' in df.columns[-1]:
-            print(f'Splits already generated for {benchmark}') if verbose else None
-            continue
+        
         rdkit_passes = df[df['rdkit_pass'] == True]
         mols = df.rdkit_mols[rdkit_passes.index]
         
         fps = morgan_generator(mols)
+        if 'split' not in df.columns[-1]:
+            print(f'Generating splits for {benchmark}') if verbose else None
+            splits, groups = splitter(
+                fps, y=rdkit_passes.y.values, verbose=verbose, **splitter_params
+            )
+            if groups is not None:
+                df[f'{splitter_kind}_cluster'] = np.nan
+                df.loc[rdkit_passes.index, f'{splitter_kind}_cluster'] = groups
 
-        splits, groups = splitter(
-            fps, y=rdkit_passes.y.values, verbose=verbose, **splitter_params
-        )
-        if groups is not None:
-            df[f'{splitter_kind}_cluster'] = np.nan
-            df.loc[rdkit_passes.index, f'{splitter_kind}_cluster'] = groups
-
-        splits = pd.DataFrame(
-            splits,
-            columns=[f'split_{i}' for i in range(splits.shape[1])],
-            index=rdkit_passes.index
-        )
-        csv_path = df.csv
-        df = df.join(splits)
-        df.to_csv(csv_path, compression='infer', index=False)
-
+            splits = pd.DataFrame(
+                splits,
+                columns=[f'split_{i}' for i in range(splits.shape[1])],
+                index=rdkit_passes.index
+            )
+            csv_path = df.csv
+            df = df.join(splits)
+            df.to_csv(csv_path, compression='infer', index=False)
+        else:
+            print(f'Splits already exist for {benchmark}') if verbose else None
         benchmark_fps[benchmark] = fps
-
     pretrain_data = config['pretrain']
     pretrain_data: BaseDataset = load_dataset(
         pretrain_data, root=data_path, compression=True,
         verbose=verbose
     )
+    print(f'Processing {pretrain_data.name}') if verbose else None
+    print(f'Data shape: {pretrain_data.shape}') if verbose else None
     rdkit_passes = pretrain_data[pretrain_data['rdkit_pass'] == True]
     rdkit_fails = pretrain_data[pretrain_data['rdkit_pass'] == False]
     pretrain_mols = pretrain_data.rdkit_mols[rdkit_passes.index]
@@ -317,18 +318,14 @@ def preprocess(config: dict):
     num_keep = int(np.sum(pretrain_filter[:, -1]))
     pretrain_filter = pretrain_filter[:, -1]
     pretrain_filter = pd.DataFrame(pretrain_filter, columns=['butina_filter'], index=rdkit_passes.index)
-    print(pretrain_filter.shape)
-    print(len(rdkit_fails))
     for fail in rdkit_fails.index:
         pretrain_filter.loc[fail, 'butina_filter'] = 0
 
     pretrain_filter.sort_index(inplace=True)
-    print(pretrain_filter.shape)
     
     random_indices = subset_indices(np.array(rdkit_passes.index), num_keep)
     random_indices = indices_to_binary(random_indices, len(pretrain_data))
-    print(random_indices.shape)
-    exit()
+
     pretrain_filter['random_filter'] = random_indices
     csv_path = pretrain_data.csv
     pretrain_data.join(pretrain_filter)
