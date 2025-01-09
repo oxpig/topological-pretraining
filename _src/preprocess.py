@@ -301,31 +301,35 @@ def preprocess(config: dict):
         pretrain_data, root=data_path, compression=True,
         verbose=verbose
     )
-    print(f'Processing {pretrain_data.name}') if verbose else None
-    print(f'Data shape: {pretrain_data.shape}') if verbose else None
-    rdkit_passes = pretrain_data[pretrain_data['rdkit_pass'] == True]
-    rdkit_fails = pretrain_data[pretrain_data['rdkit_pass'] == False]
-    pretrain_mols = pretrain_data.rdkit_mols[rdkit_passes.index]
-    
-    # fps as explicitbitvect
-    pretrain_fps = morgan_generator(pretrain_mols)
+    if 'butina_filter' and 'random_filter' not in pretrain_data.columns:
+        print(f'Processing filters for {pretrain_data.name}') if verbose else None
+        print(f'Data shape: {pretrain_data.shape}') if verbose else None
+        rdkit_passes = pretrain_data[pretrain_data['rdkit_pass'] == True]
+        rdkit_fails = pretrain_data[pretrain_data['rdkit_pass'] == False]
+        pretrain_mols = pretrain_data.rdkit_mols[rdkit_passes.index]
+        
+        # fps as explicitbitvect
+        pretrain_fps = morgan_generator(pretrain_mols)
 
-    pretrain_filter = batch_tanimoto_filter(
-        pretrain_fps, benchmark_fps.values(), threshold=config['filter_threshold'],
-        verbose=verbose
-    )
+        pretrain_filter = batch_tanimoto_filter(
+            pretrain_fps, benchmark_fps.values(), threshold=config['filter_threshold'],
+            verbose=verbose
+        )
 
-    num_keep = int(np.sum(pretrain_filter[:, -1]))
-    pretrain_filter = pretrain_filter[:, -1]
-    pretrain_filter = pd.DataFrame(pretrain_filter, columns=['butina_filter'], index=rdkit_passes.index)
-    for fail in rdkit_fails.index:
-        pretrain_filter.loc[fail, 'butina_filter'] = 0
+        num_keep = int(np.sum(pretrain_filter[:, -1]))
+        pretrain_filter = pretrain_filter[:, -1]
+        pretrain_filter = pd.DataFrame(pretrain_filter, columns=['butina_filter'], index=rdkit_passes.index)
+        for fail in rdkit_fails.index:
+            pretrain_filter.loc[fail, 'butina_filter'] = 0
 
-    pretrain_filter.sort_index(inplace=True)
-    
-    random_indices = subset_indices(np.array(rdkit_passes.index), num_keep)
-    random_indices = indices_to_binary(random_indices, len(pretrain_data))
+        pretrain_filter.sort_index(inplace=True)
+        
+        random_indices = subset_indices(np.array(rdkit_passes.index), num_keep)
+        random_indices = indices_to_binary(random_indices, len(pretrain_data))
 
-    pretrain_filter['random_filter'] = random_indices
-    csv_path = pretrain_data.csv
-    pretrain_data.join(pretrain_filter)
+        pretrain_filter['random_filter'] = random_indices
+        csv_path = pretrain_data.csv
+        pretrain_data.join(pretrain_filter)
+        pretrain_data.save()
+    else:
+        print(f'Filters already exist for {pretrain_data.name}') if verbose else None
