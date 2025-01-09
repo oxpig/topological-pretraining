@@ -107,7 +107,7 @@ def batch_tanimoto_filter(
         out[:, i] = tanimoto_filter(fp_1, fps, threshold=threshold, verbose=verbose)
         pbar.update(1)
     pbar.close()
-    out[:, -1] = np.where(np.sum(out, axis=1) > 0, 1, 0)
+    out[:, -1] = np.where(np.sum(out, axis=1) > 0, 0, 1)
     return out
 
 def repeat_groupkfold(
