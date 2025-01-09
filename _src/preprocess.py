@@ -317,11 +317,18 @@ def preprocess(config: dict):
     num_keep = int(np.sum(pretrain_filter[:, -1]))
     pretrain_filter = pretrain_filter[:, -1]
     pretrain_filter = pd.DataFrame(pretrain_filter, columns=['butina_filter'], index=rdkit_passes.index)
-    for fail in rdkit_fails:
+    print(pretrain_filter.shape)
+    print(len(rdkit_fails))
+    for fail in rdkit_fails.index:
         pretrain_filter.loc[fail, 'butina_filter'] = 0
 
+    pretrain_filter.sort_index(inplace=True)
+    print(pretrain_filter.shape)
+    
     random_indices = subset_indices(np.array(rdkit_passes.index), num_keep)
     random_indices = indices_to_binary(random_indices, len(pretrain_data))
+    print(random_indices.shape)
+    exit()
     pretrain_filter['random_filter'] = random_indices
     csv_path = pretrain_data.csv
     pretrain_data.join(pretrain_filter)
