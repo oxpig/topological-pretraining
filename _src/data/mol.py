@@ -59,7 +59,7 @@ class MorganGenerator:
             return self.dense(mol, array=self.asarray)
         else:
             out = []
-            pbar = tqdm(total=len(mol), disable=not self.verbose)
+            pbar = tqdm(total=len(mol), disable=not self.verbose, desc='Generating fingerprints')
             for m in mol:
                 out.append(self.dense(m, array=self.asarray))
                 pbar.update()
