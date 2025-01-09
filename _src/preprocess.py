@@ -310,7 +310,8 @@ def preprocess(config: dict):
     pretrain_fps = morgan_generator(pretrain_mols)
 
     pretrain_filter = batch_tanimoto_filter(
-        pretrain_fps, benchmark_fps.values(), threshold=config['filter_threshold']
+        pretrain_fps, benchmark_fps.values(), threshold=config['filter_threshold'],
+        verbose=verbose
     )
 
     num_keep = int(np.sum(pretrain_filter[:, -1]))
