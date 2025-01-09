@@ -201,7 +201,7 @@ def butina_splitting(
     )
     return splits, clusters
 
-def subset_indices(total: int, n: int) -> np.ndarray:
+def subset_indices(total: int|np.ndarray, n: int) -> np.ndarray:
     """
     Choose a random subset of indices.
 
@@ -303,6 +303,7 @@ def preprocess(config: dict):
         verbose=verbose
     )
     rdkit_passes = pretrain_data[pretrain_data['rdkit_pass'] == True]
+    rdkit_fails = pretrain_filter[pretrain_filter['rdkit_pass'] == False]
     pretrain_mols = pretrain_data.rdkit_mols[rdkit_passes.index]
     
     # fps as explicitbitvect
@@ -315,8 +316,10 @@ def preprocess(config: dict):
     num_keep = int(np.sum(pretrain_filter[:, -1]))
     pretrain_filter = pretrain_filter[:, -1]
     pretrain_filter = pd.DataFrame(pretrain_filter, columns=['butina_filter'], index=rdkit_passes.index)
+    for fail in rdkit_fails:
+        pretrain_filter.loc[fail, 'butina_filter'] = 0
 
-    random_indices = subset_indices(len(pretrain_data), num_keep)
+    random_indices = subset_indices(np.array(rdkit_passes.index), num_keep)
     random_indices = indices_to_binary(random_indices, len(pretrain_data))
     pretrain_filter['random_filter'] = random_indices
     csv_path = pretrain_data.csv
