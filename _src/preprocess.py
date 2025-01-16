@@ -328,11 +328,7 @@ def preprocess(config: dict):
 
         pretrain_filter['random_filter'] = random_indices
         csv_path = pretrain_data.csv
-        print(pretrain_data.shape)
-        print(pretrain_filter.shape)
-        pretrain_data.join(pretrain_filter)
-        print(pretrain_data.head())
-        print(pretrain_data.shape)
-        pretrain_data.save()
+        df = pretrain_data.join(pretrain_filter)
+        df.to_csv(csv_path, compression='infer', index=False)
     else:
         print(f'Filters already exist for {pretrain_data.name}') if verbose else None
