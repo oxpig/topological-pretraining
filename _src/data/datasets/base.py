@@ -141,3 +141,8 @@ class BaseDataset(pd.DataFrame):
             mols_path = Path(self.csv)
             mols_path = mols_path.parent / f'{mols_path.stem.split('.')[0]}.npz'
             return mols_path
+
+    @property
+    def splits(self):
+        cols = [i for i in self.columns if 'split' in i]
+        return self.loc[:, cols]
