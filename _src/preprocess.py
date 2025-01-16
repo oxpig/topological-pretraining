@@ -99,7 +99,6 @@ def batch_tanimoto_filter(
         Array is binary, where 1 indicates that the data point is dissimilar to the fp_2 set and
         0 indicates that the data point is similar to at least one molecule in fp_2 set.
         The last column represents an aggregate filter for all fp_2 sets.
-
     """
     out = np.zeros((len(fp_1), len(fp_2)+1))
     pbar = tqdm(fp_2, disable=not verbose, desc='Benchmark dataset')
@@ -329,7 +328,11 @@ def preprocess(config: dict):
 
         pretrain_filter['random_filter'] = random_indices
         csv_path = pretrain_data.csv
+        print(pretrain_data.shape)
+        print(pretrain_filter.shape)
         pretrain_data.join(pretrain_filter)
+        print(pretrain_data.head())
+        print(pretrain_data.shape)
         pretrain_data.save()
     else:
         print(f'Filters already exist for {pretrain_data.name}') if verbose else None
