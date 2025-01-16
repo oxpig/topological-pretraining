@@ -267,7 +267,7 @@ class SortAndSlice:
         starter['count'] = 0
         done = {}
         for r in range(radius + 1):
-            identifiers, counts = envs[:,r].unique(return_counts=True)
+            identifiers, counts = np.unique(envs[:,r], return_counts=True)
             for j in range(len(identifiers)):
                 id = int(identifiers[j])
                 count = int(counts[j])
@@ -408,6 +408,11 @@ class SortAndSlice:
     
     def values(self) -> list:
         return self.identifiers.values()
+    
+    def clear(self):
+        self.identifiers = {}
+        self.encoder = None
+
 
 class Standardizer:
     """
