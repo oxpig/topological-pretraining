@@ -1,41 +1,40 @@
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+
 from _src.data.mol import MorganGenerator, Standardizer
 
 import argparse
 from pathlib import Path
 import yaml
-from rdkit.Chem.rdFingerprintGenerator import GetMorganGenerator
-from _src import preprocess
+from _src import benchmark, preprocess, evaluate
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 parser = argparse.ArgumentParser(description='Topological Pretraining')
 parser.add_argument('--config', '-C', type=str, required=True, help='Path to the config file')
 parser.add_argument('--data', '-D', type=str, required=True, help='Path to the data')
 parser.add_argument('--output', '-o', type=str, default='output', help='Path to save')
 
+def load_base_config() -> dict:
+    config_dir = Path(__file__).parent / 'config' / 'base'
+    base_config = {}
+    for file in config_dir.iterdir():
+        if file.suffix == '.yaml':
+            with open(file, 'r') as f:
+                config = yaml.load(f, Loader=yaml.Loader)
+                base_config.update(config)
+    return base_config
 
-def benchmark(args):
-    # Load the data
-
-    # Load the model / featurizer
-
-    # Featurize the data
-
-    # Hyperparameter tuning
-
-    # Loop over splits
-    ## PCA / dimensionality reduction
-    ## Train the model
-    ## Test the model
-    pass
-
-def evaluate(args):
-    pass
 
 def main():
     args = parser.parse_args()
-    config: dict = yaml.load(open(args.config), Loader=yaml.Loader)
+    config = load_base_config()
+    config.update(yaml.load(open(args.config), Loader=yaml.Loader))
     process = config.pop('process')
     config['data'] = Path(args.data)
-    config['output'] = Path(args.output)
+    config['results'] = Path(args.output)
     if 'verbose' not in config:
         config['verbose'] = False
     if process == 'preprocess':
@@ -43,9 +42,9 @@ def main():
     elif process == 'pretrain':
         pass
     elif process == 'benchmark':
-        pass
+        benchmark.benchmark(config=config)
     elif process == 'evaluate':
-        pass
+        evaluate.evaluate(config=config)
     else:
         raise ValueError('Invalid process')
 
