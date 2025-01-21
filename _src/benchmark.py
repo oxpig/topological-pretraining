@@ -21,12 +21,32 @@ class CoCorr:
     Fetaure selection based on collinearity.
 
     For highly correlated features, the feature with the lowest variance is removed.
+
+    Parameters
+    ----------
+    threshold : float
+        The threshold for collinearity. Default is 0.9.
+
+    Attributes
+    ----------
+    threshold : float
+        The threshold for collinearity.
+    to_keep : list
+        The indices of the features to keep.
     """
     def __init__(self, threshold: float = 0.9):
         self.threshold = threshold
         self.to_keep = []
 
     def fit(self, X: np.ndarray):
+        """
+        Determine which features to keep based on multilinearity and variance.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            The input data. The shape is (n_samples, n_features).
+        """
         var = X.std(axis=0)
         corr_matrix = np.corrcoef(X, rowvar=False)
         upper = np.triu(corr_matrix, k=1)
@@ -39,9 +59,35 @@ class CoCorr:
         self.to_keep = [i for i in range(X.shape[1]) if i not in set(exclude)]
 
     def transform(self, X: np.ndarray) -> np.ndarray:
+        """
+        Transform the input data by removing highly correlated features.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            The input data. The shape is (n_samples, n_features).
+
+        Returns
+        -------
+        np.ndarray
+            The transformed data. The shape is (n_samples, len(self.to_keep)).
+        """
         return X[:, self.to_keep]
 
     def fit_transform(self, X: np.ndarray):
+        """
+        Fit CoCorr to X and return the transformed X.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            The input data. The shape is (n_samples, n_features).
+
+        Returns
+        -------
+        np.ndarray
+            The transformed data. The shape is (n_samples, len(self.to_keep)).
+        """
         self.fit(X)
         return self.transform(X)
 
@@ -63,6 +109,11 @@ def rfe(
         X_train: np.ndarray, y_train: np.ndarray, estimator,
         n_features: int|float, return_selector: bool = False, 
     ) -> np.ndarray|tuple[np.ndarray, RFE]:
+    """
+    Recursive Feature Elimination.
+
+    Good for feature selection but slow.
+    """
     rfe_selector = RFE(estimator=estimator, n_features_to_select=n_features)
     X_train = rfe_selector.fit_transform(X_train, y_train)
     if return_selector:
@@ -70,9 +121,31 @@ def rfe(
     else:
         return X_train
     
-def cocorr(X_train: np.ndarray, threshold: float = 0.9, return_selector: bool = True):
+def cocorr(
+        X_train: np.ndarray,
+        threshold: float = 0.9,
+        return_selector: bool = True,
+    ):
     """
-    Remove highly correlated features.
+    Remove highly correlated features. Finds pairs of features with a pearson correlation above the threshold.
+    The feature with the lowest variance out of the pair is removed.
+
+    Parameters
+    ----------
+    X_train : np.ndarray
+        The input data. The shape is (n_samples, n_features).
+    threshold : float
+        The threshold for collinearity. Default is 0.9.
+    return_selector : bool
+        Whether to return the selector object to use with other arrays.
+        Default is False.
+
+    Returns
+    -------
+    np.ndarray
+        The transformed data. The shape is (n_samples, n_features - n_removed).
+    Optional[CoCorr]
+        The selector object.
     """
     cc = CoCorr(threshold=threshold)
     X_train = cc.fit_transform(X_train)
@@ -86,7 +159,29 @@ def kbest(
     return_selector: bool = True, task: str = 'regression'
     ):
     """
-    Select the k best features.
+    Select the k best features using SelectKBest from sklearn.
+    The score function is mutual information for both classification and regression tasks.
+
+    Parameters
+    ----------
+    X_train : np.ndarray
+        The input data. The shape is (n_samples, n_features).
+    y_train : np.ndarray
+        The target data. The shape is (n_samples,).
+    k : int
+        The number of features to select.
+    return_selector : bool
+        Whether to return the selector object to use with other arrays.
+        Default is False.
+    task : str
+        The task type. Must be either 'classification' or 'regression'.
+
+    Returns
+    -------
+    np.ndarray
+        The transformed data. The shape is (n_samples, k).
+    Optional[SelectKBest]
+        The selector object.
     """
     if task == 'classification':
         score_func = mutual_info_classif
@@ -102,7 +197,9 @@ def kbest(
         return X_train
     
 class SelectAll:
-
+    """
+    Dummy class to select all features.
+    """
     def fit(self, X: np.ndarray):
         pass
 
@@ -113,6 +210,9 @@ class SelectAll:
         return X
     
 def select_all(X_train: np.ndarray, return_selector: bool = True, **kwargs):
+    """
+    Wrapper for SelectAll class.
+    """
     if return_selector:
         return X_train, SelectAll()
     else:
@@ -122,7 +222,24 @@ def variance_threshold(
         X_train: np.ndarray, threshold: float = 0.0, return_selector: bool = False
     ):
     """
-    Remove zero variance features.
+    Remove low variance features. Default removes features with zero variance.
+
+    Parameters
+    ----------
+    X_train : np.ndarray
+        The input data. The shape is (n_samples, n_features).
+    threshold : float
+        The threshold for variance. Default is 0.0.
+    return_selector : bool
+        Whether to return the selector object to use with other arrays.
+        Default is False.
+
+    Returns
+    -------
+    np.ndarray
+        The transformed data. The shape is (n_samples, n_features - n_removed).
+    Optional[VarianceThreshold]
+        The selector object.
     """
     vt = VarianceThreshold(threshold=threshold)
     X_train = vt.fit_transform(X_train)
@@ -132,6 +249,33 @@ def variance_threshold(
         return X_train
 
 def benchmark(config: dict):
+    """
+    Benchmark a model on a list of datasets.
+
+    Parameters
+    ----------
+    config : dict
+        The configuration dictionary. Must have the following
+        keys:
+            - name: str
+                The name of the model for saving predictions.
+            - data: str
+                The path to the data.
+            - results: str
+                The path to save the results.
+            - verbose: bool
+                Whether to print verbose output.
+            - benchmark: list[str]|str
+                The list of benchmarks to use.
+            - model: str
+                The model to use.
+            - model_kwargs: dict
+                The keyword arguments for the model.
+            - tokenizer: str
+                The tokenizer (i.e. molecular featurization method) to use.
+            - transform_kwargs: dict
+                The keyword arguments for the tokenizer.
+    """
 
     name: str = config['name']
     data_path: str = config['data']
