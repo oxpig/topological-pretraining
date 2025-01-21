@@ -70,8 +70,8 @@ class Tox21_Subset(Tox21, BaseDataset):
             )
 
     @property
-    def tasks(self):
-        return 'binary classification'
+    def task(self):
+        return 'classification'
     
     @property
     def mols_path(self):
