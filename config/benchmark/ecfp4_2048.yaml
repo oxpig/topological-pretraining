@@ -1,0 +1,11 @@
+process: benchmark
+verbose: True
+model: LGBM
+model_kwargs:
+    verbose: 1
+name: ecfp4_2048
+tokenizer: ECFP
+tokenizer_kwargs:
+    radius: 2
+    chirality: True
+    fpsize: 2048
