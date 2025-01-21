@@ -128,8 +128,8 @@ class SNS(BaseTokenizer):
         transform_kwargs: dict = {},
     ):
         mols = X
-        if 'morgan_args' in transform_kwargs:
-            morgan: dict = transform_kwargs.pop('morgan_args')
+        if 'morgan_kwargs' in transform_kwargs:
+            morgan: dict = transform_kwargs.pop('morgan_kwargs')
         else:
             morgan: dict = {}
         morgan = MorganGenerator(**morgan)
