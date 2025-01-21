@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from pathlib import Path
 from rdkit import Chem
+from typing import Callable
 
 from ..mol import Standardizer
 
@@ -144,5 +145,14 @@ class BaseDataset(pd.DataFrame):
 
     @property
     def splits(self):
-        cols = [i for i in self.columns if 'split' in i]
-        return self.loc[:, cols]
+        for col in self.columns:
+            if 'split' in col:
+                col = self.loc[:, col]
+                train = col[col == 'Train'].index.to_numpy()
+                test = col[col == 'Test'].index.to_numpy()
+                yield train, test
+
+    @property
+    def num_splits(self):
+        return len([col for col in self.columns if 'split' in col])
+    
