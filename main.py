@@ -32,7 +32,10 @@ def main():
     args = parser.parse_args()
     config = load_base_config()
     config.update(yaml.load(open(args.config), Loader=yaml.Loader))
+    config['path'] = args.config
     process = config.pop('process')
+    if 'name' not in config:
+        config['name'] = Path(args.config).stem
     config['data'] = Path(args.data)
     config['results'] = Path(args.output)
     if 'verbose' not in config:
