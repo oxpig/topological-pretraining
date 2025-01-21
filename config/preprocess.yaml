@@ -1,6 +1,5 @@
 process: preprocess
 verbose: True
-  
 filter_threshold: 0.5
 splitting:
   kind: butina
@@ -8,4 +7,3 @@ splitting:
     repeats: 100
     kfolds: 5
     threshold: 0.65
-
