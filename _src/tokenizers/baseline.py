@@ -54,11 +54,19 @@ class PDV(BaseTokenizer):
         y: np.ndarray,
         train: np.ndarray = np.array([]),
         test: np.ndarray = np.array([]),
-        descriptors: list[str] = default_descriptors,
+        transform_kwargs: dict = {},
+        verbose: bool = False,
     ):
-        
+        print('Getting descriptors') if verbose else None
+        descriptors = transform_kwargs.get('descriptors', default_descriptors)
+        print(f'Number of descriptors: {len(descriptors)}') if verbose else None
         generator = MolecularDescriptorCalculator(descriptors)
-        transform = lambda x: np.array([generator.CalcDescriptors(i) for i in x])
+        print('Setting transform to PDV') if verbose else None
+        transform = lambda x: np.array([
+            generator.CalcDescriptors(i) if i is not None
+            else np.full((len(default_descriptors)), np.nan)
+            for i in x
+        ])
         super(PDV, self).__init__(X=X, y=y, train=train, test=test, transform=transform)
         self.descriptors = descriptors
         self.generator = generator
@@ -71,11 +79,17 @@ class ECFP(BaseTokenizer):
         y: np.ndarray,
         train: np.ndarray = np.array([]),
         test: np.ndarray = np.array([]),
-        transform: MorganGenerator = MorganGenerator(),
+        transform_kwargs: dict = {},
+        verbose: bool = False,
     ):
+        transform_kwargs['verbose'] = verbose
+        transform = MorganGenerator(
+            **transform_kwargs
+        )
         transform.asarray = True
         super(ECFP, self).__init__(
-            X=X, y=y, train=train, test=test, transform=transform
+            X=X, y=y, train=train, test=test,
+            transform=transform
         )
 
     @property
@@ -94,11 +108,14 @@ class FCFP(ECFP):
         y: np.ndarray,
         train: np.ndarray = np.array([]),
         test: np.ndarray = np.array([]),
+        transform_kwargs: dict = {},
+        verbose: bool = False,
     ):
-        transform = MorganGenerator(
-            atom_inv=morgan_feat_inv
+        transform_kwargs['atom_inv'] = morgan_feat_inv
+        super(FCFP, self).__init__(
+            X=X, y=y, train=train,
+            test=test, transform_kwargs=transform_kwargs
         )
-        super(FCFP, self).__init__(X=X, y=y, train=train, test=test, generator=transform)
 
 class SNS(BaseTokenizer):
 
@@ -108,10 +125,15 @@ class SNS(BaseTokenizer):
         y: np.ndarray,
         train: np.ndarray = np.array([]),
         test: np.ndarray = np.array([]),
-        transform: SortAndSlice = SortAndSlice(generator=MorganGenerator()),
+        transform_kwargs: dict = {},
     ):
-
         mols = X
+        if 'morgan_args' in transform_kwargs:
+            morgan: dict = transform_kwargs.pop('morgan_args')
+        else:
+            morgan: dict = {}
+        morgan = MorganGenerator(**morgan)
+        transform: SortAndSlice = SortAndSlice(generator=morgan, **transform_kwargs)
         transform.update([mols[i] for i in train])
         transform.slice()
         super(SNS, self).__init__(
