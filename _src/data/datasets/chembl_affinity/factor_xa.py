@@ -1,6 +1,7 @@
 from ..base import BaseDataset
 from ...mol import Standardizer
 
+import numpy as np
 from pathlib import Path
 
 class FactorXA(BaseDataset):
@@ -24,5 +25,10 @@ class FactorXA(BaseDataset):
                 },
                 inplace=True,
             )
+            self.y = self.y.apply(lambda x: -np.log10(x))
             self.mol_standardize_check()
             self.save()
+    
+    @property
+    def task(self):
+        return 'regression'

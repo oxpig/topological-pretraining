@@ -2,6 +2,7 @@ from ..base import BaseDataset
 from ...mol import Standardizer
 
 from pathlib import Path
+import numpy as np
 
 class DRD2(BaseDataset):
 
@@ -24,5 +25,10 @@ class DRD2(BaseDataset):
                 },
                 inplace=True,
             )
+            self.y = self.y.apply(lambda x: -np.log10(x))
             self.mol_standardize_check()
             self.save()
+
+    @property
+    def task(self):
+        return 'regression'
