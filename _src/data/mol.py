@@ -54,14 +54,22 @@ class MorganGenerator:
         self.verbose = verbose
 
 
-    def __call__(self, mol: Chem.Mol|list[Chem.Mol]) -> DataStructs.ExplicitBitVect|np.ndarray:
+    def __call__(
+            self, mol: Chem.Mol|list[Chem.Mol]
+        ) -> DataStructs.ExplicitBitVect|np.ndarray:
+        if mol is None:
+            return None
         if isinstance(mol, Chem.Mol):
             return self.dense(mol, array=self.asarray)
         else:
-            out = []
-            pbar = tqdm(total=len(mol), disable=not self.verbose, desc='Generating fingerprints')
-            for m in mol:
-                out.append(self.dense(m, array=self.asarray))
+            out = np.zeros((len(mol), self.fpsize))
+            pbar = tqdm(
+                total=len(mol), disable=not self.verbose,
+                desc='Generating fingerprints'
+            )
+            for idx, m in enumerate(mol):
+                m = self.dense(m, array=self.asarray) if m is not None else np.full(self.fpsize, np.nan)
+                out[idx] = m
                 pbar.update()
             pbar.close()
             if self.asarray:
@@ -260,6 +268,8 @@ class SortAndSlice:
         """
         Adds identifiers from a molecule to the identifiers attribute.
         """
+        if mol is None:
+            return
         radius = self.generator.radius
         envs = self.generator.environments(mol)
         starter = {r: 0 for r in range(radius + 1)}
@@ -351,8 +361,10 @@ class SortAndSlice:
         -------
             np.ndarray: Binary vector indicating substructure presence.
         """
-        bitmap = self.generator.bitinfo(mol)
         out = np.zeros(len(self.encoder))
+        if mol is None:
+            return np.full(len(self.encoder), np.nan)
+        bitmap = self.generator.bitinfo(mol)
         for identifier in bitmap:
             if identifier in self.encoder:
                 out[self.encoder[identifier]] = 1
@@ -370,6 +382,8 @@ class SortAndSlice:
         -------
             np.ndarray: Binary matrix indicating substructure presence.
         """
+        if molecules is None:
+            return None
         if self.encoder is None:
             print('No encoder found, updating identifiers and slicing.') if self.verbose else None
             self.update(molecules)
