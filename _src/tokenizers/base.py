@@ -1,5 +1,6 @@
 import numpy as np
 from rdkit import Chem
+from typing import Callable
 
 class BaseTokenizer:
 
@@ -9,7 +10,7 @@ class BaseTokenizer:
         y: np.ndarray,
         train: np.ndarray = np.array([]),
         test: np.ndarray = np.array([]),
-        transform: callable = lambda x: x,
+        transform: Callable = lambda x: x,
     ):
         self.transform = transform
         self.X = self.transform(X)
@@ -28,3 +29,4 @@ class BaseTokenizer:
     @property
     def test(self):
         return self.X[self.test_idx], self.y[self.test_idx]
+    
