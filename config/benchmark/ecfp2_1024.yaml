@@ -5,6 +5,6 @@ model_kwargs:
     verbose: 1
 tokenizer: ECFP
 tokenizer_kwargs:
-    radius: 2
+    radius: 1
     chirality: True
-    fpsize: 2048
+    fpsize: 1024
