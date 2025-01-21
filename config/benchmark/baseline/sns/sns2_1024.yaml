@@ -1,0 +1,8 @@
+process: benchmark
+verbose: True
+tokenizer: SNS
+tokenizer_kwargs:
+    fpsize: 1024
+    morgan_kwargs:
+      radius: 1
+      chirality: True
