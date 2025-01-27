@@ -6,3 +6,4 @@ tokenizer_kwargs:
     morgan_kwargs:
       radius: 2
       chirality: True
+model: LGBM

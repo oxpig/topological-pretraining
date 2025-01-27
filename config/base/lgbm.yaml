@@ -1,0 +1,43 @@
+LGBM: 
+  model_kwargs:
+    verbose: 1
+  model_hyperparameters:
+    tuning: True
+    trials: 5
+    num_splits: 5
+    num_leaves:
+      target: int
+      low: 10
+      high: 100
+    max_depth:
+      target: int
+      low: 5
+      high: 50
+    learning_rate:
+      target: float
+      log: True
+      low: 0.001
+      high: 0.3
+    n_estimators:
+      target: int
+      low: 50
+      high: 150
+    subsample_for_bin:
+      target: int
+      low: 50000
+      high: 300000
+    min_data_in_leaf:
+      target: int
+      low: 10
+      high: 100
+    bagging_fraction:
+      target: float
+      log: False
+      low: 0.5
+      high: 1.0
+    feature_fraction:
+      target: float
+      log: False
+      low: 0.5
+  high: 1.0
+
