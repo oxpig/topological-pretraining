@@ -1,4 +1,4 @@
-from ..data.mol import MorganGenerator, SortAndSlice
+from ..data.mol import MorganGenerator, SortAndSlice, MolDesc
 from .base import BaseTokenizer
 
 import numpy as np
@@ -51,46 +51,42 @@ class PDV(BaseTokenizer):
     def __init__(
         self,
         X: list[Chem.Mol],
-        y: np.ndarray,
+        y: np.ndarray = None,
         train: np.ndarray = np.array([]),
         test: np.ndarray = np.array([]),
         transform_kwargs: dict = {},
         verbose: bool = False,
     ):
-        print('Getting descriptors') if verbose else None
-        descriptors = transform_kwargs.get('descriptors', default_descriptors)
-        print(f'Number of descriptors: {len(descriptors)}') if verbose else None
-        generator = MolecularDescriptorCalculator(descriptors)
-        print('Setting transform to PDV') if verbose else None
-        transform = lambda x: np.array([
-            generator.CalcDescriptors(i) if i is not None
-            else np.full((len(default_descriptors)), np.nan)
-            for i in x
-        ])
-        super(PDV, self).__init__(X=X, y=y, train=train, test=test, transform=transform)
-        self.descriptors = descriptors
-        self.generator = generator
+        super(PDV, self).__init__(
+            X=X, y=y, train=train,
+            test=test, transform_kwargs=transform_kwargs,  verbose=verbose
+        )
+
+    def _transform_base(self, **kwargs):
+        if 'descriptors' not in kwargs:
+            kwargs['descriptors'] = default_descriptors 
+        return MolDesc(verbose=self.verbose, **kwargs)
 
 class ECFP(BaseTokenizer):
 
     def __init__(
         self,
         X: list[Chem.Mol],
-        y: np.ndarray,
+        y: np.ndarray = None,
         train: np.ndarray = np.array([]),
         test: np.ndarray = np.array([]),
         transform_kwargs: dict = {},
         verbose: bool = False,
     ):
-        transform_kwargs['verbose'] = verbose
-        transform = MorganGenerator(
-            **transform_kwargs
-        )
-        transform.asarray = True
         super(ECFP, self).__init__(
             X=X, y=y, train=train, test=test,
-            transform=transform
+            transform_kwargs=transform_kwargs, verbose=verbose
         )
+
+    def _transform_base(self, **kwargs):
+        gen = MorganGenerator(verbose=self.verbose, **kwargs)
+        gen.asarray = True
+        return gen
 
     @property
     def fpsize(self):
@@ -105,7 +101,7 @@ class FCFP(ECFP):
     def __init__(
         self,
         X: Chem.Mol,
-        y: np.ndarray,
+        y: np.ndarray = None,
         train: np.ndarray = np.array([]),
         test: np.ndarray = np.array([]),
         transform_kwargs: dict = {},
@@ -114,7 +110,7 @@ class FCFP(ECFP):
         transform_kwargs['atom_inv'] = morgan_feat_inv
         super(FCFP, self).__init__(
             X=X, y=y, train=train,
-            test=test, transform_kwargs=transform_kwargs
+            test=test, transform_kwargs=transform_kwargs, verbose=verbose
         )
 
 class SNS(BaseTokenizer):
@@ -122,31 +118,35 @@ class SNS(BaseTokenizer):
     def __init__(
         self,
         X: list[Chem.Mol],
-        y: np.ndarray,
+        y: np.ndarray = None,
         train: np.ndarray = np.array([]),
         test: np.ndarray = np.array([]),
         transform_kwargs: dict = {},
+        verbose: bool = False,
     ):
-        mols = X
-        if 'morgan_kwargs' in transform_kwargs:
-            morgan: dict = transform_kwargs.pop('morgan_kwargs')
+        if len(train) == 0:
+            train = np.arange(len(X)) 
+        transform_kwargs['molecules'] = [X[i] for i in train]
+        super(SNS, self).__init__(
+            X=X, y=y, train=train,
+            test=test, transform_kwargs=transform_kwargs, verbose=verbose
+        )
+
+    def _transform_base(self, **kwargs):
+        if 'morgan_kwargs' in kwargs:
+            morgan: dict = kwargs.pop('morgan_kwargs')
         else:
             morgan: dict = {}
         morgan = MorganGenerator(**morgan)
-        transform: SortAndSlice = SortAndSlice(generator=morgan, **transform_kwargs)
-        transform.update([mols[i] for i in train])
-        transform.slice()
-        super(SNS, self).__init__(
-            X=X, y=y, train=train, test=test, transform=transform
-        )
-        self.mols = mols
+        return SortAndSlice(generator=morgan, **kwargs)
+        
 
     def reset(self, train: np.ndarray, test: np.ndarray) -> None:
         self.train_idx = train
         self.test_idx = test
-        self.transform.clear()
-        self.transform.update([self.mols[i] for i in train])
-        self.transform.slice()
+        self.transform_kwargs['molecules'] = [self.origin_X[i] for i in train]
+        self.set_transform(self.transform_kwargs)
+        self.X = self.transform(self.origin_X)
 
     @property
     def fpsize(self):
