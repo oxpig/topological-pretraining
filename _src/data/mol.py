@@ -5,6 +5,7 @@ from rdkit.Chem.rdFingerprintGenerator import (
     GetMorganGenerator
 )
 from rdkit.Chem.MolStandardize import rdMolStandardize
+from rdkit.ML.Descriptors.MoleculeDescriptors import MolecularDescriptorCalculator
 from rdkit import DataStructs
 from rdkit.ML.Cluster import Butina
 from rdkit import RDLogger
@@ -426,6 +427,35 @@ class SortAndSlice:
     def clear(self):
         self.identifiers = {}
         self.encoder = None
+
+class MolDesc:
+
+    def __init__(self, descriptors: list[str], verbose: bool = False, **kwargs):
+        self.verbose = verbose
+        self.set_generator(descriptors=descriptors)
+
+    def set_generator(self, descriptors):
+        self.generator = MolecularDescriptorCalculator(descriptors)
+
+    def __len__(self):
+        return len(self.generator.GetDescriptorNames())
+
+    def __call__(self, X: Chem.Mol|list[Chem.Mol]) -> np.ndarray:
+        if isinstance(X, Chem.Mol):
+            X = [X]
+        out = np.full((len(X), len(self)), np.nan)
+
+        pbar = tqdm(
+            total=len(X), desc='Calculating Descriptors', disable=not self.verbose
+        )
+        for idx, mol in enumerate(X):
+            if isinstance(mol, Chem.Mol):
+                out[idx] = self.generator.CalcDescriptors(mol)
+            pbar.update()
+        pbar.close()
+
+        return out
+
 
 
 class Standardizer:
