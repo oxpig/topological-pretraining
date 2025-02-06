@@ -21,80 +21,7 @@ import yaml
 import optuna
 
 
-class CoCorr:
-    """
-    Fetaure selection based on collinearity.
 
-    For highly correlated features, the feature with the lowest variance is removed.
-
-    Parameters
-    ----------
-    threshold : float
-        The threshold for collinearity. Default is 0.9.
-
-    Attributes
-    ----------
-    threshold : float
-        The threshold for collinearity.
-    to_keep : list
-        The indices of the features to keep.
-    """
-    def __init__(self, threshold: float = 0.9):
-        self.threshold = threshold
-        self.to_keep = []
-
-    def fit(self, X: np.ndarray):
-        """
-        Determine which features to keep based on multilinearity and variance.
-
-        Parameters
-        ----------
-        X : np.ndarray
-            The input data. The shape is (n_samples, n_features).
-        """
-        var = X.std(axis=0)
-        corr_matrix = np.corrcoef(X, rowvar=False)
-        upper = np.triu(corr_matrix, k=1)
-        idx = np.where(upper>0.9)
-        idx = zip(*idx)
-        exclude = []
-        for i, j in idx:
-            out = i if var[i] < var[j] else j
-            exclude.append(int(out))
-        self.to_keep = [i for i in range(X.shape[1]) if i not in set(exclude)]
-
-    def transform(self, X: np.ndarray) -> np.ndarray:
-        """
-        Transform the input data by removing highly correlated features.
-
-        Parameters
-        ----------
-        X : np.ndarray
-            The input data. The shape is (n_samples, n_features).
-
-        Returns
-        -------
-        np.ndarray
-            The transformed data. The shape is (n_samples, len(self.to_keep)).
-        """
-        return X[:, self.to_keep]
-
-    def fit_transform(self, X: np.ndarray):
-        """
-        Fit CoCorr to X and return the transformed X.
-
-        Parameters
-        ----------
-        X : np.ndarray
-            The input data. The shape is (n_samples, n_features).
-
-        Returns
-        -------
-        np.ndarray
-            The transformed data. The shape is (n_samples, len(self.to_keep)).
-        """
-        self.fit(X)
-        return self.transform(X)
 
 def rfecv(
         X_train: np.ndarray, y_train: np.ndarray, estimator,
@@ -152,12 +79,8 @@ def cocorr(
     Optional[CoCorr]
         The selector object.
     """
-    cc = CoCorr(threshold=threshold)
-    X_train = cc.fit_transform(X_train)
-    if return_selector:
-        return X_train, cc
-    else:
-        return X_train
+    pass
+    
     
 def kbest(
     X_train: np.ndarray, y_train: np.ndarray, k: int,
@@ -201,57 +124,8 @@ def kbest(
     else:
         return X_train
     
-class SelectAll:
-    """
-    Dummy class to select all features.
-    """
-    def fit(self, X: np.ndarray):
-        pass
 
-    def transform(self, X: np.ndarray):
-        return X
 
-    def fit_transform(self, X: np.ndarray):
-        return X
-    
-def select_all(X_train: np.ndarray, return_selector: bool = True, **kwargs):
-    """
-    Wrapper for SelectAll class.
-    """
-    if return_selector:
-        return X_train, SelectAll()
-    else:
-        return X_train
-
-def variance_threshold(
-        X_train: np.ndarray, threshold: float = 0.0, return_selector: bool = False
-    ):
-    """
-    Remove low variance features. Default removes features with zero variance.
-
-    Parameters
-    ----------
-    X_train : np.ndarray
-        The input data. The shape is (n_samples, n_features).
-    threshold : float
-        The threshold for variance. Default is 0.0.
-    return_selector : bool
-        Whether to return the selector object to use with other arrays.
-        Default is False.
-
-    Returns
-    -------
-    np.ndarray
-        The transformed data. The shape is (n_samples, n_features - n_removed).
-    Optional[VarianceThreshold]
-        The selector object.
-    """
-    vt = VarianceThreshold(threshold=threshold)
-    X_train = vt.fit_transform(X_train)
-    if return_selector:
-        return X_train, vt
-    else:
-        return X_train
 
 class HyperOpt:
 
@@ -304,7 +178,8 @@ class HyperOpt:
             train_X, val_X, train_y, val_y = train_test_split(
                 X, y, test_size=self.val_size, random_state=42
             )
-            train_X, var_selector = variance_threshold(train_X, return_selector=True)
+
+            # train_X, var_selector = variance_threshold(train_X, return_selector=True)
             train_X, cocorr_selector = cocorr(train_X, return_selector=True)
             k = train_X.shape[0] - 1
             if train_X.shape[1] > k:
@@ -313,12 +188,13 @@ class HyperOpt:
                     return_selector=True, task=self.task
                 )
             else:
-                train_X, kbest_selector = select_all(train_X, return_selector=True)
+                pass
+                # train_X, kbest_selector = select_all(train_X, return_selector=True)
             model = self.model(task=self.task, **params)
             
             model.fit(train_X, train_y)
             
-            val_X = var_selector.transform(val_X)
+            # val_X = var_selector.transform(val_X)
             val_X = cocorr_selector.transform(val_X)
             val_X = kbest_selector.transform(val_X)
 
