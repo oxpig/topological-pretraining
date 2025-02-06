@@ -265,14 +265,21 @@ class SortAndSlice:
             self.update(molecules)
             self.slice(fpsize)
 
-    def append(self, mol: Chem.Mol):
+    def append(self, mol: Chem.Mol|np.ndarray):
         """
         Adds identifiers from a molecule to the identifiers attribute.
         """
         if mol is None:
             return
-        radius = self.generator.radius
-        envs = self.generator.environments(mol)
+        elif isinstance(mol, np.ndarray):
+            envs = mol
+            radius = envs.shape[1] - 1
+        elif isinstance(mol, Chem.Mol):
+            radius = self.generator.radius
+            envs = self.generator.environments(mol)
+        else:
+            raise ValueError('Input must be a RDKit molecule or an envs array.')
+
         starter = {r: 0 for r in range(radius + 1)}
         starter['num_mols'] = 0
         starter['count'] = 0
@@ -290,7 +297,7 @@ class SortAndSlice:
                     done[id] = True
                 self.identifiers[id] = value
 
-    def update(self, molecules: list[Chem.Mol]):
+    def update(self, molecules: list[Chem.Mol|np.ndarray]):
         """
         Updates the identifiers attribute with identifiers from new molecules.
         
@@ -303,7 +310,6 @@ class SortAndSlice:
             identifiers (dict[str, int]): Dictionary of identifiers and their counts.
         """
         pbar = tqdm(total=len(molecules), desc='Collecting identifiers', disable=not self.verbose)
-
         for mol in molecules:
             self.append(mol)
             pbar.update(1)
@@ -314,7 +320,7 @@ class SortAndSlice:
         Sorts the identifiers by the number of molecules they appear in and their total count.
         """                
         self.identifiers = dict(sorted(
-            self.identifiers.items(), key=lambda x: tuple(x[1]['num_mols'], x[1]['count']), reverse=True,
+            self.identifiers.items(), key=lambda x: (x[1]['num_mols'], x[1]['count']), reverse=True,
         ))
 
     def slice(self, fpsize: int|None = None):
@@ -333,19 +339,21 @@ class SortAndSlice:
         if fpsize is None:
             fpsize = self.fpsize
         if self.verbose:
-            print(f'Setting bit length of encoder to a max of {fpsize}.')
+            print(f'Attempting to set bit length of encoder to a max of {fpsize}.')
         encoder = {}
-        for i, k in enumerate(self.identifiers.keys()):
-            if i >= fpsize:
+        count = 0
+        for k in self.identifiers.keys():
+            if count >= fpsize:
                 break
-            encoder[k] = i
+            encoder[k] = count
+            count += 1
 
         self.encoder = encoder
         if len(encoder) < fpsize:
-            warnings.warn(
-                f'Fewer observed substructures than fpsize.\
-                Encoder is only {len(encoder)} bits long.'
-            )
+            if self.verbose:
+                print(
+                    f'Fewer observed substructures than fpsize.\nEncoder is only {len(encoder)} bits long.'
+                )
 
         if self.verbose:
             print(f'Encoder set to {len(encoder)} bits.')
