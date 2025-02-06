@@ -140,7 +140,7 @@ class BaseDataset(pd.DataFrame):
             return None
         else:
             mols_path = Path(self.csv)
-            mols_path = mols_path.parent / f'{mols_path.stem.split('.')[0]}.npz'
+            mols_path = mols_path.parent / f'{mols_path.stem.split(".")[0]}.npz'
             return mols_path
 
     @property
@@ -156,3 +156,22 @@ class BaseDataset(pd.DataFrame):
     def num_splits(self):
         return len([col for col in self.columns if 'split' in col])
     
+    def save_standard_smiles(self):
+        smi = [Chem.MolToSmiles(m) if m != None else None for m in self.rdkit_mols]
+        try:
+            mols_path = self.mols_path
+            smi_path = mols_path.parent / f'{mols_path.stem}.smi'
+
+            with open(smi_path, 'w') as f:
+                for s in smi:
+                    f.write(f'{s}\n')
+        except:
+            print('Could not save SMILES file')
+
+    def get_smiles(self):
+        mols_path = self.mols_path
+        smi_path = mols_path.parent / f'{mols_path.stem}.smi'
+        try:
+            return pd.read_csv(smi_path, header=None).iloc[:,0].tolist()
+        except:
+            print('Could not load SMILES file')
