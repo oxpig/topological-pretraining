@@ -313,7 +313,7 @@ def preprocess(config: dict):
         pretrain_data, root=data_path, compression=True,
         verbose=verbose
     )
-    if 'butina_filter' and 'random_filter' not in pretrain_data.columns:
+    if 'butina_filter' and 'max_tanimoto' not in pretrain_data.columns:
         print(f'Processing filters for {pretrain_data.name}') if verbose else None
         print(f'Data shape: {pretrain_data.shape}') if verbose else None
         rdkit_passes = pretrain_data[pretrain_data['rdkit_pass'] == True]
