@@ -109,6 +109,19 @@ def batch_tanimoto_filter(
     out[:, -1] = np.where(np.sum(out[:,:-1], axis=1) == len(fp_2), 1, 0)
     return out
 
+def batch_max_tanimoto(
+    fp_1: list[DataStructs.ExplicitBitVect],
+    fp_2: list[list[DataStructs.ExplicitBitVect]],
+    verbose: bool = False,
+) -> np.ndarray:
+    out = np.zeros((len(fp_1), len(fp_2)))
+    pbar = tqdm(total=len(fp_2), disable=not verbose)
+    for i, fps in enumerate(fp_2):
+        out[:, i] = max_tanimoto(fp_1, fps, verbose=verbose)
+        pbar.update(1)
+    pbar.close()
+    out = out.max(axis=1)
+    return out
 def repeat_groupkfold(
     X: np.ndarray,
     y: np.ndarray,
@@ -310,25 +323,25 @@ def preprocess(config: dict):
         # fps as explicitbitvect
         pretrain_fps = morgan_generator(pretrain_mols)
 
-        pretrain_filter = batch_tanimoto_filter(
-            pretrain_fps, benchmark_fps.values(), threshold=config['filter_threshold'],
-            verbose=verbose
+        max_tanimote_scores = batch_max_tanimoto(
+            pretrain_fps, benchmark_fps.values(), verbose=verbose
         )
+        df['max_tanimoto'] = max_tanimote_scores
+        thresholds = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+        num_keep = None
+        for threshold in thresholds:
+            pretrain_filter = float_to_binary(max_tanimote_scores, threshold=threshold, below=True)
+            for fail in rdkit_fails.index:
+                pretrain_filter = np.insert(pretrain_filter, fail, 0, axis=0)
+            if num_keep is None:
+                num_keep = int(np.sum(pretrain_filter))
+            else:
+                filter_indices = np.where(pretrain_filter == 1)[0]
+                filter_indices = subset_indices(filter_indices, num_keep)
+                pretrain_filter = indices_to_binary(filter_indices, len(pretrain_filter))
+                
+            df[f'butina_filter_{threshold}'] = pretrain_filter
 
-        num_keep = int(np.sum(pretrain_filter[:, -1]))
-        pretrain_filter = pretrain_filter[:, -1]
-        pretrain_filter = pd.DataFrame(pretrain_filter, columns=['butina_filter'], index=rdkit_passes.index)
-        for fail in rdkit_fails.index:
-            pretrain_filter.loc[fail, 'butina_filter'] = 0
-
-        pretrain_filter.sort_index(inplace=True)
-        
-        random_indices = subset_indices(np.array(rdkit_passes.index), num_keep)
-        random_indices = indices_to_binary(random_indices, len(pretrain_data))
-
-        pretrain_filter['random_filter'] = random_indices
-        csv_path = pretrain_data.csv
-        df = pretrain_data.join(pretrain_filter)
-        df.to_csv(csv_path, compression='infer', index=False)
+        df.save()
     else:
         print(f'Filters already exist for {pretrain_data.name}') if verbose else None
