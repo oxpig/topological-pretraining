@@ -324,10 +324,11 @@ def preprocess(config: dict):
         # fps as explicitbitvect
         pretrain_fps = morgan_generator(pretrain_mols[:1000])
 
+        print(max_tanimote_scores.shape)
         max_tanimote_scores = batch_max_tanimoto(
             pretrain_fps, benchmark_fps.values(), verbose=verbose
         )
-        max_tanimote_scores = np.max(max_tanimote_scores, axis=0)
+        max_tanimote_scores = np.max(max_tanimote_scores, axis=1)
         print(max_tanimote_scores) if verbose else None
         print(max_tanimote_scores.shape) if verbose else None
         exit()
