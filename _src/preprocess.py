@@ -322,7 +322,7 @@ def preprocess(config: dict):
         pretrain_mols = pretrain_data.rdkit_mols[rdkit_passes.index]
         
         # fps as explicitbitvect
-        pretrain_fps = morgan_generator(pretrain_mols[:1000])
+        pretrain_fps = morgan_generator(pretrain_mols)
 
         
         max_tanimote_scores = batch_max_tanimoto(
