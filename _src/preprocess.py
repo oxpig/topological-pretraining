@@ -328,11 +328,11 @@ def preprocess(config: dict):
         max_tanimote_scores = batch_max_tanimoto(
             pretrain_fps, benchmark_fps.values(), verbose=verbose
         )
-        max_tanimote_scores = np.max(max_tanimote_scores, axis=1)
+        max_tanimote_scores_all = np.max(max_tanimote_scores, axis=1)
         thresholds = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
         num_keep = None
         for threshold in thresholds:
-            pretrain_filter = float_to_binary(max_tanimote_scores, threshold=threshold, below=True)
+            pretrain_filter = float_to_binary(max_tanimote_scores_all, threshold=threshold, below=True)
             for fail in rdkit_fails.index:
                 pretrain_filter = np.insert(pretrain_filter, fail, 0, axis=0)
             if num_keep is None:
@@ -345,8 +345,11 @@ def preprocess(config: dict):
             pretrain_data[f'butina_filter_{threshold}'] = pretrain_filter
 
         for fail in rdkit_fails.index:
+            max_tanimote_scores_all = np.insert(max_tanimote_scores_all, fail, np.nan, axis=0)
             max_tanimote_scores = np.insert(max_tanimote_scores, fail, np.nan, axis=0)
-        pretrain_data['max_tanimoto'] = max_tanimote_scores
+        pretrain_data['max_tanimoto'] = max_tanimote_scores_all
+        for i, benchmark in enumerate(benchmark_fps.keys()):
+            pretrain_data[f'max_tanimoto_{benchmark}'] = max_tanimote_scores[:, i]
 
         pretrain_data.save()
     else:
