@@ -328,11 +328,7 @@ def preprocess(config: dict):
         max_tanimote_scores = batch_max_tanimoto(
             pretrain_fps, benchmark_fps.values(), verbose=verbose
         )
-        print(max_tanimote_scores.shape)
         max_tanimote_scores = np.max(max_tanimote_scores, axis=1)
-        print(max_tanimote_scores) if verbose else None
-        print(max_tanimote_scores.shape) if verbose else None
-        exit()
         df['max_tanimoto'] = max_tanimote_scores
         thresholds = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
         num_keep = None
