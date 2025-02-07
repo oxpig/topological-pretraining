@@ -329,7 +329,7 @@ def preprocess(config: dict):
             pretrain_fps, benchmark_fps.values(), verbose=verbose
         )
         max_tanimote_scores = np.max(max_tanimote_scores, axis=1)
-        df['max_tanimoto'] = max_tanimote_scores
+        pretrain_data['max_tanimoto'] = max_tanimote_scores
         thresholds = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
         num_keep = None
         for threshold in thresholds:
@@ -343,8 +343,8 @@ def preprocess(config: dict):
                 filter_indices = subset_indices(filter_indices, num_keep)
                 pretrain_filter = indices_to_binary(filter_indices, len(pretrain_filter))
                 
-            df[f'butina_filter_{threshold}'] = pretrain_filter
+            pretrain_data[f'butina_filter_{threshold}'] = pretrain_filter
 
-        df.save()
+        pretrain_data.save()
     else:
         print(f'Filters already exist for {pretrain_data.name}') if verbose else None
