@@ -120,7 +120,7 @@ def batch_max_tanimoto(
         out[:, i] = max_tanimoto(fp_1, fps, verbose=verbose)
         pbar.update(1)
     pbar.close()
-    out = out.max(axis=1)
+
     return out
 def repeat_groupkfold(
     X: np.ndarray,
@@ -313,6 +313,7 @@ def preprocess(config: dict):
         pretrain_data, root=data_path, compression=True,
         verbose=verbose
     )
+
     if 'butina_filter' and 'max_tanimoto' not in pretrain_data.columns:
         print(f'Processing filters for {pretrain_data.name}') if verbose else None
         print(f'Data shape: {pretrain_data.shape}') if verbose else None
@@ -321,11 +322,14 @@ def preprocess(config: dict):
         pretrain_mols = pretrain_data.rdkit_mols[rdkit_passes.index]
         
         # fps as explicitbitvect
-        pretrain_fps = morgan_generator(pretrain_mols)
+        pretrain_fps = morgan_generator(pretrain_mols[:1000])
 
         max_tanimote_scores = batch_max_tanimoto(
             pretrain_fps, benchmark_fps.values(), verbose=verbose
         )
+        print(max_tanimote_scores) if verbose else None
+        print(max_tanimote_scores.shape) if verbose else None
+        exit()
         df['max_tanimoto'] = max_tanimote_scores
         thresholds = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
         num_keep = None
