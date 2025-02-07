@@ -63,14 +63,14 @@ class MorganGenerator:
         if isinstance(mol, Chem.Mol):
             return self.dense(mol, array=self.asarray)
         else:
-            out = np.zeros((len(mol), self.fpsize))
+            out = []
             pbar = tqdm(
                 total=len(mol), disable=not self.verbose,
                 desc='Generating fingerprints'
             )
             for idx, m in enumerate(mol):
                 m = self.dense(m, array=self.asarray) if m is not None else np.full(self.fpsize, np.nan)
-                out[idx] = m
+                out.append(m)
                 pbar.update()
             pbar.close()
             if self.asarray:
