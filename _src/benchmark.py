@@ -316,28 +316,39 @@ def benchmark(config: dict):
             else:
                 print('Using default hyperparameters.') if verbose else None
 
-        out = np.zeros((num_splits, len(df)))
+        out = np.zeros((num_splits, len(df) + 1))
+        out_path = Path(results_path) / name
+        out_path.mkdir(parents=True, exist_ok=True)
+        if (out_path / f'{benchmark.lower()}_preds.npz').exists():
+            print('Predictions already exist. Finding checkpoint.') if verbose else None
+            preds = np.load(out_path / f'{benchmark.lower()}_preds.npz')
+            out = preds['arr_0']
+            incomplete = np.where(out[:, -1] == 0)[0]
+            
         kbar = tqdm(total=num_splits, desc='Splits', disable=not verbose)
         for idx, (train, test) in enumerate(splits):
-            print('\n') if verbose else None
-            print(f'Processing split {idx}.') if verbose else None
+            if not idx in incomplete:
+                kbar.update(1)
+                continue
+            print('\n') if verbose == 2 else None
+            print(f'Processing split {idx}.') if verbose == 2 else None
             tokenizer.reset(train, test)
             # train_X, train_y = tokenizer.train
-            print(f'Original shape: {tokenizer.train_X.shape}.') if verbose else None
-            print('Applying variance threshold.') if verbose else None
+            print(f'Original shape: {tokenizer.train_X.shape}.') if verbose == 2 else None
+            print('Applying variance threshold.') if verbose == 2 else None
             tokenizer.set_variance_threshold()
-            print(f'New shape: {tokenizer.train_X.shape}.') if verbose else None
+            print(f'New shape: {tokenizer.train_X.shape}.') if verbose == 2 else None
             # train_X, var_selector = variance_threshold(train_X, return_selector=True)
-            print('Applying cocorrelation feature selection.') if verbose else None
+            print('Applying cocorrelation feature selection.') if verbose == 2 else None
             # train_X, cocorr_selector = cocorr(train_X, return_selector=True)
             tokenizer.set_cocorr()
-            print(f'New shape: {tokenizer.train_X.shape}.') if verbose else None
+            print(f'New shape: {tokenizer.train_X.shape}.') if verbose == 2 else None
             k = tokenizer.train_X.shape[0] - 1
             if tokenizer.train_X.shape[1] > k:
                 print(
                     f'More features than N - 1.\
                     Applying kbest feature selection with k = {k}.'
-                ) if verbose else None
+                ) if verbose == 2 else None
                 tokenizer.set_select_k_best(k=k, task=df.task)
                 # print(f'New shape: {tokenizer.train_X.shape}.') if verbose else None
                 # train_X, kbest_selector = kbest(
@@ -349,11 +360,14 @@ def benchmark(config: dict):
                     'Fewer features than N - 1, selecting all features.'
                 ) if verbose else None
                 # train_X, kbest_selector = select_all(train_X, return_selector=True)
-            print(f'Final shape: {tokenizer.train_X.shape}.') if verbose else None
-            print(f'Setting feature scaling.') if verbose else None
+            print(f'Final shape: {tokenizer.train_X.shape}.') if verbose == 2 else None
+            print(f'Setting feature scaling.') if verbose == 2 else None
             tokenizer.set_min_max_scale()
 
-
+            if verbose == 2:
+                model_kwargs['verbose'] = 1
+            else:
+                model_kwargs['verbose'] = -1
             model = model_class(seed=42, task=df.task, **model_kwargs)
             train_X, train_y = tokenizer.train
             model.fit(train_X, train_y)
@@ -364,11 +378,12 @@ def benchmark(config: dict):
 
             test_pred = model.predict(test_X)
             out[idx, test] = test_pred
+            out[idx, -1] = 1
+            np.savez_compressed(out_path / f'{benchmark.lower()}_preds.npz', out)
+
             kbar.update(1)
         kbar.close()
-        out_path = Path(results_path) / name
-        out_path.mkdir(parents=True, exist_ok=True)
-        np.savez_compressed(out_path / f'{benchmark.lower()}_preds.npz', out)
+        
         pbar.update(1)
 
     pbar.close()
