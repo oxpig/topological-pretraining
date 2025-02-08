@@ -5,7 +5,8 @@ import torch_geometric as pyg
 from tqdm import tqdm
 from typing import Callable
 from sklearn.feature_selection import (
-    SelectKBest, VarianceThreshold
+    SelectKBest, VarianceThreshold,
+    mutual_info_classif, mutual_info_regression
 )
 from sklearn.preprocessing import MinMaxScaler
 
@@ -21,6 +22,7 @@ class BaseTokenizer:
     cocorr = SelectAll()
     select_k_best = SelectAll()
     scaler = SelectAll()
+    use_scaler = False
 
     def __init__(
         self,
@@ -55,6 +57,10 @@ class BaseTokenizer:
     def reset(self, train: np.ndarray, test: np.ndarray) -> None:
         self.train_idx = train
         self.test_idx = test
+        self.variance_threshold = SelectAll()
+        self.cocorr = SelectAll()
+        self.select_k_best = SelectAll()
+        self.scaler = SelectAll()
 
     @property
     def train_X(self):
@@ -132,7 +138,7 @@ class BaseTokenizer:
         cc.fit(X_train)
         self.cocorr = cc
 
-    def set_select_k_best(self, score_func: Callable, k: int = 10):
+    def set_select_k_best(self, k: int = 10, task: str = 'classification'):
         """
         Select the k best features.
         
@@ -149,6 +155,10 @@ class BaseTokenizer:
             if self.verbose:
                 print('No y values for SelectKBest')
             return SelectAll()
+        if task == 'classification':
+            score_func = mutual_info_classif
+        elif task == 'regression':
+            score_func = mutual_info_regression
 
         skb = SelectKBest(score_func=score_func, k=k)
         skb.fit(X_train, y_train)
@@ -211,6 +221,7 @@ class BaseGraphTokenizer(BaseTokenizer):
     edge_attr_variance_threshold = SelectAll()
     edge_attr_cocorr = SelectAll()
     edge_attr_scaler = SelectAll()
+    use_scaler = False
 
     def __init__(
         self,
@@ -344,7 +355,8 @@ class BaseGraphTokenizer(BaseTokenizer):
     def set_select_k_best(self, score_func: Callable, k: int = 10):
         self.select_k_best = SelectAll()
 
-    def set_min_max_scale(self, use = True):
+    def set_min_max_scale(self):
+        use = self.use_scaler
         self.scaler = SelectAll()
         if use:
             X_train = pyg.data.Batch.from_data_list(self.train_X)
