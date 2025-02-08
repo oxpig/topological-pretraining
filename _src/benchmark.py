@@ -319,15 +319,16 @@ def benchmark(config: dict):
         out = np.zeros((num_splits, len(df) + 1))
         out_path = Path(results_path) / name
         out_path.mkdir(parents=True, exist_ok=True)
+        complete = {}
         if (out_path / f'{benchmark.lower()}_preds.npz').exists():
             print('Predictions already exist. Finding checkpoint.') if verbose else None
             preds = np.load(out_path / f'{benchmark.lower()}_preds.npz')
             out = preds['arr_0']
-            incomplete = np.where(out[:, -1] == 0)[0]
+            complete = {i: True for i in np.where(out[:, -1])[0]}
             
         kbar = tqdm(total=num_splits, desc='Splits', disable=not verbose)
         for idx, (train, test) in enumerate(splits):
-            if not idx in incomplete:
+            if idx in complete:
                 kbar.update(1)
                 continue
             print('\n') if verbose == 2 else None
