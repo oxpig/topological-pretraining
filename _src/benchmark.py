@@ -234,6 +234,9 @@ def benchmark(config: dict):
                 The keyword arguments for the tokenizer.
     """
     name: str = config['name']
+    print(f'\n##################################################\n') if verbose else None
+    print(f'Run {name}.') if verbose else None
+
     data_path: str = config['data']
     results_path: str = config['results']
     verbose: bool = config['verbose']
@@ -243,6 +246,8 @@ def benchmark(config: dict):
 
     tokenizer_class = get_tokenizer(config['tokenizer'])
     transform_kwargs = config.get('transform_kwargs', {})
+    print(f'Benchmarking {config["tokenizer"]}.') if verbose else None
+    print(f'Tokenizer transform kwargs: {transform_kwargs}') if verbose else None
 
     hyperparameters: dict = config.get('model_hyperparameters', {})
     print(f'Hyperparameters: {hyperparameters}') if verbose else None
@@ -262,6 +267,7 @@ def benchmark(config: dict):
     pbar = tqdm(total=len(benchmark_data), desc='Benchmarking', disable=not verbose)
     for benchmark in benchmark_data:
         model_kwargs = {**base_model_kwargs}
+        print(f'\n##################################################\n') if verbose else None
         print(f'Benchmarking on {benchmark}') if verbose else None
         print(f'Loading benchmark {benchmark}') if verbose else None
         df: BaseDataset = load_dataset(
