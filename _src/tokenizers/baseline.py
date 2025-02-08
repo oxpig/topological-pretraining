@@ -1,5 +1,5 @@
 from ..data.mol import MorganGenerator, SortAndSlice, MolDesc
-from .base import BaseTokenizer
+from .base import BaseTokenizer, SelectAll
 
 import numpy as np
 from rdkit import Chem
@@ -47,6 +47,8 @@ default_descriptors: list[str] = [
 ]
 
 class PDV(BaseTokenizer):
+
+    use_scaler = True
 
     def __init__(
         self,
@@ -147,6 +149,11 @@ class SNS(BaseTokenizer):
         self.transform_kwargs['molecules'] = [self.origin_X[i] for i in train]
         self.set_transform(self.transform_kwargs)
         self.X = self.transform(self.origin_X)
+        self.variance_threshold = SelectAll()
+        self.cocorr = SelectAll()
+        self.select_k_best = SelectAll()
+        self.scaler = SelectAll()
+
 
     @property
     def fpsize(self):
