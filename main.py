@@ -33,6 +33,8 @@ def main():
     config = load_base_config()
     config.update(yaml.load(open(args.config), Loader=yaml.Loader))
     config['path'] = args.config
+    if 'model' in config:
+        config.update(config[config['model']])
     process = config.pop('process')
     if 'name' not in config:
         config['name'] = Path(args.config).stem
