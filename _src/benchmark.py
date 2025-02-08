@@ -324,7 +324,7 @@ def benchmark(config: dict):
             print('Predictions already exist. Finding checkpoint.') if verbose else None
             preds = np.load(out_path / f'{benchmark.lower()}_preds.npz')
             out = preds['arr_0']
-            complete = {i: True for i in np.where(out[:, -1])[0]}
+            complete = {i: True for i in np.where(out[:, -1] == 1)[0]}
             
         kbar = tqdm(total=num_splits, desc='Splits', disable=not verbose)
         for idx, (train, test) in enumerate(splits):
@@ -379,7 +379,7 @@ def benchmark(config: dict):
 
             test_pred = model.predict(test_X)
             out[idx, test] = test_pred
-            out[idx, -1] = 1
+            out[idx, -1] = 1 # Mark as complete
             np.savez_compressed(out_path / f'{benchmark.lower()}_preds.npz', out)
 
             kbar.update(1)
