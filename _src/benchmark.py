@@ -256,7 +256,7 @@ def benchmark(config: dict):
         'num_splits'
     ) if 'num_splits' in hyperparameters else 5
 
-    hyperparam_path = Path(data_path) / f'results/hyperparameters/{name}'
+    hyperparam_path = Path(data_path) / f'/hyperparameters/{name}'
     hyperparam_path.mkdir(parents=True, exist_ok=True)
 
     pbar = tqdm(total=len(benchmark_data), desc='Benchmarking', disable=not verbose)
