@@ -287,7 +287,7 @@ def benchmark(config: dict):
             print(
                 f'Using saved hyperparameters: \n{best_params}'
             ) if verbose else None
-            model_kwargs.update(config[f'{benchmark}_hyperparameters'])
+            model_kwargs.update(best_params)
         
         else:
             print('No hyperparameters for benchmark found.') if verbose else None
