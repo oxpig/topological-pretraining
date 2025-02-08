@@ -14,6 +14,7 @@ from sklearn.feature_selection import (
 )
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, average_precision_score
+import torch
 from tqdm import tqdm
 from typing import Callable, Generator
 import yaml
@@ -133,7 +134,8 @@ class HyperOpt:
         self, model, model_kwargs: dict,
         task: str, hyperparameters: dict, tokenizer: BaseTokenizer,
         splits: list, scorer: Callable,
-        direction: str = 'minimize', val_size: float = 0.2
+        direction: str = 'minimize', val_size: float = 0.2,
+        verbose: bool = False
     ):
         self.model = model
         self.model_kwargs = model_kwargs
@@ -145,6 +147,7 @@ class HyperOpt:
         self.hyperparameters = hyperparameters
         self.task = task
         self.val_size = val_size
+        self.verbose = verbose
 
     def objective(self, trial: optuna.Trial):
         hyperparameters = self.hyperparameters
@@ -173,37 +176,32 @@ class HyperOpt:
         filler = np.inf if self.direction == 'minimize' else -np.inf
         out = np.full((len(self.splits,)), filler)
         for idx, (train, test) in enumerate(self.splits):
-            self.tokenizer.reset(train, test)
-            X, y = self.tokenizer.train
-            train_X, val_X, train_y, val_y = train_test_split(
-                X, y, test_size=self.val_size, random_state=42
+            train_idx, val_idx = train_test_split(
+                train, test_size=self.val_size, random_state=42, shuffle=True
             )
 
-            # train_X, var_selector = variance_threshold(train_X, return_selector=True)
-            train_X, cocorr_selector = cocorr(train_X, return_selector=True)
-            k = train_X.shape[0] - 1
-            if train_X.shape[1] > k:
-                train_X, kbest_selector = kbest(
-                    train_X, train_y, k=k,
-                    return_selector=True, task=self.task
-                )
+            self.tokenizer.reset(train_idx, val_idx)
+            self.tokenizer.set_variance_threshold()
+            self.tokenizer.set_cocorr()
+            k = self.tokenizer.train_X.shape[0] - 1
+            if self.tokenizer.train_X.shape[1] > k:
+                self.tokenizer.set_select_k_best(k=k, task=self.task)
             else:
                 pass
-                # train_X, kbest_selector = select_all(train_X, return_selector=True)
-            model = self.model(task=self.task, **params)
-            
+            self.tokenizer.set_min_max_scale()
+            train_X, train_y = self.tokenizer.train
+            val_X, val_y = self.tokenizer.test
+            model = self.model(seed=42, task=self.task, **params)
             model.fit(train_X, train_y)
-            
-            # val_X = var_selector.transform(val_X)
-            val_X = cocorr_selector.transform(val_X)
-            val_X = kbest_selector.transform(val_X)
-
+            val_X, _ = self.tokenizer.test
             test_pred = model.predict(val_X)
             out[idx] = self.scorer(val_y, test_pred)
+        print(out)
         return out.mean()
     
     def run(self, trials: int = 50):
-        study = optuna.create_study(direction=self.direction)
+        print(f'Running hyperparameter tuning with {trials} trials.') if self.verbose else None
+        study = optuna.create_study(direction=self.direction, sampler=optuna.samplers.TPESampler(seed=42))
         study.optimize(self.objective, n_trials=trials)
         return study.best_params
 
@@ -242,7 +240,7 @@ def benchmark(config: dict):
     benchmark_data: list[str]|str = config['benchmark']
     model_class = get_model(config['model'])
     base_model_kwargs = config.get('model_kwargs', {})
-    
+
     tokenizer_class = get_tokenizer(config['tokenizer'])
     transform_kwargs = config.get('transform_kwargs', {})
 
@@ -257,6 +255,9 @@ def benchmark(config: dict):
     num_hyp_splits = hyperparameters.pop(
         'num_splits'
     ) if 'num_splits' in hyperparameters else 5
+
+    hyperparam_path = Path(data_path) / f'results/hyperparameters/{name}'
+    hyperparam_path.mkdir(parents=True, exist_ok=True)
 
     pbar = tqdm(total=len(benchmark_data), desc='Benchmarking', disable=not verbose)
     for benchmark in benchmark_data:
@@ -275,10 +276,14 @@ def benchmark(config: dict):
         mols = df.rdkit_mols
         y = df.y.to_numpy()
 
-        tokenizer = tokenizer_class(X=mols, y=y, transform_kwargs=transform_kwargs, verbose=verbose)
+        tokenizer: BaseTokenizer = tokenizer_class(
+            X=mols, y=y, transform_kwargs=transform_kwargs,
+            verbose=verbose
+        )
 
-        if f'{benchmark}_hyperparameters' in config:
-            best_params = config[f'{benchmark}_hyperparameters']
+        benchmark_hp_path = hyperparam_path / f'{benchmark}.pt'
+        if benchmark_hp_path.exists():
+            best_params = torch.load(benchmark_hp_path, map_location='cpu', allow_pickle=True)
             print(
                 f'Using saved hyperparameters: \n{best_params}'
             ) if verbose else None
@@ -299,15 +304,13 @@ def benchmark(config: dict):
                 opt = HyperOpt(
                     model=model_class, model_kwargs=model_kwargs, task=df.task,
                     hyperparameters=hyperparameters, tokenizer=tokenizer,
-                    splits=hyperopt_splits, scorer=scorer, direction=direction
+                    splits=hyperopt_splits, scorer=scorer, direction=direction,
+                    verbose=verbose
                 )
                 best_params = opt.run(trials=trials)
                 print(f'Best hyperparameters: {best_params}') if verbose else None
 
-                current_config = yaml.load(open(config['path']), Loader=yaml.Loader)
-                current_config |= {f'{benchmark}_hyperparameters': best_params}
-                with open(config['path'], 'w') as f:
-                    yaml.dump(current_config, f)
+                torch.save(best_params, benchmark_hp_path)
                 print('Saved hyperparameters.') if verbose else None
 
             else:
@@ -319,36 +322,45 @@ def benchmark(config: dict):
             print('\n') if verbose else None
             print(f'Processing split {idx}.') if verbose else None
             tokenizer.reset(train, test)
-            train_X, train_y = tokenizer.train
-            print(f'Original shape: {train_X.shape}.') if verbose else None
+            # train_X, train_y = tokenizer.train
+            print(f'Original shape: {tokenizer.train_X.shape}.') if verbose else None
             print('Applying variance threshold.') if verbose else None
-            train_X, var_selector = variance_threshold(train_X, return_selector=True)
+            tokenizer.set_variance_threshold()
+            print(f'New shape: {tokenizer.train_X.shape}.') if verbose else None
+            # train_X, var_selector = variance_threshold(train_X, return_selector=True)
             print('Applying cocorrelation feature selection.') if verbose else None
-            train_X, cocorr_selector = cocorr(train_X, return_selector=True)
-            k = train_X.shape[0] - 1
-            if train_X.shape[1] > k:
+            # train_X, cocorr_selector = cocorr(train_X, return_selector=True)
+            tokenizer.set_cocorr()
+            print(f'New shape: {tokenizer.train_X.shape}.') if verbose else None
+            k = tokenizer.train_X.shape[0] - 1
+            if tokenizer.train_X.shape[1] > k:
                 print(
                     f'More features than N - 1.\
                     Applying kbest feature selection with k = {k}.'
                 ) if verbose else None
-                train_X, kbest_selector = kbest(
-                    train_X, train_y, k=k,
-                    return_selector=True, task=df.task
-                )
+                tokenizer.set_select_k_best(k=k, task=df.task)
+                # print(f'New shape: {tokenizer.train_X.shape}.') if verbose else None
+                # train_X, kbest_selector = kbest(
+                #     train_X, train_y, k=k,
+                #     return_selector=True, task=df.task
+                # )
             else:
                 print(
                     'Fewer features than N - 1, selecting all features.'
                 ) if verbose else None
-                train_X, kbest_selector = select_all(train_X, return_selector=True)
-            print(f'Final shape: {train_X.shape}.') if verbose else None
-            model = model_class(task=df.task, **model_kwargs)
+                # train_X, kbest_selector = select_all(train_X, return_selector=True)
+            print(f'Final shape: {tokenizer.train_X.shape}.') if verbose else None
+            print(f'Setting feature scaling.') if verbose else None
+            tokenizer.set_min_max_scale()
+
+
+            model = model_class(seed=42, task=df.task, **model_kwargs)
+            train_X, train_y = tokenizer.train
             model.fit(train_X, train_y)
             train_pred = model.predict(train_X)
             out[idx, train] = train_pred
+
             test_X, _ = tokenizer.test
-            test_X = var_selector.transform(test_X)
-            test_X = cocorr_selector.transform(test_X)
-            test_X = kbest_selector.transform(test_X)
 
             test_pred = model.predict(test_X)
             out[idx, test] = test_pred
