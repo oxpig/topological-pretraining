@@ -196,7 +196,7 @@ class HyperOpt:
             val_X, _ = self.tokenizer.test
             test_pred = model.predict(val_X)
             out[idx] = self.scorer(val_y, test_pred)
-        print(out)
+
         return out.mean()
     
     def run(self, trials: int = 50):
