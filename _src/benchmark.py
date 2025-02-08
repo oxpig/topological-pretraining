@@ -365,7 +365,7 @@ def benchmark(config: dict):
             else:
                 print(
                     'Fewer features than N - 1, selecting all features.'
-                ) if verbose else None
+                ) if verbose == 2 else None
                 # train_X, kbest_selector = select_all(train_X, return_selector=True)
             print(f'Final shape: {tokenizer.train_X.shape}.') if verbose == 2 else None
             print(f'Setting feature scaling.') if verbose == 2 else None
