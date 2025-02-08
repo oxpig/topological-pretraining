@@ -283,7 +283,7 @@ def benchmark(config: dict):
 
         benchmark_hp_path = hyperparam_path / f'{benchmark}.pt'
         if benchmark_hp_path.exists():
-            best_params = torch.load(benchmark_hp_path, map_location='cpu', allow_pickle=True)
+            best_params = torch.load(benchmark_hp_path, map_location='cpu')
             print(
                 f'Using saved hyperparameters: \n{best_params}'
             ) if verbose else None
