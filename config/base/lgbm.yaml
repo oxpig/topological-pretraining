@@ -3,7 +3,7 @@ LGBM:
     verbose: 1
   model_hyperparameters:
     tuning: True
-    trials: 5
+    trials: 50
     num_splits: 5
     num_leaves:
       target: int
@@ -39,5 +39,6 @@ LGBM:
       target: float
       log: False
       low: 0.5
+      high: 1.0
   high: 1.0
 
