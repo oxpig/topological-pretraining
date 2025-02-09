@@ -165,6 +165,20 @@ def benchmark(config: dict):
         model_kwargs = {**base_model_kwargs}
         print(f'\n##################################################\n') if verbose else None
         print(f'Benchmarking on {benchmark}') if verbose else None
+        out_path = Path(results_path) / name
+        out_path.mkdir(parents=True, exist_ok=True)
+        out = np.zeros((num_splits, len(df) + 1))
+        complete = {}
+        if (out_path / f'{benchmark.lower()}_preds.npz').exists():
+            print('Predictions already exist. Getting checkpoint.') if verbose else None
+            preds = np.load(out_path / f'{benchmark.lower()}_preds.npz')
+            out = preds['arr_0']
+            complete = {i: True for i in np.where(out[:, -1] == 1)[0]}
+        if out[-1, -1] == 1:
+            print('All splits complete. Skipping') if verbose else None
+            pbar.update(1)
+            continue
+        
         print(f'Loading benchmark {benchmark}') if verbose else None
         df: BaseDataset = load_dataset(
             name=benchmark, root=data_path, compression=True,
@@ -222,16 +236,6 @@ def benchmark(config: dict):
 
             else:
                 print('Using default hyperparameters.') if verbose else None
-
-        out = np.zeros((num_splits, len(df) + 1))
-        out_path = Path(results_path) / name
-        out_path.mkdir(parents=True, exist_ok=True)
-        complete = {}
-        if (out_path / f'{benchmark.lower()}_preds.npz').exists():
-            print('Predictions already exist. Finding checkpoint.') if verbose else None
-            preds = np.load(out_path / f'{benchmark.lower()}_preds.npz')
-            out = preds['arr_0']
-            complete = {i: True for i in np.where(out[:, -1] == 1)[0]}
             
         kbar = tqdm(total=num_splits, desc='Splits', disable=not verbose)
         for idx, (train, test) in enumerate(splits):
