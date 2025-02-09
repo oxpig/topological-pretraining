@@ -165,6 +165,12 @@ def benchmark(config: dict):
         model_kwargs = {**base_model_kwargs}
         print(f'\n##################################################\n') if verbose else None
         print(f'Benchmarking on {benchmark}') if verbose else None
+        
+        print(f'Loading benchmark {benchmark}') if verbose else None
+        df: BaseDataset = load_dataset(
+            name=benchmark, root=data_path, compression=True,
+            verbose=verbose,
+        )
         out_path = Path(results_path) / name
         out_path.mkdir(parents=True, exist_ok=True)
         out = np.zeros((num_splits, len(df) + 1))
@@ -178,12 +184,6 @@ def benchmark(config: dict):
             print('All splits complete. Skipping') if verbose else None
             pbar.update(1)
             continue
-        
-        print(f'Loading benchmark {benchmark}') if verbose else None
-        df: BaseDataset = load_dataset(
-            name=benchmark, root=data_path, compression=True,
-            verbose=verbose,
-        )
         print(f'Task type: {df.task}') if verbose else None
         splits: list = list(df.splits)
         num_splits = df.num_splits
