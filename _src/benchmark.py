@@ -282,12 +282,12 @@ def benchmark(config: dict):
             model = model_class(seed=42, task=df.task, **model_kwargs)
             train_X, train_y = tokenizer.train
             model.fit(train_X, train_y)
-            train_pred = model.predict(train_X)
+            train_pred = model.predict_proba(train_X)
             out[idx, train] = train_pred
 
             test_X, _ = tokenizer.test
 
-            test_pred = model.predict(test_X)
+            test_pred = model.predict_proba(test_X)
             out[idx, test] = test_pred
             out[idx, -1] = 1 # Mark as complete
             np.savez_compressed(out_path / f'{benchmark.lower()}_preds.npz', out)
