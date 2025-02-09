@@ -41,7 +41,7 @@ class HyperOpt:
         self.task = task
         self.val_size = val_size
         self.verbose = verbose
-        if verbose:
+        if verbose == 2:
             optuna.logging.set_verbosity(optuna.logging.INFO)
         else:
             optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -219,15 +219,13 @@ def benchmark(config: dict):
                     scorer = average_precision_score
                     direction = 'maximize'
                 hyperopt_splits = [splits[i] for i in range(num_hyp_splits)]
-                # if verbose == 2:
-                #     hyperopt_verbose = True
-                # else:
-                #     hyperopt_verbose = False
+                if verbose == True:
+                    hyperopt_verbose = 1
                 opt = HyperOpt(
                     model=model_class, model_kwargs=model_kwargs, task=df.task,
                     hyperparameters=hyperparameters, tokenizer=tokenizer,
                     splits=hyperopt_splits, scorer=scorer, direction=direction,
-                    verbose=verbose
+                    verbose=hyperopt_verbose
                 )
                 best_params = opt.run(trials=trials)
                 print(f'Best hyperparameters: {best_params}') if verbose else None
