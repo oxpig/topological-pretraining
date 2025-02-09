@@ -27,5 +27,5 @@ class FreeSolv(BaseDataset):
             self.save()
 
     @property
-    def tasks(self):
+    def task(self):
         return 'regression'

@@ -40,8 +40,8 @@ class MUV(BaseDataset):
             self.save()
 
     @property
-    def tasks(self):
-        return 'binary classification'
+    def task(self):
+        return 'classification'
     
     @property
     def subsets(self):
@@ -112,6 +112,10 @@ class MUV_Subset(MUV, BaseDataset):
             return mols
         else:
             raise ValueError('SMILES column not found in the dataset and no saved molecules')
+        
+    @property
+    def task(self):
+        return 'classification'
    
 
 class MUV466(MUV_Subset):
