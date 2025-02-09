@@ -238,8 +238,7 @@ def benchmark(config: dict):
                 The keyword arguments for the tokenizer.
     """
     name: str = config['name']
-    print(f'\n##################################################\n') if verbose else None
-    print(f'Run {name}.') if verbose else None
+
 
     data_path: str = config['data']
     results_path: str = config['results']
@@ -250,6 +249,8 @@ def benchmark(config: dict):
 
     tokenizer_class = get_tokenizer(config['tokenizer'])
     transform_kwargs = config.get('transform_kwargs', {})
+    print(f'\n##################################################\n') if verbose else None
+    print(f'Run {name}.') if verbose else None
     print(f'Benchmarking {config["tokenizer"]}.') if verbose else None
     print(f'Tokenizer transform kwargs: {transform_kwargs}') if verbose else None
 
