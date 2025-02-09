@@ -171,6 +171,8 @@ def benchmark(config: dict):
             name=benchmark, root=data_path, compression=True,
             verbose=verbose,
         )
+        splits: list = list(df.splits)
+        num_splits = df.num_splits
         out_path = Path(results_path) / name
         out_path.mkdir(parents=True, exist_ok=True)
         out = np.zeros((num_splits, len(df) + 1))
@@ -185,8 +187,7 @@ def benchmark(config: dict):
             pbar.update(1)
             continue
         print(f'Task type: {df.task}') if verbose else None
-        splits: list = list(df.splits)
-        num_splits = df.num_splits
+        
         print(f'Number of splits: {num_splits}') if verbose else None
         print('Loading molecules') if verbose else None
         mols = df.rdkit_mols
