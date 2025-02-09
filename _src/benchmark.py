@@ -21,113 +21,6 @@ import yaml
 
 import optuna
 
-
-
-
-def rfecv(
-        X_train: np.ndarray, y_train: np.ndarray, estimator,
-        return_selector: bool = False, cv: int = 5,
-    ) -> np.ndarray|tuple[np.ndarray, RFECV]:
-    """
-    Recursive Feature Elimination with X-validation.
-    """
-    rfe_selector = RFECV(estimator=estimator, cv=cv)
-    X_train = rfe_selector.fit_transform(X_train, y_train)
-    if return_selector:
-        return X_train, rfe_selector
-    else:
-        return X_train
-    
-def rfe(
-        X_train: np.ndarray, y_train: np.ndarray, estimator,
-        n_features: int|float, return_selector: bool = False, 
-    ) -> np.ndarray|tuple[np.ndarray, RFE]:
-    """
-    Recursive Feature Elimination.
-
-    Good for feature selection but slow.
-    """
-    rfe_selector = RFE(estimator=estimator, n_features_to_select=n_features)
-    X_train = rfe_selector.fit_transform(X_train, y_train)
-    if return_selector:
-        return X_train, rfe_selector
-    else:
-        return X_train
-    
-def cocorr(
-        X_train: np.ndarray,
-        threshold: float = 0.9,
-        return_selector: bool = True,
-    ):
-    """
-    Remove highly correlated features. Finds pairs of features with a pearson correlation above the threshold.
-    The feature with the lowest variance out of the pair is removed.
-
-    Parameters
-    ----------
-    X_train : np.ndarray
-        The input data. The shape is (n_samples, n_features).
-    threshold : float
-        The threshold for collinearity. Default is 0.9.
-    return_selector : bool
-        Whether to return the selector object to use with other arrays.
-        Default is False.
-
-    Returns
-    -------
-    np.ndarray
-        The transformed data. The shape is (n_samples, n_features - n_removed).
-    Optional[CoCorr]
-        The selector object.
-    """
-    pass
-    
-    
-def kbest(
-    X_train: np.ndarray, y_train: np.ndarray, k: int,
-    return_selector: bool = True, task: str = 'regression'
-    ):
-    """
-    Select the k best features using SelectKBest from sklearn.
-    The score function is mutual information for both classification and regression tasks.
-
-    Parameters
-    ----------
-    X_train : np.ndarray
-        The input data. The shape is (n_samples, n_features).
-    y_train : np.ndarray
-        The target data. The shape is (n_samples,).
-    k : int
-        The number of features to select.
-    return_selector : bool
-        Whether to return the selector object to use with other arrays.
-        Default is False.
-    task : str
-        The task type. Must be either 'classification' or 'regression'.
-
-    Returns
-    -------
-    np.ndarray
-        The transformed data. The shape is (n_samples, k).
-    Optional[SelectKBest]
-        The selector object.
-    """
-    if task == 'classification':
-        score_func = mutual_info_classif
-    elif task == 'regression':
-        score_func = mutual_info_regression
-    else:
-        raise ValueError('Invalid task. Must be either "classification" or "regression"')
-    selector = SelectKBest(score_func=score_func, k=k)
-    X_train = selector.fit_transform(X_train, y_train)
-    if return_selector:
-        return X_train, selector
-    else:
-        return X_train
-    
-
-
-
 class HyperOpt:
 
     def __init__(
@@ -238,8 +131,6 @@ def benchmark(config: dict):
                 The keyword arguments for the tokenizer.
     """
     name: str = config['name']
-
-
     data_path: str = config['data']
     results_path: str = config['results']
     verbose: bool = config['verbose']
