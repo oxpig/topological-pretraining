@@ -177,12 +177,13 @@ def benchmark(config: dict):
         print('Loading molecules') if verbose else None
         mols = df.rdkit_mols
         y = df.y.to_numpy()
-
+        print('Tokenizing molecules.') if verbose else None
         tokenizer: BaseTokenizer = tokenizer_class(
             X=mols, y=y, transform_kwargs=transform_kwargs,
             verbose=verbose
         )
-
+        print('Tokenization complete.') if verbose else None
+        print('Checking for saved hyperparameters.') if verbose else None
         benchmark_hp_path = hyperparam_path / f'{benchmark}.pt'
         if benchmark_hp_path.exists():
             best_params = torch.load(benchmark_hp_path, map_location='cpu')
@@ -204,9 +205,9 @@ def benchmark(config: dict):
                     direction = 'maximize'
                 hyperopt_splits = [splits[i] for i in range(num_hyp_splits)]
                 if verbose == 2:
-                    hyperopt_verbose = 1
+                    hyperopt_verbose = True
                 else:
-                    hyperopt_verbose = 0
+                    hyperopt_verbose = False
                 opt = HyperOpt(
                     model=model_class, model_kwargs=model_kwargs, task=df.task,
                     hyperparameters=hyperparameters, tokenizer=tokenizer,
