@@ -14,6 +14,7 @@ class LGBM:
 
     def predict(self, X):
         if self.task == 'classification':
-            return self.model.predict_proba(X)
+            return self.model.predict_proba(X)[:, 1]
+        
         else:
             return self.model.predict(X)
