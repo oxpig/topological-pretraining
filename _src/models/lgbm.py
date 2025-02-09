@@ -13,8 +13,7 @@ class LGBM:
         self.model.fit(X, y)
 
     def predict(self, X):
-        return self.model.predict(X)
-    
-    def predict_proba(self, X):
-        return self.model.predict_proba(X)
-    
+        if self.task == 'classification':
+            return self.model.predict_proba(X)
+        else:
+            return self.model.predict(X)
