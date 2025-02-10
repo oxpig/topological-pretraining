@@ -165,6 +165,8 @@ class SNSGraphTokenizer(MorganGraphTokenizer):
     sort_and_slice : SortAndSlice
         SortAndSlice object to sort and slice hashed identifiers.
     """
+    max_vocab_size = 2048
+    vocab_size = 0
     def __init__(
         self,
         X: list[Chem.Mol],
@@ -178,14 +180,12 @@ class SNSGraphTokenizer(MorganGraphTokenizer):
             X=X, y=y, train=train, test=test,
             transform_kwargs=transform_kwargs, verbose=verbose
         )
-        if 'vocab_size' in transform_kwargs:
-            self.vocab_size = transform_kwargs.pop('vocab_size')
-        else:
-            self.vocab_size = 1000
+        if 'max_vocab_size' in transform_kwargs:
+            self.max_vocab_size = transform_kwargs.pop('max_vocab_size')
 
         self.envs = [np.array(graph.x, dtype=int) if graph != None else None for graph in self.X.values()]
         self.sort_and_slice = SortAndSlice(
-            generator=self.transform.morgan, fpsize=self.vocab_size, verbose=False  
+            generator=self.transform.morgan, fpsize=self.max_vocab_size, verbose=False  
         )
         self.sort_and_slice.verbose = self.verbose
         self.reset(self.train_idx, self.test_idx)
@@ -207,14 +207,14 @@ class SNSGraphTokenizer(MorganGraphTokenizer):
             return
         x = np.full(atomic_environments.shape, fill_value=np.nan)
         encoder = self.sort_and_slice.encoder
-        unk = encoder['unk']
+        unk = encoder['UNK']
         for i in range(atomic_environments.shape[0]):
             for j in range(atomic_environments.shape[1]):
                 env = atomic_environments[i, j]
                 x[i, j] = encoder.get(env, unk)
         self.X[idx].x = torch.tensor(x, dtype=torch.long)
 
-    def reset(self, train: np.ndarray, test: np.ndarray, vocab_size: None) -> None:
+    def reset(self, train: np.ndarray, test: np.ndarray) -> None:
         """
         Reset the training and test indices and re-encode the hashed identifiers.
         SortAndSlice object is updated with the new training environments.
@@ -232,13 +232,13 @@ class SNSGraphTokenizer(MorganGraphTokenizer):
         self.sort_and_slice.clear()
         self.sort_and_slice.update(train_environments)
         self.sort_and_slice.sort()
-        self.sort_and_slice.slice(vocab_size)
-        self.sort_and_slice.encoder['unk'] = len(self.sort_and_slice.encoder)
+        self.sort_and_slice.slice(self.max_vocab_size)
+        self.sort_and_slice.encoder['UNK'] = len(self.sort_and_slice.encoder)
         for i in self.X:
             self.encode(i)  
         self.vocab_size = len(self.sort_and_slice.encoder)
         if self.verbose:
-            print(f'Vocabulary size: {self.vocab_size} (including unknown token).')
+            print(f'Vocabulary size: {self.vocab_size} (including unknown token).') if self.verbose else None
 
 """
     TODO: Implement MolETokenizer
