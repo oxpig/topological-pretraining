@@ -21,9 +21,14 @@ class PredHead(MLP):
             num_layers=num_layers, dropout=dropout, batch_norm=batch_norm,
             act=act
         )
+    
+    @property
+    def loss_fn(self):
+        return torch.nn.Identity()
 
     def loss(self, x, y):
-        raise NotImplementedError
+        preds = self(x)
+        return self.loss_fn(preds, y)
 
 class RegressionHead(PredHead):
     """
@@ -44,10 +49,14 @@ class RegressionHead(PredHead):
             num_layers=num_layers, dropout=dropout, batch_norm=batch_norm,
             act=act
         )
+    
+    @property
+    def loss_fn(self):
+        return torch.nn.MSELoss()
 
     def loss(self, x, y):
         pred = self(x)
-        return torch.nn.functional.mse_loss(pred, y)
+        return self.loss_fn(pred, y)
 
 class BinaryHead(PredHead):
     """
@@ -72,12 +81,16 @@ class BinaryHead(PredHead):
         )
         self.class_weights = torch.tensor(class_weights)
 
+    @property
+    def loss_fn(self):
+        return torch.nn.functional.binary_cross_entropy
+
     def loss(self, x, y):
         pred = self(x)
         weights = torch.zeros_like(y)
         weights[y == 0] = self.class_weights[0]
         weights[y == 1] = self.class_weights[1]
-        return torch.nn.BCELoss(pred, y, weight=weights)
+        return self.loss_fn(pred, y, weight=weights)
 
 class MultiClassHead(PredHead):
     """
@@ -106,6 +119,10 @@ class MultiClassHead(PredHead):
         else:
             self.class_weights = torch.ones(size=(output_dim,))
 
+    @property
+    def loss_fn(self):
+        return torch.nn.CrossEntropyLoss(weight=self.class_weights)
+
     def loss(self, x, y):
         pred = self(x)
-        return torch.nn.CrossEntropyLoss(pred, y, weight=self.class_weights)
+        return self.loss_fn(pred, y)
