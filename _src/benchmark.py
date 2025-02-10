@@ -139,7 +139,7 @@ def benchmark(config: dict):
     base_model_kwargs = config.get('model_kwargs', {})
 
     tokenizer_class = get_tokenizer(config['tokenizer'])
-    transform_kwargs = config.get('transform_kwargs', {})
+    transform_kwargs = config.get('tokenizer_kwargs', {})
     print(f'\n##################################################\n') if verbose else None
     print(f'Run {name}.') if verbose else None
     print(f'Benchmarking {config["tokenizer"]}.') if verbose else None
