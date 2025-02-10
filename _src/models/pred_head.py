@@ -5,15 +5,23 @@ class PredHead(MLP):
     Prediction head for the model
     """
     def __init__(
-        self, 
+        self,
+        input_dim: int, 
+        output_dim: int,
+        hidden_dim: int = None, 
+        num_layers: int = 1,
+        dropout: float = 0.0,
+        batch_norm: bool = False,
+        act: str = 'relu',
     ):
-        pass
-        
-    def forward(self, x):
-        pass
+        super(PredHead, self).__init__(
+            input_dim=input_dim, output_dim=output_dim, hidden_dim=hidden_dim,
+            num_layers=num_layers, dropout=dropout, batch_norm=batch_norm,
+            act=act
+        )
 
     def loss(self, x, y):
-        pass
+        raise NotImplementedError
 
 class RegressionHead(PredHead):
     """
