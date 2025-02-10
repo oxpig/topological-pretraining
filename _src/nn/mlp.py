@@ -23,11 +23,10 @@ class MLP(torch.nn.Module):
         batch_norm: bool = False,
         act: str = 'relu',
         final_act: str = None,
-        verbose: bool = False
     ):
         super(MLP, self).__init__()
-        self.verbose = verbose
-
+        if hidden_dim is None:
+            hidden_dim = output_dim
         if num_layers == 1:
             self.layers = torch.nn.ModuleList([
                 torch.nn.Linear(input_dim, output_dim)
@@ -39,8 +38,6 @@ class MLP(torch.nn.Module):
                 torch.nn.Linear(hidden_dim, output_dim)
             ])
         else:
-            if hidden_dim is None:
-                hidden_dim = input_dim
             self.layers = torch.nn.ModuleList([
                 torch.nn.Linear(input_dim, hidden_dim),
                 *[torch.nn.Linear(hidden_dim, hidden_dim) for _ in range(num_layers - 2)],
