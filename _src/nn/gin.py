@@ -1,9 +1,10 @@
 from .mlp import MLP
+from .gnn import BaseGNN
 
 import torch
 import torch_geometric as pyg
 
-class GIN(pyg.nn.conv.GINConv):
+class GINLayer(pyg.nn.conv.GINConv):
 
     def __init__(
         self,
@@ -23,6 +24,12 @@ class GIN(pyg.nn.conv.GINConv):
             num_layers=num_layers, dropout=dropout, batch_norm=batch_norm,
             act=act, final_act=final_act
         )
-        super(GIN, self).__init__(
+        super(GINLayer, self).__init__(
             nn=mlp, eps=eps, train_eps=train_eps
         )
+
+class GIN(BaseGNN):
+
+    def _init_layer(self, input_dim, output_dim, **kwargs):
+        pass
+        
