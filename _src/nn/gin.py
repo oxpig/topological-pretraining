@@ -1,0 +1,28 @@
+from .mlp import MLP
+
+import torch
+import torch_geometric as pyg
+
+class GIN(pyg.nn.conv.GINConv):
+
+    def __init__(
+        self,
+        input_dim: int,
+        output_dim: int,
+        hidden_dim: int = None,
+        num_layers: int = 1,
+        dropout: float = 0.0,
+        batch_norm: bool = False,
+        act: str = 'relu',
+        final_act: str = None,
+        eps: float = 0.0,
+        train_eps: bool = False,
+    ):
+        mlp = MLP(
+            input_dim=input_dim, output_dim=output_dim, hidden_dim=hidden_dim,
+            num_layers=num_layers, dropout=dropout, batch_norm=batch_norm,
+            act=act, final_act=final_act
+        )
+        super(GIN, self).__init__(
+            nn=mlp, eps=eps, train_eps=train_eps
+        )
