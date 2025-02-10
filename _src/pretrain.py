@@ -15,6 +15,11 @@ def pretrain(config: dict):
     tokenizer_class = get_tokenizer(config['tokenizer'])
     tokenizer_kwargs = config.get('transform_kwargs', {})
 
+    if 'target' in config:
+        target: list[str] = config['target']
+    else:
+        raise ValueError('No target specified in config file.')
+    
     model_class = get_model(config['model'])
     model_kwargs = config.get('model_kwargs', {})
     print(f'\n##################################################\n') if verbose else None
@@ -25,3 +30,10 @@ def pretrain(config: dict):
 
     # Load the dataset
     dataset: BaseDataset = load_dataset(data_path, pretrain_data, verbose=verbose)
+    mols = dataset.rdkit_mols
+
+    # Load the tokenizer
+    tokenizer = tokenizer_class(X=mols, **tokenizer_kwargs)
+
+    # Load the model
+    model = model_class(tokenizer, **model_kwargs)
