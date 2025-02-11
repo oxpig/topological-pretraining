@@ -14,7 +14,7 @@ class BaseGNN(torch.nn.Module):
         self,
         input_dim: int,
         hidden_dim: int,
-        node_embeds: int = None,
+        node_vocab_size: int = None,
         padding_idx: int = None,
         num_layers: int = 1,
         dropout: float = 0.0,
@@ -28,26 +28,32 @@ class BaseGNN(torch.nn.Module):
         super(BaseGNN, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
+        self.dropout_value = dropout
+        self.use_batch_norm = batch_norm
+        self.act_type = act
         self.num_layers = num_layers
         self.layer_pool_type = layer_pool_type
         self.graph_pool_type = graph_pool_type
         self.gnn_kwargs = gnn_kwargs
-        self.node_embeds = node_embeds
+        self.node_vocab_size = node_vocab_size
         self.share_weights = share_weights
         self.layers = torch.nn.ModuleDict({
-            'act': act_fn[act],
-            'dropout': torch.nn.Dropout(dropout),
-            'batch_norm': torch.nn.BatchNorm1d(input_dim) if batch_norm else torch.nn.Identity(),
-        })
-        if node_embeds:
-            input_dim = hidden_dim
+                'act': act_fn[act],
+                'dropout': torch.nn.Dropout(dropout),
+                'batch_norm': torch.nn.BatchNorm1d(hidden_dim) if batch_norm else torch.nn.Identity(),
+            })
+        self.num_hidden_states = self.num_layers
+        if node_vocab_size is not None:
             self.layers['node_embedding'] = torch.nn.Embedding(
-                node_embeds, input_dim, padding_idx=padding_idx
+                node_vocab_size, hidden_dim, padding_idx=padding_idx
             )
-            self.num_hidden_states = self.num_layers + 1
+            node_tokens = input_dim
+            input_dim = hidden_dim*node_tokens
+            self.num_hidden_states += node_tokens
+        
         else:
             self.layers['node_embedding'] = None
-            self.num_hidden_states = self.num_layers
+
         layer_count = 0
         if input_dim != hidden_dim:
             self.layers[f'conv_{layer_count}'] = self._init_layer(
@@ -103,20 +109,23 @@ class BaseGNN(torch.nn.Module):
                 'Valid options are: sum, mean, max.'
             )
     
-    def forward(self, x, edge_index, edge_weight, edge_attr, batch = None):
+    def forward(self, x, edge_index, edge_weight = None, edge_attr = None, batch = None):
         out = {
             'input': x,
-            'hidden_states': torch.zeros((x.size(0), self.num_hidden_states, self.hidden_dim)),
         }
         state = 0
+        num_hidden_states = self.num_hidden_states
+        out['hidden_states'] = torch.zeros((x.size(0), num_hidden_states, self.hidden_dim))
 
-        if self.node_embeds:
+        if self.node_vocab_size is not None:
             x = self.layers['node_embedding'](x)
-            out['hidden_states'][:, state, :] = x
-            state += 1
+            out['hidden_states'][:, :x.size(1), :] = x
+            state += x.size(1)
+            x = x.view(x.size(0), -1)
+            
         
-        for i in range(state, self.num_hidden_states):
-            if self.share_weights:
+        for i in range(self.num_layers):
+            if self.share_weights and i > 0:
                 conv = self.layers[self.shared_layer]
             else:
                 conv = self.layers[f'conv_{i}']
@@ -134,7 +143,8 @@ class BaseGNN(torch.nn.Module):
             x = self.layers['act'](x)
             x = self.layers['dropout'](x)
             x = self.layers['batch_norm'](x)
-            out['hidden_states'][:, i, :] = x
+            out['hidden_states'][:, state, :] = x
+            state += 1
 
         out['final_state'] = self.layer_pool(out['hidden_states'])
         out['global_state'] = self.graph_pool(out['final_state'], batch)
