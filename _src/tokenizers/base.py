@@ -32,6 +32,7 @@ class BaseTokenizer:
         k_best_task: Optional[int] = None,
         scaler: bool = False,
         verbose: bool = False,
+        **kwargs,
     ):
         self.verbose = verbose
         if isinstance(variance_threshold, float):
