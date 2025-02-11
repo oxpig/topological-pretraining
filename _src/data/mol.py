@@ -18,6 +18,7 @@ TODO: change print statements to logging
 
 RDLogger.DisableLog('rdApp.*')
 
+
 class MorganGenerator:
     """
     Python wrapper for Morgan fingerprint generator.
@@ -463,8 +464,6 @@ class MolDesc:
         pbar.close()
 
         return out
-
-
 
 class Standardizer:
     """
