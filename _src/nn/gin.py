@@ -18,6 +18,7 @@ class GINLayer(pyg.nn.conv.GINConv):
         final_act: str = None,
         eps: float = 0.0,
         train_eps: bool = False,
+        **kwargs,
     ):
         mlp = MLP(
             input_dim=input_dim, output_dim=output_dim, hidden_dim=hidden_dim,
@@ -31,5 +32,15 @@ class GINLayer(pyg.nn.conv.GINConv):
 class GIN(BaseGNN):
 
     def _init_layer(self, input_dim, output_dim, **kwargs):
-        pass
+
+        if 'act' not in kwargs:
+            kwargs['act'] = self.act_type
+        if 'dropout' not in kwargs:
+            kwargs['dropout'] = self.dropout_value
+        if 'batch_norm' not in kwargs:
+            kwargs['batch_norm'] = self.use_batch_norm
+
+        return GINLayer(input_dim, output_dim, **kwargs)
         
+
+            
