@@ -69,40 +69,27 @@ class AtomGraph(BaseGraph):
             [0],
             [0]], dtype=torch.int32)
     """
-    def __init__(
-        self,
-        molecules: list[Chem.Mol] = None,
-        atom_types: dict = {
-            'C' : 0,
-            'O' : 1,
-            'N' : 2,
-        },
-        bond_types = {
+    atom_types = {}
+    bond_types = {
             Chem.rdchem.BondType.SINGLE: 0,
             Chem.rdchem.BondType.DOUBLE: 1,
             Chem.rdchem.BondType.AROMATIC: 2,
             Chem.rdchem.BondType.TRIPLE: 3,
-        },
-        verbose: bool = False
-    ):
-        
-        super(AtomGraph, self).__init__(verbose)
-        # if molecules provided, get atom types
-        if molecules is not None:
-            atom_types = {}
-            for mol in molecules:
-                if mol is None:
-                    continue
-                for atom in mol.GetAtoms():
-                    atom = atom.GetSymbol()
-                    if atom not in atom_types:
-                        atom_types[atom] = len(atom_types)
+        }
+
+    def reset(self, mols: list[Chem.Mol]) -> None:
+        atom_types = {}
+        for m in mols:
+            if m is None:
+                continue
+            for atom in m.GetAtoms():
+                atom = atom.GetSymbol()
+                if atom not in atom_types:
+                    atom_types[atom] = len(atom_types)
 
         # add unknown atom type
-        atom_types['unk'] = len(atom_types)
-
+        atom_types['UNK'] = len(atom_types)
         self.atom_types = atom_types
-        self.bond_types = bond_types
 
     def make_graph(self, mol: Chem.Mol):
         """
@@ -127,7 +114,7 @@ class AtomGraph(BaseGraph):
         # initialize node features
         x = torch.empty((mol.GetNumAtoms(), 1), dtype=torch.int)
         # set unknown atom type
-        unk = self.atom_types['unk']
+        unk = self.atom_types['UNK']
 
         # loop over atoms and set atom types
         for atom in mol.GetAtoms():
@@ -169,20 +156,12 @@ class AtomGraph(BaseGraph):
         )
 
 
-class AtomGraphTokenizer(BaseGraphTokenizer):
+class AtomGraphTokenizer(BaseTokenizer):
     """
     Class to tokenize molecules into graphs using atom types and bond types.
 
     Parameters
     ----------
-    X : list[Chem.Mol]
-        List of RDKit molecule objects.
-    y : Optional[np.ndarray]
-        Target values.
-    train : Optional[np.ndarray]
-        Indices of the training set.
-    test : Optional[np.ndarray]
-        Indices of the test set.
     transform_kwargs : dict
         Keyword arguments for the AtomGraph.
     verbose : bool
@@ -190,33 +169,21 @@ class AtomGraphTokenizer(BaseGraphTokenizer):
     """
     def __init__(
         self,
-        X: list[Chem.Mol],
-        y: np.ndarray = None,
-        train: np.ndarray = np.array([]),
-        test: np.ndarray = np.array([]),
         transform_kwargs: dict = {},
         verbose: bool = False,
+        **kwargs,
     ):
-        if len(train) == 0:
-            train = np.arange(len(X))
-        
-        # set molecules for AtomGraph
-        transform_kwargs['molecules'] = [X[i] for i in train]
         super(AtomGraphTokenizer, self).__init__(
-            X=X, y=y, train=train, test=test,
             transform_kwargs=transform_kwargs, verbose=verbose
         )
+        if 'atom_types' in transform_kwargs:
+            self.transform.atom_types = transform_kwargs['atom_types']
 
     def _transform_base(self, **kwargs):
         return AtomGraph(verbose=self.verbose, **kwargs)
     
-    def reset(self, train: np.ndarray, test: np.ndarray) -> None:
-        self.train_idx = train
-        self.test_idx = test
-        # reset molecules for AtomGraph i.e., reset atom types
-        self.transform_kwargs['molecules'] = [self.origin_X[i] for i in train]
-        self.set_transform(self.transform_kwargs)
-        self.X = self.transform(self.origin_X)
+    def reset(self, mols: Chem.Mol) -> None:
+        self.transform.reset(mols)
 
     @property
     def vocab_size(self):
