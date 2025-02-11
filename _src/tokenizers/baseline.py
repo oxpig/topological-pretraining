@@ -1,12 +1,15 @@
 from ..data.mol import MorganGenerator, SortAndSlice, MolDesc
 from .base import BaseTokenizer, SelectAll
 
+
 import numpy as np
 from rdkit import Chem
 from rdkit.ML.Descriptors.MoleculeDescriptors import MolecularDescriptorCalculator
 from rdkit.Chem.rdFingerprintGenerator import GetMorganFeatureAtomInvGen
 
-from typing import Callable, Literal
+from sklearn.feature_selection import SelectKBest
+
+from typing import Callable, Literal, Optional
 
 morgan_feat_inv = GetMorganFeatureAtomInvGen()
 
@@ -46,44 +49,27 @@ default_descriptors: list[str] = [
     'fr_tetrazole', 'fr_thiazole', 'fr_thiocyan', 'fr_thiophene', 'fr_unbrch_alkane', 'fr_urea', 'qed'
 ]
 
-class PDV(BaseTokenizer):
+class BaselineTokenizer(BaseTokenizer):
 
-    use_scaler = True
+    def reset(self, mols: list[Chem.Mol], y: Optional[np.ndarray] = None) -> None:
+        x = self.transform(mols)
+        x = self.variance_threshold.fit_transform(x)
+        x = self.cocorr.fit_transform(x)
+        if self.k_best_func is not None and x.shape[0] - 1 < x.shape[1]:
+            if y is None:
+                raise ValueError('y must be provided for SelectKBest feature selection.')
+            select_k_best = SelectKBest(score_func=self.k_best_func, k=x.shape[1] -1)
+            x = select_k_best.fit_transform(x, y)
+        x = self.scaler.fit_transform(x)
 
-    def __init__(
-        self,
-        X: list[Chem.Mol],
-        y: np.ndarray = None,
-        train: np.ndarray = np.array([]),
-        test: np.ndarray = np.array([]),
-        transform_kwargs: dict = {},
-        verbose: bool = False,
-    ):
-        super(PDV, self).__init__(
-            X=X, y=y, train=train,
-            test=test, transform_kwargs=transform_kwargs,  verbose=verbose
-        )
+class PDV(BaselineTokenizer):
 
     def _transform_base(self, **kwargs):
         if 'descriptors' not in kwargs:
             kwargs['descriptors'] = default_descriptors 
         return MolDesc(verbose=self.verbose, **kwargs)
 
-class ECFP(BaseTokenizer):
-
-    def __init__(
-        self,
-        X: list[Chem.Mol],
-        y: np.ndarray = None,
-        train: np.ndarray = np.array([]),
-        test: np.ndarray = np.array([]),
-        transform_kwargs: dict = {},
-        verbose: bool = False,
-    ):
-        super(ECFP, self).__init__(
-            X=X, y=y, train=train, test=test,
-            transform_kwargs=transform_kwargs, verbose=verbose
-        )
+class ECFP(BaselineTokenizer):
 
     def _transform_base(self, **kwargs):
         gen = MorganGenerator(verbose=self.verbose, **kwargs)
@@ -100,39 +86,9 @@ class ECFP(BaseTokenizer):
 
 class FCFP(ECFP):
 
-    def __init__(
-        self,
-        X: Chem.Mol,
-        y: np.ndarray = None,
-        train: np.ndarray = np.array([]),
-        test: np.ndarray = np.array([]),
-        transform_kwargs: dict = {},
-        verbose: bool = False,
-    ):
-        transform_kwargs['atom_inv'] = morgan_feat_inv
-        super(FCFP, self).__init__(
-            X=X, y=y, train=train,
-            test=test, transform_kwargs=transform_kwargs, verbose=verbose
-        )
+    fixed_transform_kwargs = {'atom_inv': morgan_feat_inv}
 
 class SNS(BaseTokenizer):
-
-    def __init__(
-        self,
-        X: list[Chem.Mol],
-        y: np.ndarray = None,
-        train: np.ndarray = np.array([]),
-        test: np.ndarray = np.array([]),
-        transform_kwargs: dict = {},
-        verbose: bool = False,
-    ):
-        if len(train) == 0:
-            train = np.arange(len(X)) 
-        transform_kwargs['molecules'] = [X[i] for i in train]
-        super(SNS, self).__init__(
-            X=X, y=y, train=train,
-            test=test, transform_kwargs=transform_kwargs, verbose=verbose
-        )
 
     def _transform_base(self, **kwargs):
         if 'morgan_kwargs' in kwargs:
@@ -142,19 +98,20 @@ class SNS(BaseTokenizer):
         morgan = MorganGenerator(**morgan)
         return SortAndSlice(generator=morgan, **kwargs)
         
-
-    def reset(self, train: np.ndarray, test: np.ndarray) -> None:
-        self.train_idx = train
-        self.test_idx = test
-        self.transform_kwargs['molecules'] = [self.origin_X[i] for i in train]
-        self.set_transform(self.transform_kwargs)
-        self.X = self.transform(self.origin_X)
-        self.variance_threshold = SelectAll()
-        self.cocorr = SelectAll()
-        self.select_k_best = SelectAll()
-        self.scaler = SelectAll()
-
-
+    def reset(self, mols: list[Chem.Mol], y: Optional[np.ndarray] = None) -> None:
+        self.transform.clear()
+        self.transform.update(mols)
+        self.transform.slice()
+        self.transform.sort()
+        x = self.transform(mols)
+        x = self.variance_threshold.fit_transform(x)
+        x = self.cocorr.fit_transform(x)
+        if self.k_best_func is not None and x.shape[0] - 1 < x.shape[1]:
+            if y is None:
+                raise ValueError('y must be provided for SelectKBest feature selection.')
+            select_k_best = SelectKBest(score_func=self.k_best_func, k=x.shape[1] -1)
+            x = select_k_best.fit_transform(x, y)
+        x = self.scaler.fit_transform(x)
     @property
     def fpsize(self):
         return self.transform.fpsize
