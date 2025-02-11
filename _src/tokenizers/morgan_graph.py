@@ -29,8 +29,6 @@ class MorganGraph(BaseGraph):
     morgan : MorganGenerator
         MorganGenerator object to generate hashed identifiers.
     """
-
-
     bond_types = {
         Chem.rdchem.BondType.SINGLE: 0,
         Chem.rdchem.BondType.DOUBLE: 1,
@@ -119,17 +117,15 @@ class MorganGraphTokenizer(BaseGraphTokenizer):
     """
     def __init__(
         self,
-        X: list[Chem.Mol],
-        y: np.ndarray = None,
-        train: np.ndarray = np.array([]),
-        test: np.ndarray = np.array([]),
         transform_kwargs: dict = {},
         verbose: bool = False,
     ):
         super(MorganGraphTokenizer, self).__init__(
-            X=X, y=y, train=train, test=test,
             transform_kwargs=transform_kwargs, verbose=verbose
         )
+
+    def reset(self, mols: list[Chem.Mol], y: Optional[np.ndarray] = None) -> None:
+        return
 
     def _transform_base(self, **kwargs):
         """
@@ -169,28 +165,32 @@ class SNSGraphTokenizer(MorganGraphTokenizer):
     vocab_size = 0
     def __init__(
         self,
-        X: list[Chem.Mol],
-        y: np.ndarray = None,
-        train: np.ndarray = np.array([]),
-        test: np.ndarray = np.array([]),
         transform_kwargs: dict = {},
         verbose: bool = False,
     ):
         super(SNSGraphTokenizer, self).__init__(
-            X=X, y=y, train=train, test=test,
             transform_kwargs=transform_kwargs, verbose=verbose
         )
         if 'max_vocab_size' in transform_kwargs:
             self.max_vocab_size = transform_kwargs.pop('max_vocab_size')
 
-        self.envs = [np.array(graph.x, dtype=int) if graph != None else None for graph in self.X.values()]
         self.sort_and_slice = SortAndSlice(
             generator=self.transform.morgan, fpsize=self.max_vocab_size, verbose=False  
         )
+        if 'encoder' in transform_kwargs:
+            self.sort_and_slice.encoder = transform_kwargs.pop('encoder')
+            self.vocab_size = len(self.sort_and_slice.encoder)
+            
         self.sort_and_slice.verbose = self.verbose
-        self.reset(self.train_idx, self.test_idx)
 
-    def encode(self, idx: int) -> None:
+    def __call__(self, mol: Chem.Mol):
+        self.transform.verbose = False
+        X = self.transform(mol)
+        X.x = self.encode(X.x)
+        self.transform.verbose = self.verbose
+        return X
+
+    def encode(self, atomic_environments: torch.Tensor) -> None:
         """
         Encode hashed identifiers into sort and slice integer ranks.
         For molecular graph at index idx in self.X, self.X.x is
@@ -202,40 +202,25 @@ class SNSGraphTokenizer(MorganGraphTokenizer):
         idx : int
             Index of the molecule in the dataset.
         """
-        atomic_environments = self.envs[idx]
         if atomic_environments is None:
             return
-        x = np.full(atomic_environments.shape, fill_value=np.nan)
+        x = torch.full_like(atomic_environments, fill_value=-1, dtype=torch.long)
         encoder = self.sort_and_slice.encoder
         unk = encoder['UNK']
-        for i in range(atomic_environments.shape[0]):
-            for j in range(atomic_environments.shape[1]):
-                env = atomic_environments[i, j]
+        for i in range(atomic_environments.size(0)):
+            for j in range(atomic_environments.size(1)):
+                env = int(atomic_environments[i, j])
                 x[i, j] = encoder.get(env, unk)
-        self.X[idx].x = torch.tensor(x, dtype=torch.long)
+        return x
 
-    def reset(self, train: np.ndarray, test: np.ndarray) -> None:
+    def reset(self, mols: list[Chem.Mol]) -> None:
         """
-        Reset the training and test indices and re-encode the hashed identifiers.
-        SortAndSlice object is updated with the new training environments.
-
-        Parameters
-        ----------
-        train : np.ndarray
-            Indices of the training set.
-        test : np.ndarray
-            Indices of the test set.
         """
-        self.train_idx = train
-        self.test_idx = test
-        train_environments = [self.envs[i] for i in train]
         self.sort_and_slice.clear()
-        self.sort_and_slice.update(train_environments)
+        self.sort_and_slice.update(mols)
         self.sort_and_slice.sort()
         self.sort_and_slice.slice(self.max_vocab_size)
         self.sort_and_slice.encoder['UNK'] = len(self.sort_and_slice.encoder)
-        for i in self.X:
-            self.encode(i)  
         self.vocab_size = len(self.sort_and_slice.encoder)
         if self.verbose:
             print(f'Vocabulary size: {self.vocab_size} (including unknown token).') if self.verbose else None
@@ -248,7 +233,6 @@ class MolETokenizer(MorganGraphTokenizer):
     """
     Currently not implemented.
     """
-
     def __init__(
         self, X: list[Chem.Mol], y: Optional[np.ndarray] = None,
         train: Optional[np.ndarray] = np.array([]), test: Optional[np.ndarray] = np.array([]),
