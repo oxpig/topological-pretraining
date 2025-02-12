@@ -35,6 +35,12 @@ class BaseGNN(torch.nn.Module):
         self.layer_pool_type = layer_pool_type
         self.graph_pool_type = graph_pool_type
         self.gnn_kwargs = gnn_kwargs
+        if 'act' not in gnn_kwargs:
+            gnn_kwargs['act'] = act
+        if 'dropout' not in gnn_kwargs:
+            gnn_kwargs['dropout'] = dropout
+        if 'batch_norm' not in gnn_kwargs:
+            gnn_kwargs['batch_norm'] = batch_norm
         self.node_vocab_size = node_vocab_size
         self.share_weights = share_weights
         self.layers = torch.nn.ModuleDict({
@@ -125,6 +131,7 @@ class BaseGNN(torch.nn.Module):
             
         
         for i in range(self.num_layers):
+            # print(x.size())
             if self.share_weights and i > 0:
                 conv = self.layers[self.shared_layer]
             else:
@@ -148,6 +155,7 @@ class BaseGNN(torch.nn.Module):
 
         out['final_state'] = self.layer_pool(out['hidden_states'])
         out['global_state'] = self.graph_pool(out['final_state'], batch)
+        print(out['global_state'].size())
         return out
 
 
