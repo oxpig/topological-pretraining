@@ -6,7 +6,7 @@ from _src.data.mol import MorganGenerator, Standardizer
 import argparse
 from pathlib import Path
 import yaml
-from _src import benchmark, preprocess, evaluate
+from _src import benchmark, preprocess, evaluate, pretrain
 
 from dotenv import load_dotenv
 
@@ -45,7 +45,7 @@ def main():
     if process == 'preprocess':
         preprocess.preprocess(config=config)
     elif process == 'pretrain':
-        pass
+        pretrain.pretrain(config=config)
     elif process == 'benchmark':
         benchmark.benchmark(config=config)
     elif process == 'evaluate':
