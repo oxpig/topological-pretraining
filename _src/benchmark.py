@@ -1,6 +1,6 @@
 from .utils import get_model, get_tokenizer
 from .data.utils import load_dataset
-from .data.datasets import BaseDataset
+from .data.datasets import BaseDataset, MolDataset
 from .tokenizers.base import BaseTokenizer
 
 from copy import deepcopy
@@ -25,7 +25,7 @@ class HyperOpt:
 
     def __init__(
         self, model, model_kwargs: dict,
-        task: str, hyperparameters: dict, tokenizer: BaseTokenizer,
+        task: str, hyperparameters: dict, dataset: MolDataset,
         splits: list, scorer: Callable,
         direction: str = 'minimize', val_size: float = 0.2,
         verbose: bool = False
@@ -33,7 +33,7 @@ class HyperOpt:
         self.model = model
         self.model_kwargs = model_kwargs
         self.model_kwargs['verbose'] = -1
-        self.tokenizer = tokenizer
+        self.dataset = dataset
         self.splits = splits
         self.scorer = scorer
         self.direction = direction
@@ -42,6 +42,8 @@ class HyperOpt:
         self.val_size = val_size
         self.verbose = verbose
         if verbose == 2:
+            optuna.logging.set_verbosity(optuna.logging.DEBUG)
+        elif verbose == 1:
             optuna.logging.set_verbosity(optuna.logging.INFO)
         else:
             optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -76,21 +78,12 @@ class HyperOpt:
             train_idx, val_idx = train_test_split(
                 train, test_size=self.val_size, random_state=42, shuffle=True
             )
+            self.dataset.reset(train_idx, val_idx)
 
-            self.tokenizer.reset(train_idx, val_idx)
-            self.tokenizer.set_variance_threshold()
-            self.tokenizer.set_cocorr()
-            k = self.tokenizer.train_X.shape[0] - 1
-            if self.tokenizer.train_X.shape[1] > k:
-                self.tokenizer.set_select_k_best(k=k, task=self.task)
-            else:
-                pass
-            self.tokenizer.set_min_max_scale()
-            train_X, train_y = self.tokenizer.train
-            val_X, val_y = self.tokenizer.test
+            train_X, train_y = self.dataset.train
+            val_X, val_y = self.dataset.test
             model = self.model(seed=42, task=self.task, **params)
             model.fit(train_X, train_y)
-            val_X, _ = self.tokenizer.test
             test_pred = model.predict(val_X)
             out[idx] = self.scorer(val_y, test_pred)
 
@@ -138,12 +131,14 @@ def benchmark(config: dict):
     model_class = get_model(config['model'])
     base_model_kwargs = config.get('model_kwargs', {})
 
-    tokenizer_class = get_tokenizer(config['tokenizer'])
-    transform_kwargs = config.get('tokenizer_kwargs', {})
+    tokenizer_class = config['tokenizer']
+    tokenizer_kwargs = config.get('tokenizer_kwargs', {})
+    extra_transform_kwargs = config.get('extra_transform_kwargs', {})
+
     print(f'\n##################################################\n') if verbose else None
     print(f'Run {name}.') if verbose else None
     print(f'Benchmarking {config["tokenizer"]}.') if verbose else None
-    print(f'Tokenizer transform kwargs: {transform_kwargs}') if verbose else None
+    print(f'Tokenizer kwargs: {tokenizer_kwargs}') if verbose else None
 
     hyperparameters: dict = config.get('model_hyperparameters', {})
     print(f'Hyperparameters: {hyperparameters}') if verbose else None
@@ -192,12 +187,15 @@ def benchmark(config: dict):
         print('Loading molecules') if verbose else None
         mols = df.rdkit_mols
         y = df.y.to_numpy()
-        print('Tokenizing molecules.') if verbose else None
-        tokenizer: BaseTokenizer = tokenizer_class(
-            X=mols, y=y, transform_kwargs=transform_kwargs,
-            verbose=verbose
+
+        dataset = MolDataset(
+            mols=mols, y=y,
+            tokenizer=tokenizer_class, tokenizer_kwargs=tokenizer_kwargs,
+            extra_transform_kwargs=extra_transform_kwargs,
+            verbose=verbose, fit_transform=False,
         )
-        print('Tokenization complete.') if verbose else None
+    
+        print('Dataset loaded.') if verbose else None
         print('Checking for saved hyperparameters.') if verbose else None
         benchmark_hp_path = hyperparam_path / f'{benchmark}.pt'
         if benchmark_hp_path.exists():
@@ -219,13 +217,11 @@ def benchmark(config: dict):
                     scorer = average_precision_score
                     direction = 'maximize'
                 hyperopt_splits = [splits[i] for i in range(num_hyp_splits)]
-                if verbose == True:
-                    hyperopt_verbose = 1
                 opt = HyperOpt(
                     model=model_class, model_kwargs=model_kwargs, task=df.task,
-                    hyperparameters=hyperparameters, tokenizer=tokenizer,
+                    hyperparameters=hyperparameters, dataset=dataset,
                     splits=hyperopt_splits, scorer=scorer, direction=direction,
-                    verbose=hyperopt_verbose
+                    verbose=verbose
                 )
                 best_params = opt.run(trials=trials)
                 print(f'Best hyperparameters: {best_params}') if verbose else None
@@ -235,7 +231,6 @@ def benchmark(config: dict):
 
             else:
                 print('Using default hyperparameters.') if verbose else None
-            
         kbar = tqdm(total=num_splits, desc='Splits', disable=not verbose)
         for idx, (train, test) in enumerate(splits):
             if idx in complete:
@@ -243,49 +238,20 @@ def benchmark(config: dict):
                 continue
             print('\n') if verbose == 2 else None
             print(f'Processing split {idx}.') if verbose == 2 else None
-            tokenizer.reset(train, test)
-            # train_X, train_y = tokenizer.train
-            print(f'Original shape: {tokenizer.train_X.shape}.') if verbose == 2 else None
-            print('Applying variance threshold.') if verbose == 2 else None
-            tokenizer.set_variance_threshold()
-            print(f'New shape: {tokenizer.train_X.shape}.') if verbose == 2 else None
-            # train_X, var_selector = variance_threshold(train_X, return_selector=True)
-            print('Applying cocorrelation feature selection.') if verbose == 2 else None
-            # train_X, cocorr_selector = cocorr(train_X, return_selector=True)
-            tokenizer.set_cocorr()
-            print(f'New shape: {tokenizer.train_X.shape}.') if verbose == 2 else None
-            k = tokenizer.train_X.shape[0] - 1
-            if tokenizer.train_X.shape[1] > k:
-                print(
-                    f'More features than N - 1.\
-                    Applying kbest feature selection with k = {k}.'
-                ) if verbose == 2 else None
-                tokenizer.set_select_k_best(k=k, task=df.task)
-                # print(f'New shape: {tokenizer.train_X.shape}.') if verbose else None
-                # train_X, kbest_selector = kbest(
-                #     train_X, train_y, k=k,
-                #     return_selector=True, task=df.task
-                # )
-            else:
-                print(
-                    'Fewer features than N - 1, selecting all features.'
-                ) if verbose == 2 else None
-                # train_X, kbest_selector = select_all(train_X, return_selector=True)
-            print(f'Final shape: {tokenizer.train_X.shape}.') if verbose == 2 else None
-            print(f'Setting feature scaling.') if verbose == 2 else None
-            tokenizer.set_min_max_scale()
+            dataset.reset(train, test)
+            print(f'Train shape: {dataset.train_X.shape}.') if verbose == 2 else None
 
             if verbose == 2:
                 model_kwargs['verbose'] = 1
             else:
                 model_kwargs['verbose'] = -1
             model = model_class(seed=42, task=df.task, **model_kwargs)
-            train_X, train_y = tokenizer.train
+            train_X, train_y = dataset.train
             model.fit(train_X, train_y)
             train_pred = model.predict(train_X)
             out[idx, train] = train_pred
 
-            test_X, _ = tokenizer.test
+            test_X, _ = dataset.test
 
             test_pred = model.predict(test_X)
             out[idx, test] = test_pred
