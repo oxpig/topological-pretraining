@@ -39,6 +39,13 @@ class BaseTokenizer:
     def transform(self):
         return self._transform
     
+    def save_transform(self, X: Chem.Mol|list[Chem.Mol], path: str):
+        """
+        Transform and save the data to a file.
+        """
+        X = self.transform(X)
+        torch.save(X, path)
+
     def set_transform(self, kwargs):
         self.transform_kwargs = kwargs
         self._transform = self._transform_base(**kwargs)
