@@ -60,6 +60,13 @@ class BaseTokenizer:
             'transform_kwargs': self.transform_kwargs,
         }
     
+    def save(self, path: str, params_only: bool = False):
+        if params_only:
+            params = self.to_dict()
+            torch.save(params, path)
+        else:
+            torch.save(self, path)
+    
 class BaseGraph:
 
     def __init__(self, verbose: bool = False):
