@@ -4,7 +4,7 @@ import torch_geometric as pyg
 import numpy as np
 from rdkit import Chem
 
-from .base import BaseGraph, BaseGraphTokenizer, BaseTokenizer
+from .base import BaseGraph, BaseTokenizer
 
 import torch
 import torch_geometric as pyg
@@ -178,6 +178,8 @@ class AtomGraphTokenizer(BaseTokenizer):
         )
         if 'atom_types' in transform_kwargs:
             self.transform.atom_types = transform_kwargs['atom_types']
+        if 'bond_types' in transform_kwargs:
+            self.transform.bond_types = transform_kwargs['bond_types']
 
     def _transform_base(self, **kwargs):
         return AtomGraph(verbose=self.verbose, **kwargs)
@@ -197,3 +199,8 @@ class AtomGraphTokenizer(BaseTokenizer):
     def atom_types(self):
         return self.transform.atom_types
     
+    def to_dict(self):
+        params = super().to_dict()
+        params['atom_types'] = self.atom_types
+        params['bond_types'] = self.bond_types
+        return params
