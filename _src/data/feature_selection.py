@@ -21,7 +21,6 @@ class CoCorr:
     def __init__(self, threshold: float = 0.9):
         self.threshold = threshold
         self.to_keep = []
-        super().__init__()
 
     def fit(self, X: np.ndarray):
         """
