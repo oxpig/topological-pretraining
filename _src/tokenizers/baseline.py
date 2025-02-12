@@ -51,16 +51,11 @@ default_descriptors: list[str] = [
 
 class BaselineTokenizer(BaseTokenizer):
 
-    def reset(self, mols: list[Chem.Mol], y: Optional[np.ndarray] = None) -> None:
+    precomputed = True
+
+    def fit(self, mols: list[Chem.Mol], y: Optional[np.ndarray] = None) -> None:
         x = self.transform(mols)
-        x = self.variance_threshold.fit_transform(x)
-        x = self.cocorr.fit_transform(x)
-        if self.k_best_func is not None and x.shape[0] - 1 < x.shape[1]:
-            if y is None:
-                raise ValueError('y must be provided for SelectKBest feature selection.')
-            select_k_best = SelectKBest(score_func=self.k_best_func, k=x.shape[1] -1)
-            x = select_k_best.fit_transform(x, y)
-        x = self.scaler.fit_transform(x)
+        self.ready = True
 
 class PDV(BaselineTokenizer):
 
@@ -88,8 +83,10 @@ class FCFP(ECFP):
 
     fixed_transform_kwargs = {'atom_inv': morgan_feat_inv}
 
-class SNS(BaseTokenizer):
+class SNS(BaselineTokenizer):
 
+    precomputed = False
+    
     def _transform_base(self, **kwargs):
         if 'morgan_kwargs' in kwargs:
             morgan: dict = kwargs.pop('morgan_kwargs')
@@ -98,20 +95,13 @@ class SNS(BaseTokenizer):
         morgan = MorganGenerator(**morgan)
         return SortAndSlice(generator=morgan, **kwargs)
         
-    def reset(self, mols: list[Chem.Mol], y: Optional[np.ndarray] = None) -> None:
+    def fit(self, mols: list[Chem.Mol], y: Optional[np.ndarray] = None) -> None:
         self.transform.clear()
         self.transform.update(mols)
         self.transform.slice()
         self.transform.sort()
-        x = self.transform(mols)
-        x = self.variance_threshold.fit_transform(x)
-        x = self.cocorr.fit_transform(x)
-        if self.k_best_func is not None and x.shape[0] - 1 < x.shape[1]:
-            if y is None:
-                raise ValueError('y must be provided for SelectKBest feature selection.')
-            select_k_best = SelectKBest(score_func=self.k_best_func, k=x.shape[1] -1)
-            x = select_k_best.fit_transform(x, y)
-        x = self.scaler.fit_transform(x)
+        super().fit(mols=mols, y=y)
+
     @property
     def fpsize(self):
         return self.transform.fpsize
