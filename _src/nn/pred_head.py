@@ -1,4 +1,4 @@
-from ..nn.mlp import MLP
+from .mlp import MLP
 
 import torch
 
@@ -15,11 +15,12 @@ class PredHead(MLP):
         dropout: float = 0.0,
         batch_norm: bool = False,
         act: str = 'relu',
+        final_act: str = None,
     ):
         super(PredHead, self).__init__(
             input_dim=input_dim, output_dim=output_dim, hidden_dim=hidden_dim,
             num_layers=num_layers, dropout=dropout, batch_norm=batch_norm,
-            act=act
+            act=act, final_act=final_act
         )
     
     @property
@@ -87,7 +88,7 @@ class BinaryHead(PredHead):
 
     def loss(self, x, y):
         pred = self(x)
-        weights = torch.zeros_like(y)
+        weights = torch.zeros(size=y.size())
         weights[y == 0] = self.class_weights[0]
         weights[y == 1] = self.class_weights[1]
         return self.loss_fn(pred, y, weight=weights)
