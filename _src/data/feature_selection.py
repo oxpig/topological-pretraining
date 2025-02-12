@@ -21,6 +21,7 @@ class CoCorr:
     def __init__(self, threshold: float = 0.9):
         self.threshold = threshold
         self.to_keep = []
+        super().__init__()
 
     def fit(self, X: np.ndarray):
         """
@@ -40,7 +41,7 @@ class CoCorr:
         for i, j in idx:
             out = i if var[i] < var[j] else j
             exclude.append(int(out))
-        self.to_keep = [i for i in range(X.shape[1]) if i not in set(exclude)]
+        self.to_keep = np.array([i for i in range(X.shape[1]) if i not in set(exclude)])
 
     def transform(self, X: np.ndarray) -> np.ndarray:
         """
@@ -74,16 +75,18 @@ class CoCorr:
         """
         self.fit(X)
         return self.transform(X)
+
     
 class SelectAll:
     """
     Dummy class to select all features.
     """
-    def fit(self, X: np.ndarray):
+    named_steps = {}
+    def fit(self, X: np.ndarray, y: np.ndarray = None):
         pass
 
-    def transform(self, X: np.ndarray):
-        return X
+    def transform(self, X: np.ndarray, y: np.ndarray = None) -> np.ndarray:
+        return X if y is None else (X, y)
 
-    def fit_transform(self, X: np.ndarray):
-        return X
+    def fit_transform(self, X: np.ndarray, y: np.ndarray = None) -> np.ndarray:
+        return X if y is None else (X, y)
