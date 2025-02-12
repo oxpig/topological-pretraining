@@ -1,4 +1,4 @@
-from .base import BaseDataset
+from .base import BaseDataFrame
 from ..mol import Standardizer
 import pandas as pd
 import numpy as np
@@ -6,7 +6,7 @@ from typing import Literal
 from pathlib import Path
 from rdkit import Chem
 
-class Biogen(BaseDataset):
+class Biogen(BaseDataFrame):
     """
     Dataset from the paper:
         Fang, C. et al. 2023. Prospective Validation of Machine Learning Algorithms for
@@ -25,7 +25,7 @@ class Biogen(BaseDataset):
     The dataset is available at: 
         https://raw.githubusercontent.com/molecularinformatics/Computational-ADME/main/ADME_public_set_3521.csv
 
-    Class inherits from BaseDataset; which in inherits from pandas.DataFrame.
+    Class inherits from BaseDataFrame; which in inherits from pandas.DataFrame.
     For inherited attributes and methods, see the pandas.DataFrame:
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 
@@ -99,7 +99,7 @@ class Biogen(BaseDataset):
             self.mol_standardize_check()
             self.save(csv)
         
-class Biogen_Subset(Biogen, BaseDataset):
+class Biogen_Subset(Biogen, BaseDataFrame):
 
     def __init__(
         self, root: str|None = None, compression: bool = True,
@@ -123,7 +123,7 @@ class Biogen_Subset(Biogen, BaseDataset):
             self.reset_index(drop=True, inplace=True)
             self.save(csv)
         else:
-            BaseDataset.__init__(self, csv=csv, compression=compression, verbose=verbose, standardizer=standardizer)
+            BaseDataFrame.__init__(self, csv=csv, compression=compression, verbose=verbose, standardizer=standardizer)
 
     @property
     def mols_path(self):

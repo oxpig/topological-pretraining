@@ -1,4 +1,4 @@
-from ..base import BaseDataset
+from ..base import BaseDataFrame
 from ...mol import Standardizer
 from pathlib import Path
 from rdkit import Chem
@@ -6,7 +6,7 @@ import numpy as np
 
 # TODO: Add docstrings
 
-class Tox21(BaseDataset):
+class Tox21(BaseDataFrame):
     url = 'https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/tox21.csv.gz'
 
     def __init__(
@@ -36,7 +36,7 @@ class Tox21(BaseDataset):
             'SR_HSE', 'SR_MMP', 'SR_p53'
         ]
 
-class Tox21_Subset(Tox21, BaseDataset):
+class Tox21_Subset(Tox21, BaseDataFrame):
 
     def __init__(
             self, root: str|None = None, compression: bool = True,
@@ -64,7 +64,7 @@ class Tox21_Subset(Tox21, BaseDataset):
             self.reset_index(drop=True, inplace=True)
             self.save(csv)
         else:
-            BaseDataset.__init__(
+            BaseDataFrame.__init__(
                 self, csv=csv, compression=compression, 
                 verbose=verbose, standardizer=standardizer
             )

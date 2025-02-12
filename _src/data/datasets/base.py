@@ -7,7 +7,7 @@ from typing import Callable
 
 from ..mol import Standardizer
 
-class BaseDataset(pd.DataFrame):
+class BaseDataFrame(pd.DataFrame):
     """
     Base pandas DataFrame class for datasets.
 
@@ -67,7 +67,7 @@ class BaseDataset(pd.DataFrame):
         
 
         # Initialize the DataFrame
-        super(BaseDataset, self).__init__(data=df)
+        super(BaseDataFrame, self).__init__(data=df)
         # Set the csv, url, and compression
         self.csv = csv
         self.url = url

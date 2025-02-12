@@ -1,10 +1,10 @@
-from ..base import BaseDataset
+from ..base import BaseDataFrame
 from ...mol import Standardizer
 
 from pathlib import Path
 import numpy as np
 
-class DRD2(BaseDataset):
+class DRD2(BaseDataFrame):
 
     url = 'https://raw.githubusercontent.com/MarkusFerdinandDablander/QSAR-activity-cliff-experiments/refs/heads/main/data/chembl_dopamine_d2/molecule_data_clean.csv'
 

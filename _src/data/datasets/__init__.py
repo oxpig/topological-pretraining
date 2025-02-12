@@ -1,4 +1,4 @@
-from .base import BaseDataset
+from .base import BaseDataFrame
 from .biogen import (
     Biogen, Efflux, Human_CLint,
     Human_PPB, Rat_CLint, Rat_PPB,

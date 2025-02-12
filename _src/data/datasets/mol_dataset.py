@@ -209,7 +209,7 @@ class MolDataset:
             test_X = self.X[self.test_idx]
         else:
             test_X = [self[i] for i in self.test_idx]
-            
+
         # Apply the extra transforms
         test_X = self._extra_transform.transform(test_X)
         return test_X
@@ -229,15 +229,3 @@ class MolDataset:
             return self.test_X
         else:
             return self.test_X, self.test_y
-
-class GraphDataset(torch.utils.data.Dataset):
-
-    def __init__(self, graphs: list[pyg.data.Data]):
-        super(GraphDataset, self).__init__()
-        self.graphs = graphs
-
-    def __len__(self):
-        return len(self.graphs)
-    
-    def __getitem__(self, idx):
-        return self.graphs[idx]

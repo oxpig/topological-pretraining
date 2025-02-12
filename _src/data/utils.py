@@ -13,7 +13,7 @@ def load_dataset(
     compression: bool = True,
     verbose: bool = False,
     standardizer: Standardizer = Standardizer(),
-) -> datasets.BaseDataset:
+) -> datasets.BaseDataFrame:
     """
     Load a dataset from dataset module.
 
@@ -26,11 +26,11 @@ def load_dataset(
     
     Returns
     -------
-    out: datasets.BaseDataset
+    out: datasets.BaseDataFrame
         The dataset.
     """
     available_datasets = [
-        "BaseDataset", "Biogen", "Efflux",
+        "BaseDataFrame", "Biogen", "Efflux",
         "HClint", "HPPB", "RClint",
         "RPPB", "Solu", "DRD2",
         "FactorXA", "BACE",
@@ -55,7 +55,7 @@ def load_dataset(
 
 
 def load_molecules(
-    dataset: datasets.BaseDataset|pd.DataFrame,
+    dataset: datasets.BaseDataFrame|pd.DataFrame,
     verbose: bool = False
 ):
     """
@@ -63,7 +63,7 @@ def load_molecules(
 
     Parameters
     ----------
-    dataset: datasets.BaseDataset
+    dataset: datasets.BaseDataFrame
         The dataset to load molecules from. Must have a 'SMILES' column.
 
     Returns

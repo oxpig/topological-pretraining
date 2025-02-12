@@ -1,8 +1,8 @@
-from ..base import BaseDataset
+from ..base import BaseDataFrame
 from ...mol import Standardizer
 from pathlib import Path
 
-class FreeSolv(BaseDataset):
+class FreeSolv(BaseDataFrame):
     url = 'https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/SAMPL.csv'
 
     def __init__(

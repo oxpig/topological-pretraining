@@ -8,7 +8,7 @@ from rdkit.Chem.rdFingerprintGenerator import (
 )
 from tqdm import tqdm
 
-from .data.datasets import BaseDataset
+from .data.datasets import BaseDataFrame
 from .data.utils import load_dataset, load_molecules
 from .data.mol import FPOps, Standardizer, MorganGenerator
 
@@ -279,7 +279,7 @@ def preprocess(config: dict):
 
     for benchmark in benchmark_data:
         print(f'Processing {benchmark}') if verbose else None
-        df: BaseDataset = load_dataset(
+        df: BaseDataFrame = load_dataset(
             benchmark, root=data_path, compression=True,
             verbose=verbose, standardizer=standardizer
         )
@@ -309,7 +309,7 @@ def preprocess(config: dict):
             print(f'Splits already exist for {benchmark}') if verbose else None
         benchmark_fps[benchmark] = fps
     pretrain_data = config['pretrain']
-    pretrain_data: BaseDataset = load_dataset(
+    pretrain_data: BaseDataFrame = load_dataset(
         pretrain_data, root=data_path, compression=True,
         verbose=verbose
     )

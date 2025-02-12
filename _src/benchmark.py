@@ -1,6 +1,6 @@
 from .utils import get_model, get_tokenizer
 from .data.utils import load_dataset
-from .data.datasets import BaseDataset, MolDataset
+from .data.datasets import BaseDataFrame, MolDataset
 from .tokenizers.base import BaseTokenizer
 
 from copy import deepcopy
@@ -162,7 +162,7 @@ def benchmark(config: dict):
         print(f'Benchmarking on {benchmark}') if verbose else None
         
         print(f'Loading benchmark {benchmark}') if verbose else None
-        df: BaseDataset = load_dataset(
+        df: BaseDataFrame = load_dataset(
             name=benchmark, root=data_path, compression=True,
             verbose=verbose,
         )

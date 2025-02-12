@@ -1,8 +1,8 @@
-from ..base import BaseDataset
+from ..base import BaseDataFrame
 from ...mol import Standardizer
 from pathlib import Path
 
-class ESOL(BaseDataset):
+class ESOL(BaseDataFrame):
     url = 'https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/delaney-processed.csv'
 
     def __init__(

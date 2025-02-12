@@ -1,10 +1,10 @@
-from ..base import BaseDataset
+from ..base import BaseDataFrame
 from ...mol import Standardizer
 
 from pathlib import Path
 
 
-class Lipo(BaseDataset):
+class Lipo(BaseDataFrame):
     url = 'https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/Lipophilicity.csv'
 
     def __init__(

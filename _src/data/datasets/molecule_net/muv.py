@@ -1,11 +1,11 @@
-from ..base import BaseDataset
+from ..base import BaseDataFrame
 from ...mol import Standardizer
 
 import numpy as np
 from pathlib import Path
 from rdkit import Chem
 
-class MUV(BaseDataset):
+class MUV(BaseDataFrame):
     """
     Maximum Unbiased Validation dataset.
 
@@ -55,7 +55,7 @@ class MUV(BaseDataset):
         ]
 
         
-class MUV_Subset(MUV, BaseDataset):
+class MUV_Subset(MUV, BaseDataFrame):
 
     aid_number = None
 
@@ -83,7 +83,7 @@ class MUV_Subset(MUV, BaseDataset):
             self.reset_index(drop=True, inplace=True)
             self.save(csv)
         else:
-            BaseDataset.__init__(
+            BaseDataFrame.__init__(
                 self, csv=csv, url=self.url,
                 compression=compression, verbose=verbose, standardizer=standardizer
             )

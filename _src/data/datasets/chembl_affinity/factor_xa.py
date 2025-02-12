@@ -1,10 +1,10 @@
-from ..base import BaseDataset
+from ..base import BaseDataFrame
 from ...mol import Standardizer
 
 import numpy as np
 from pathlib import Path
 
-class FactorXA(BaseDataset):
+class FactorXA(BaseDataFrame):
 
     url = 'https://raw.githubusercontent.com/MarkusFerdinandDablander/QSAR-activity-cliff-experiments/refs/heads/main/data/chembl_factor_xa/molecule_data_clean.csv'
 

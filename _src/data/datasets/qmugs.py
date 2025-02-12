@@ -1,10 +1,10 @@
-from .base import BaseDataset
+from .base import BaseDataFrame
 from ..mol import Standardizer
 from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-class QMugs(BaseDataset):
+class QMugs(BaseDataFrame):
     """
     Pandas DataFrame class for QMugs dataset.
 
@@ -47,7 +47,7 @@ class QMugs(BaseDataset):
 
         # Set the path to the csv file
         csv = Path(root) / f'qmugs.{suffix}'
-        # Initialize the BaseDataset
+        # Initialize the BaseDataFrame
         super(QMugs, self).__init__(
             csv=csv, url=self.url, compression=compression,
             verbose=verbose, standardizer=standardizer
