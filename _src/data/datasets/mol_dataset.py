@@ -1,7 +1,7 @@
 from ...tokenizers import (
     BaseTokenizer,
     ECFP, FCFP, PDV, SNS,
-    AtomGraphTokenizer, MorganGraphTokenizer, SNSGraphTokenizer
+    AtomGraphTokenizer, MorganGraphTokenizer
 )
 from ..feature_selection import CoCorr, SelectAll
 
@@ -27,7 +27,6 @@ tokenizers_dict = {
     'SNS': SNS,
     'AtomGraphTokenizer': AtomGraphTokenizer,
     'MorganGraphTokenizer': MorganGraphTokenizer,
-    'SNSGraphTokenizer': SNSGraphTokenizer,
 }
 
 extra_transform_classes = {
@@ -79,7 +78,7 @@ class MolDataset:
         train_idx: Optional[np.ndarray] = None, test_idx: Optional[np.ndarray] = None,
         tokenizer: Literal[
             'ECFP', 'FCFP', 'PDV', 'SNS',
-            'AtomGraphTokenizer', 'MorganGraphTokenizer', 'SNSGraphTokenizer' 
+            'AtomGraphTokenizer', 'MorganGraphTokenizer'
         ] = None,
         tokenizer_kwargs: dict = {}, extra_transform_kwargs: dict = {},
         verbose: bool = False, fit_transform: bool = False,
