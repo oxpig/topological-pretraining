@@ -8,7 +8,7 @@ from typing import Optional
 from scipy import sparse
 
 from ..data.mol import MorganGenerator, SortAndSlice
-from .base import BaseGraph, BaseGraphTokenizer
+from .base import BaseGraph, GraphTokenizer
 
 
 class MorganGraph(BaseGraph):
@@ -24,79 +24,59 @@ class MorganGraph(BaseGraph):
 
     Attributes
     ----------
+    env_types : dict
+        Mapping from hashed identifiers to integer tokens.
     bond_types : dict
         Mapping from RDKit bond types to integers.
     morgan : MorganGenerator
         MorganGenerator object to generate hashed identifiers.
     """
-    bond_types = {
-        Chem.rdchem.BondType.SINGLE: 0,
-        Chem.rdchem.BondType.DOUBLE: 1,
-        Chem.rdchem.BondType.AROMATIC: 2,
-        Chem.rdchem.BondType.TRIPLE: 3,
-        }
-
     def __init__(
         self,
         verbose: bool = False,
-        morgan_kwargs: dict = {},
+        node_types: dict = {},
+        edge_types: dict = {},
+        max_vocab_size: int = 2048,
         **kwargs
     ):
-        super(MorganGraph, self).__init__(verbose=verbose)
-        self.morgan = MorganGenerator(**morgan_kwargs)
+        super(MorganGraph, self).__init__(node_types=node_types, edge_types=edge_types, max_vocab_size=max_vocab_size)
+        morgan = MorganGenerator(**kwargs)
+        self.sort_and_slice = SortAndSlice(
+            generator=morgan, verbose=verbose  
+        )
 
-    def make_graph(self, mol: Chem.Mol):
+    def get_nodes(self, mol):
+        envs = self.sort_and_slice.generator.environments(mol)
+        x = torch.tensor(envs, dtype=torch.long)
+        return x
+    
+    def reset(self, mols: list[Chem.Mol|pyg.data.Data]) -> None:
         """
-        Convert a molecule into a graph.
+        Reset the hashed identifiers for a new set of molecules.
 
         Parameters
         ----------
-        mol : Chem.Mol
-            RDKit molecule object.
-        
-        Returns
-        -------
-        pyg.data.Data
-            PyTorch Geometric Data object.
-            x : torch.Tensor
-                Node features. Shape (n, m), where n is the number of atoms in mol
-                and m is maximum radii of the Morgan identifiers.
-            edge_index : torch.Tensor
-                Edge index tensor. Shape (2, 2e), where e is the number of bonds in mol.
-                For each bond between atoms i and j, there are two edges (i, j) and (j, i).
-            edge_attr : torch.Tensor
-                Edge attribute tensor. Shape (2e, 1).
-                Contains the bond type for each edge as integers; single (0), double (1),
-                aromatic (2), triple (3).
+        mols : list[Chem.Mol]
+            List of RDKit molecule objects.
         """
-        envs = self.morgan.environments(mol)
-        x = torch.tensor(envs, dtype=torch.long)
-        num_bonds = mol.GetNumBonds()
-        edge_index = torch.full(
-            (2, num_bonds*2), fill_value=-1, dtype=torch.long
-        )
-        edge_attr = torch.full(
-            (num_bonds*2, 1), fill_value=-1, dtype=torch.int
-        )
+        self.sort_and_slice.clear()
+        if all(isinstance(m, pyg.data.Data) for m in mols):
+            mols = pyg.data.Batch.from_data_list(mols)
+            assert torch.all(mols.raw), 'Data must be raw graphs.'
+            envs = mols.x.numpy()
+            self.sort_and_slice.append(envs)
+        elif all(isinstance(m, Chem.Mol|None) for m in mols):
+            self.sort_and_slice.update(mols)
+        else:
+            raise ValueError('Molecules must be RDKit molecule objects or PyG Data objects.')
+    
+        self.sort_and_slice.sort()
+        self.sort_and_slice.slice(self.max_vocab_size)
+        self.sort_and_slice.encoder['UNK'] = len(self.sort_and_slice.encoder)
+        self.node_types = self.sort_and_slice.encoder
 
-        for idx, bond in enumerate(mol.GetBonds()):
-            start = bond.GetBeginAtomIdx()
-            end = bond.GetEndAtomIdx()
-            edge_index[0, idx] = start
-            edge_index[1, idx] = end
-            edge_index[0, idx + num_bonds] = end
-            edge_index[1, idx + num_bonds] = start
-            bond_type = self.bond_types[bond.GetBondType()]
-            edge_attr[idx, 0] = bond_type
-            edge_attr[idx + num_bonds, 0] = bond_type
 
-        return pyg.data.Data(
-            x=x,
-            edge_index=edge_index,
-            edge_attr=edge_attr
-        )
-            
-class MorganGraphTokenizer(BaseGraphTokenizer):
+class MorganGraphTokenizer(GraphTokenizer):
     """
     Class to tokenize molecules into graphs using Morgan hashed identifiers.
 
@@ -115,17 +95,6 @@ class MorganGraphTokenizer(BaseGraphTokenizer):
     verbose : bool
         Whether to print progress information.
     """
-    def __init__(
-        self,
-        transform_kwargs: dict = {},
-        verbose: bool = False,
-    ):
-        super(MorganGraphTokenizer, self).__init__(
-            transform_kwargs=transform_kwargs, verbose=verbose
-        )
-
-    def reset(self, mols: list[Chem.Mol], y: Optional[np.ndarray] = None) -> None:
-        return
 
     def _transform_base(self, **kwargs):
         """
@@ -133,101 +102,6 @@ class MorganGraphTokenizer(BaseGraphTokenizer):
         """
         return MorganGraph(verbose=self.verbose, **kwargs)
 
-class SNSGraphTokenizer(MorganGraphTokenizer):
-    """
-    Graph tokenizer using Morgan hashed identifiers with sort and slice.
-
-    Parameters
-    ----------
-    X : list[Chem.Mol]
-        List of RDKit molecule objects.
-    y : Optional[np.ndarray]
-        Array of labels.
-    train : Optional[np.ndarray]
-        Indices of the training set.
-    test : Optional[np.ndarray]
-        Indices of the test set.
-    transform_kwargs : dict
-        Keyword arguments for the MorganGraph and SortAndSlice.
-    verbose : bool
-        Whether to print progress information.
-
-    Attributes
-    ----------
-    vocab_size : int
-        Number of unique hashed identifiers. Excludes unknown token.
-    envs : list[np.ndarray]
-        List of hashed identifiers arrays for each molecule.
-    sort_and_slice : SortAndSlice
-        SortAndSlice object to sort and slice hashed identifiers.
-    """
-    max_vocab_size = 2048
-    vocab_size = 0
-    def __init__(
-        self,
-        transform_kwargs: dict = {},
-        verbose: bool = False,
-    ):
-        super(SNSGraphTokenizer, self).__init__(
-            transform_kwargs=transform_kwargs, verbose=verbose
-        )
-        if 'max_vocab_size' in transform_kwargs:
-            self.max_vocab_size = transform_kwargs.pop('max_vocab_size')
-
-        self.sort_and_slice = SortAndSlice(
-            generator=self.transform.morgan, fpsize=self.max_vocab_size, verbose=False  
-        )
-        if 'encoder' in transform_kwargs:
-            self.sort_and_slice.encoder = transform_kwargs.pop('encoder')
-            self.vocab_size = len(self.sort_and_slice.encoder)
-            
-        self.sort_and_slice.verbose = self.verbose
-
-    def __call__(self, mol: Chem.Mol):
-        self.transform.verbose = False
-        X = self.transform(mol)
-        X.x = self.encode(X.x)
-        self.transform.verbose = self.verbose
-        return X
-
-    def encode(self, atomic_environments: torch.Tensor) -> None:
-        """
-        Encode hashed identifiers into sort and slice integer ranks.
-        For molecular graph at index idx in self.X, self.X.x is
-        updated with the encoded identifiers. Unknown identifiers
-        are encoded as the maximum rank.
-
-        Parameters
-        ----------
-        idx : int
-            Index of the molecule in the dataset.
-        """
-        if atomic_environments is None:
-            return
-        x = torch.full_like(atomic_environments, fill_value=-1, dtype=torch.long)
-        encoder = self.sort_and_slice.encoder
-        unk = encoder['UNK']
-        for i in range(atomic_environments.size(0)):
-            for j in range(atomic_environments.size(1)):
-                env = int(atomic_environments[i, j])
-                x[i, j] = encoder.get(env, unk)
-        return x
-
-    def reset(self, mols: list[Chem.Mol]) -> None:
-        """
-        """
-        self.sort_and_slice.clear()
-        self.sort_and_slice.update(mols)
-        self.sort_and_slice.sort()
-        self.sort_and_slice.slice(self.max_vocab_size)
-        self.sort_and_slice.encoder['UNK'] = len(self.sort_and_slice.encoder)
-        self.vocab_size = len(self.sort_and_slice.encoder)
-        if self.verbose:
-            print(f'Vocabulary size: {self.vocab_size} (including unknown token).') if self.verbose else None
-
-"""
-    TODO: Implement MolETokenizer
-"""
 
 class MolETokenizer(MorganGraphTokenizer):
     """
