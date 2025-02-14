@@ -5,7 +5,8 @@ from .biogen import (
     Solu,
 )
 from .chembl_affinity import DRD2, FactorXA
-from .mol_dataset import MolDataset, GraphDataset
+from .graph_dataset import GraphDataset
+from .mol_dataset import MolDataset
 from .molecule_net import (
     BACE, BBBP, ClinTox,
     ESOL, FreeSolv, HIV,
