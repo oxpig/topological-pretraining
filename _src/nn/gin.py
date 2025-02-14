@@ -9,8 +9,8 @@ class GINLayer(pyg.nn.conv.GINConv):
     def __init__(
         self,
         input_dim: int,
-        output_dim: int,
-        hidden_dim: int = None,
+        hidden_dim: int,
+        output_dim: int = None,
         num_layers: int = 1,
         dropout: float = 0.0,
         batch_norm: bool = False,
