@@ -45,7 +45,7 @@ class MLP(torch.nn.Module):
             ])
         
         self.dropout = torch.nn.Dropout(dropout)
-        self.batch_norm = torch.nn.BatchNorm1d(input_dim) if batch_norm else torch.nn.Identity()
+        self.batch_norm = torch.nn.BatchNorm1d(hidden_dim) if batch_norm else torch.nn.Identity()
         self.act = act_fn[act]
         self.final_act = act_fn[final_act]
 
