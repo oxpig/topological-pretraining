@@ -4,7 +4,7 @@ from .data.datasets import BaseDataFrame
 from .data.mol import MorganGenerator, SortAndSlice
 from .data.datasets import GraphDataset
 
-from .nn.pred_head import (BinaryHead, RegressionHead, MultiClassHead)
+from .nn.pred_head import (BinaryHead, RegressionHead, MultiClassHead, MultiTaskLoss)
 
 from pathlib import Path
 import numpy as np
@@ -100,14 +100,21 @@ def pretrain(config: dict):
         graph_0 = pretrain_dataset[0]
         out = model['main'](graph_0.x, graph_0.edge_index, graph.edge_attr)
         head_input_dim = out['global_state'].size(-1)
-        for target_name in pretrain_dataset.targets:
-            head_name = pretrain_dataset.targets[target_name]['prediction_head']
+        targets_key = pretrain_dataset.targets
+        is_regression = torch.full((len(targets_key),), False)
+        
+        for i, target_name in enumerate(targets):
+            head_name = targets[target_name]['prediction_head']
             head_cls = pred_head_map[head_name]
-            level = pretrain_dataset.targets[target_name]['level']
+            
             output_dim = graph_0[target_name].size(1)
 
             if head_name == 'multiclass' or head_name == 'binary':
-                class_weights = pretrain_dataset.targets[target_name].get('class_weights', None)
+                class_weights = targets[target_name]['class_weights']
+            
+            else:
+                class_weights = None
+                is_regression[i] = True
 
             head = head_cls(
                 input_dim=head_input_dim,
@@ -117,29 +124,45 @@ def pretrain(config: dict):
                 dropout=0.0,
                 batch_norm=True,
                 act='hardswish',
-                class_weights=None
+                class_weights=class_weights
             )
-
             model[target_name] = head
 
-        model.eval()
-        out = model['main'](
-            pretrain_dataset[0].x, pretrain_dataset[0].edge_index, batch=pretrain_dataset[0].batch
-        )
-        model['head'] = BinaryHead(
-            input_dim=out['global_state'].size(1), hidden_dim=512, num_layers=2, output_dim=sns.fpsize, act='hardswish', batch_norm=True
-        )
+        if len(is_regression) == 1:
+            model['losses'] = torch.nn.Identity()
+
+        else:
+            model['losses'] = MultiTaskLoss(is_regression=is_regression)
+
+
         model.to(device)
         model.train()
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
         for epoch in range(epochs):
-            for batch in pretrain_loader:
+            average_epoch_loss = 0
+            for batch_num, batch in enumerate(pretrain_loader):
                 batch.to(device) 
                 optimizer.zero_grad()
                 out = model['main'](batch.x, batch.edge_index, batch=batch.batch)
-                loss = model['head'].loss(out['global_state'], batch.y)
+                losses = torch.empty(len(targets_key), device=device)
+                for i, target_name in enumerate(targets_key):
+                    head = model[target_name]
+                    if targets_key['level'] == 'global':
+                        losses[i] = head.loss(
+                            x = out['global_state'],
+                            y = batch[target_name],
+                        )
+                    elif targets_key['level'] == 'node':
+                        losses[i] = head.loss(
+                            x = out['final_state'],
+                            y = batch[target_name],
+                            mask = batch[f'{target_name}_mask']
+                        )
+                loss = model['losses'](losses)
                 loss.backward()
                 optimizer.step()
-            break
-
+                average_epoch_loss += loss.item() / batch_num
+            
+        model['tokenizer'] = pretrain_dataset.tokenizer
+        torch.save(model, results_path / name / f'model_{split}.pt')
        
