@@ -51,24 +51,17 @@ class AtomGraph(BaseGraph):
             [1],
             [1]], dtype=torch.int)
     """
-    node_types = {}
-    edge_types = {
-            Chem.rdchem.BondType.SINGLE: 0,
-            Chem.rdchem.BondType.DOUBLE: 1,
-            Chem.rdchem.BondType.AROMATIC: 2,
-            Chem.rdchem.BondType.TRIPLE: 3,
-        }
     
     def __init__(self, node_types: dict = None, edge_types: dict = None, **kwargs):
         super(AtomGraph, self).__init__(node_types=node_types, edge_types=edge_types)
 
-    def get_node(self, mol: Chem.Mol):
+    def get_nodes(self, mol: Chem.Mol):
         """
         Get the raw node descriptor for an atom.
         """
         x = torch.full((mol.GetNumAtoms(), 1), fill_value=-1, dtype=torch.long)
         for atom in mol.GetAtoms():
-            x[atom.GetIdx()] = self.get_node(atom)
+            x[atom.GetIdx()] = atom.GetAtomicNum()
         return x
 
 class AtomGraphTokenizer(GraphTokenizer):
