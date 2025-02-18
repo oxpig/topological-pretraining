@@ -1,5 +1,7 @@
-from ... import tokenizers
+from ...tokenizers import GraphTokenizer, load_tokenizer
+from ...tokenizers.targets import Targets
 
+import numpy as np
 from pathlib import Path
 import torch_geometric as pyg
 from torch_geometric.data.dataset import _repr
@@ -8,6 +10,7 @@ from rdkit import Chem
 
 from typing import Optional, Callable
 import warnings
+
 
 class PreFilter:
 
@@ -33,55 +36,94 @@ class GraphDataset(pyg.data.InMemoryDataset):
     """
     _indexes = None
     def __init__(
-        self, root: str, tokenizer: tokenizers.GraphTokenizer = None,
+        self, root: str, tokenizer: GraphTokenizer = None,
         molecules: Optional[list[Chem.Mol]] = None,
         split: Optional[tuple[str, torch.Tensor]] = None,
+        fit_tokenizer: bool = True,
+        run_id: Optional[str] = None,
+        targets: dict[str, dict[str, str]] = None,
     ):
+        if run_id is None:
+            run_id = ''
+        else:
+            run_id = f'_{run_id}'
         if split is not None:
             split = (f'_{split[0]}', split[1])
         else:
             split = ('', None)
-        self.split = split[0]
-        self.molecules = molecules
+
+        self.split_name, self.split_indices = split
+        self._molecules = molecules
+        self.run_id = run_id
+        
+        
+        tokenizer_path = Path(root) / 'processed' / f'tokenizer{run_id}{self.split_name}.pt'
+        if tokenizer_path.exists():
+            tokenizer = load_tokenizer(tokenizer_path)
+            self.fit_tokenizer = False
+
         if tokenizer is None:
-            tokenizer_path = Path(root) / 'processed' / f'tokenizer{split[0]}.pt'
-            if tokenizer_path.exists():
-                tokenizer = tokenizers.load_tokenizer(tokenizer_path)
-                
-            else:
-                raise ValueError('No tokenizer provided or found in the processed directory.')
+            raise ValueError('Tokenizer not found.')
+            
         self.tokenizer = tokenizer
+        self.fit_tokenizer = fit_tokenizer
+        targets_path = Path(root) / 'processed' / f'targets{run_id}{self.split_name}.pt'
+        if targets_path.exists():
+            self.targets = Targets(targets_path=targets_path)
+        elif isinstance(targets, dict):
+            self.targets = Targets(targets=targets.copy())
+        else:
+            self.targets = None
             
         super(GraphDataset, self).__init__(
-            root=root, pre_filter=PreFilter(split)
+            root=root, pre_filter=PreFilter(split), transform=self.load_graph_targets,
         )
+        if self.targets is not None:          
+            if not self.targets.is_fitted_:
+                self.transform = None
+                print('Targets not fitted. Fitting...')
+                data_list = [self.get(i) for i in range(len(self))]
+                self.fit_targets(data_list)
+                self.transform = self.load_graph_targets
         self.load(self.processed_paths[0])
+        
 
-    @property
-    def processed_file_names(self):
-        return [f'processed{self.split}.pt']
+    def load_graph_targets(self, graph: pyg.data.Data):
+        idx = graph.idx.item()
+        mol = self.molecules[idx]
+        graph = self.targets.transform(mol, graph)
+        return graph
     
     @property
     def tokenizer_path(self):
-        return Path(self.processed_dir) / f'tokenizer{self.split}.pt'
+        return Path(self.processed_dir) / f'tokenizer{self.run_id}{self.split_name}.pt'
+    
+    @property
+    def targets_path(self):
+        return Path(self.processed_dir) / f'targets{self.run_id}{self.split_name}.pt'
+
+    @property
+    def processed_file_names(self):
+        return [f'processed{self.run_id}{self.split_name}.pt']
+    
+    def fit_targets(self, data_list: list[pyg.data.Data]):
+        self.targets.fit((self.molecules, data_list))
+        if self.targets_path.exists():
+            warnings.warn('Overwriting existing targets.')
+        self.targets.save(self.targets_path)
 
     def process(self):
-
         raw_dir = Path(self.raw_dir)
         molecules_path = raw_dir / 'molecules.pt'
-        raw_graph_path = raw_dir / 'graphs.pt'
-        if self.molecules is not None:
-            assert all(isinstance(m, Chem.Mol|None) for m in self.molecules)
+        raw_graph_path = raw_dir / f'graphs{self.run_id}.pt'
+        if self._molecules is not None:
+            assert all(isinstance(m, Chem.Mol|None) for m in self._molecules)
             root = Path(self.root)
             raw = root / 'raw'
             raw.mkdir(parents=True, exist_ok=True)
             molecules_path = raw / 'molecules.pt'
-            torch.save(self.molecules, raw / 'molecules.pt')
+            torch.save(self._molecules, raw / 'molecules.pt')
 
-        processed_graph_path = Path(self.processed_paths[0])
-
-        if processed_graph_path.exists():
-            return
         if not raw_graph_path.exists() and not molecules_path.exists():
             raise FileNotFoundError('No molecules or graphs found in the raw directory.')
         if not raw_graph_path.exists() and molecules_path.exists():
@@ -93,32 +135,30 @@ class GraphDataset(pyg.data.InMemoryDataset):
                 data_list.append(raw_graph.to_dict())
             torch.save(data_list, raw_graph_path)
             print(f'Saved {len(data_list)} graphs to {raw_graph_path}.')
-            
-        if raw_graph_path.exists():
-            data_list = pyg.io.fs.torch_load(raw_graph_path)
+        
+        processed_graph_path = Path(self.processed_paths[0])
+
+        if raw_graph_path.exists() and self.fit_tokenizer:
+            data_list = torch.load(raw_graph_path, weights_only=False)
             data_list = [pyg.data.Data(**data_dict) for data_dict in data_list]
             print(f'Loaded {len(data_list)} graphs from {raw_graph_path}.')
-
             data_list = [graph for graph in data_list if self.pre_filter(graph)]
-            if not self.tokenizer.fitted:
+            if not self.tokenizer.is_fitted_:
                 self.tokenizer.fit(data_list)
                 self.tokenizer.save(self.tokenizer_path, params_only=True)
 
             data_list = [self.tokenizer.encode(graph) for graph in data_list]
             self.save(data_list, processed_graph_path)
-
+            if self.targets is not None:
+                if not self.targets.is_fitted_:
+                    self.fit_targets(data_list)
+        
         else:
             return
         
     @property
     def raw_file_names(self):
         return [f'{i}.pt' for i in range(len(self))]
-        
-    def reset(self, indexes: torch.Tensor):
-        self._indexes = indexes
-        graphs = [self.get_raw(i) for i in self._indexes]
-        self._tokenizer.fit(graphs)
-        self.transform = self._tokenizer.preprocess
 
     def get_raw(self, idx):
         return torch.load(self.raw_paths[idx], weights_only=False)
@@ -128,8 +168,12 @@ class GraphDataset(pyg.data.InMemoryDataset):
         if 'x' not in graph:
             raise Warning('Graph does not contain node features.')
         return graph
-
     
-
-    
+    @property
+    def molecules(self):
+        molecules_path = Path(self.raw_dir) / 'molecules.pt'
+        if molecules_path.exists():
+            return torch.load(molecules_path, weights_only=False)
+        else:
+            return self._molecules
     
