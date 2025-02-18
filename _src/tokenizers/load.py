@@ -21,9 +21,9 @@ def read_from_dict(parameters: dict) -> BaseTokenizer:
     """
     if 'name' not in parameters:
         raise ValueError('Tokenizer name not found in parameters.')
-    tokenizer = parameters['name']
+    tokenizer = parameters.pop('name')
     tokenizer = all_tokenizers[tokenizer](**parameters)
-    tokenizer.fitted = parameters['fitted']
+    tokenizer.is_fitted_ = parameters['is_fitted_']
     return tokenizer
 
 
