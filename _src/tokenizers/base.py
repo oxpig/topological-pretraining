@@ -5,39 +5,40 @@ import torch_geometric as pyg
 from tqdm import tqdm
 from typing import Callable, Optional
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.base import BaseEstimator, TransformerMixin
 
 from copy import deepcopy
 
 from ..data.mol import MolDesc
 from ..data.feature_selection import CoCorr, SelectAll
 
-class BaseTokenizer:
 
-    _transform = None
+class BaseTokenizer(BaseEstimator, TransformerMixin):
+
+    transform = lambda x: x
     fixed_transform_kwargs = {}
     precomputed = False
-    fitted: bool = False
+    is_fitted_ = False
 
     def __init__(
         self,
         transform_kwargs: dict = {},
         verbose: bool = False,
-        **kwargs,
+        is_fitted_: bool = None,
     ):
+        super(BaseTokenizer, self).__init__()
         self.verbose = verbose
-
+        if is_fitted_ is not None:
+            self.is_fitted_ = is_fitted_
         transform_kwargs.update(self.fixed_transform_kwargs)
         self.set_transform(kwargs=transform_kwargs)
 
     def __call__(self, X: Chem.Mol|list[Chem.Mol]) -> np.ndarray:
-        if not self.fitted:
+        if not self.is_fitted_:
             raise ValueError('Tokenizer must be fit before calling.')
         X = self.transform(X)
         return X
-
-    @property
-    def transform(self):
-        return self._transform
+    
     
     def save_transform(self, X: Chem.Mol|list[Chem.Mol], path: str):
         """
@@ -48,15 +49,16 @@ class BaseTokenizer:
 
     def set_transform(self, kwargs):
         self.transform_kwargs = kwargs
-        self._transform = self._transform_base(**kwargs)
+        self.transform = self._transform_base(**kwargs)
         
 
     def _transform_base(self, **kwargs):
         raise NotImplementedError
 
     def fit(self, mols: Chem.Mol, y: Optional[np.ndarray] = None) -> None:
-        raise NotImplementedError
-    
+        self.is_fitted_ = True
+        return self
+
     @property
     def name(self):
         return self.__class__.__name__
@@ -64,7 +66,7 @@ class BaseTokenizer:
     def to_dict(self):
         return {
             'name': self.name,
-            'fitted': self.fitted,
+            'is_fitted_': self.is_fitted_,
             'transform_kwargs': self.transform_kwargs,
         }
     
@@ -119,14 +121,17 @@ class BaseTokenizer:
         """
         X = self.raw(X)
         torch.save(X, path)
+
+    def __sklearn_is_fitted__(self):
+        return self.is_fitted_
     
 class BaseGraph:
 
     edge_types = {
-        Chem.rdchem.BondType.SINGLE: 0,
-        Chem.rdchem.BondType.DOUBLE: 1,
-        Chem.rdchem.BondType.AROMATIC: 2,
-        Chem.rdchem.BondType.TRIPLE: 3,
+        1.0: 0,
+        2.0: 1,
+        1.5: 2,
+        3.0: 3,
     }
     node_types: dict = {'UNK': 0}
 
@@ -152,7 +157,7 @@ class BaseGraph:
         for bond in mol.GetBonds():
             # get start and end atom indices
             start, end = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
-            bond_type = self.edge_types[bond.GetBondType()]
+            bond_type = self.edge_types[bond.GetBondTypeAsDouble()]
 
             # set edge index
             edge_index[0, bond.GetIdx()] = start
@@ -277,7 +282,7 @@ class BaseGraph:
             if not isinstance(mol, Chem.Mol):
                 out.append(None)
             else:
-                out.append(self.make_graph(mol))
+                out.append(self.transform(mol))
             pbar.update(1)
         pbar.close()
         return out
@@ -311,8 +316,9 @@ class GraphTokenizer(BaseTokenizer):
         return self.transform.encode(graph)
     
     def fit(self, mols: list[Chem.Mol|pyg.data.Data], y: None = None) -> None:
-        self.fitted = True
+        self = super().fit(mols, y)
         self.transform.reset(mols)
+        return self
 
     @property
     def vocab_size(self):
