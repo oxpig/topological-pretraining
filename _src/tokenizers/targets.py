@@ -71,14 +71,27 @@ class Targets(dict):
                 self[target_name]['input_type'] = possible_targets_[target_name]['input_type']
 
     def fit(self, data: tuple[list[Chem.Mol], list[pyg.data.Data]]):
-
         for target_name in self:
             input_type = self[target_name]['input_type']
             
             if input_type == 'molecule':
-                self[target_name]['pipeline'].fit(data[0])
+                x = torch.tensor(self[target_name]['pipeline'].fit_transform(data[0]))
             elif input_type == 'graph':
-                self[target_name]['pipeline'].fit(data[1])
+                x = torch.tensor(self[target_name]['pipeline'].fit_transform(data[1]))
+
+            if self[target_name]['prediction_head'] == 'binary':
+                zero_class = torch.zeros_like(x)
+                zero_class[x == 0] = 1
+                weights = torch.stack([
+                    x.size(0) / (2 * zero_class.sum(dim=0)),
+                    x.size(0) / (2 * x.sum(dim=0))
+                ])
+
+            elif self[target_name]['prediction_head'] == 'multiclass':
+                weights = x.size(0) / (x.size(1) * x.sum(dim=0))
+            else:
+                weights = None
+            self[target_name]['class_weights'] = weights
 
         return self
 
@@ -111,7 +124,6 @@ class Targets(dict):
         for target in self:
             out[target] = self[target].copy()
             out[target]['pipeline'] = self[target]['pipeline'].to_dict()
-
         return out 
     
     def save(self, targets_path: str = None):
@@ -136,3 +148,5 @@ class Targets(dict):
             self[target_name]['pipeline'].__sklearn_is_fitted__()
             for target_name in self
         ])
+
+    
