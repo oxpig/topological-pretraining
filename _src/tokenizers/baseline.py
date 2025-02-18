@@ -49,22 +49,17 @@ default_descriptors: list[str] = [
     'fr_tetrazole', 'fr_thiazole', 'fr_thiocyan', 'fr_thiophene', 'fr_unbrch_alkane', 'fr_urea', 'qed'
 ]
 
-class BaselineTokenizer(BaseTokenizer):
 
-    precomputed = True
-
-    def fit(self, mols: list[Chem.Mol], y: Optional[np.ndarray] = None) -> None:
-        x = self.transform(mols)
-        self.ready = True
-
-class PDV(BaselineTokenizer):
+class PDV(BaseTokenizer):
 
     def _transform_base(self, **kwargs):
         if 'descriptors' not in kwargs:
             kwargs['descriptors'] = default_descriptors 
         return MolDesc(verbose=self.verbose, **kwargs)
 
-class ECFP(BaselineTokenizer):
+class ECFP(BaseTokenizer):
+
+    is_fitted_ = True
 
     def _transform_base(self, **kwargs):
         gen = MorganGenerator(verbose=self.verbose, **kwargs)
@@ -80,13 +75,17 @@ class ECFP(BaselineTokenizer):
         self.transform.fpsize = value
 
 class FCFP(ECFP):
-
+    is_fitted_ = True
     fixed_transform_kwargs = {'atom_inv': morgan_feat_inv}
 
-class SNS(BaselineTokenizer):
+class SNS(BaseTokenizer):
+    is_fitted_ = False
 
-    precomputed = False
-    
+    def __init__(self, identifiers: dict = {}, encoder: dict = {}, **kwargs):
+        super().__init__(**kwargs)
+        self.transform.identifiers = identifiers
+        self.transform.encoder = encoder
+
     def _transform_base(self, **kwargs):
         if 'morgan_kwargs' in kwargs:
             morgan: dict = kwargs.pop('morgan_kwargs')
@@ -96,18 +95,35 @@ class SNS(BaselineTokenizer):
         return SortAndSlice(generator=morgan, **kwargs)
         
     def fit(self, mols: list[Chem.Mol], y: Optional[np.ndarray] = None) -> None:
+        self = super().fit(mols=mols, y=y)
         self.transform.clear()
         self.transform.update(mols)
         self.transform.slice()
         self.transform.sort()
-        super().fit(mols=mols, y=y)
-
+        return self
+        
     @property
     def fpsize(self):
         return self.transform.fpsize
     
+    @property
+    def encoder(self):
+        return self.transform.encoder
+    
+    @property
+    def identifiers(self):
+        return self.transform.identifiers
+    
     @fpsize.setter
     def fpsize(self, value: int):
         self.transform.slice(value)
+
+    def to_dict(self):
+        params = super().to_dict()
+        params['identifiers'] = self.identifiers
+        params['encoder'] = self.encoder
+        return params
+
+    
 
     
