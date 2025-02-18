@@ -131,7 +131,6 @@ class BaseGNN(torch.nn.Module):
             
         
         for i in range(self.num_layers):
-            # print(x.size())
             if self.share_weights and i > 0:
                 conv = self.layers[self.shared_layer]
             else:
@@ -155,7 +154,6 @@ class BaseGNN(torch.nn.Module):
 
         out['final_state'] = self.layer_pool(out['hidden_states'])
         out['global_state'] = self.graph_pool(out['final_state'], batch)
-        print(out['global_state'].size())
         return out
 
 
