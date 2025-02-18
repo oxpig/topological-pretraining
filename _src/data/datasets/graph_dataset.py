@@ -6,6 +6,7 @@ from pathlib import Path
 import torch_geometric as pyg
 from torch_geometric.data.dataset import _repr
 import torch
+from tqdm import tqdm
 from rdkit import Chem
 
 from typing import Optional, Callable
@@ -42,6 +43,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         fit_tokenizer: bool = True,
         run_id: Optional[str] = None,
         targets: dict[str, dict[str, str]] = None,
+        verbose: bool = False,
     ):
         if run_id is None:
             run_id = ''
@@ -55,6 +57,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         self.split_name, self.split_indices = split
         self._molecules = molecules
         self.run_id = run_id
+        self.verbose = verbose
         
         
         tokenizer_path = Path(root) / 'processed' / f'tokenizer{run_id}{self.split_name}.pt'
@@ -81,10 +84,12 @@ class GraphDataset(pyg.data.InMemoryDataset):
         if self.targets is not None:          
             if not self.targets.is_fitted_:
                 self.transform = None
-                print('Targets not fitted. Fitting...')
+                print('Targets not fitted. Fitting...') if self.verbose else None
                 data_list = [self.get(i) for i in range(len(self))]
                 self.fit_targets(data_list)
                 self.transform = self.load_graph_targets
+
+        print('Loading processed graphs into memory...') if self.verbose else None
         self.load(self.processed_paths[0])
         
 
@@ -107,6 +112,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         return [f'processed{self.run_id}{self.split_name}.pt']
     
     def fit_targets(self, data_list: list[pyg.data.Data]):
+        print('Fitting targets...') if self.verbose else None
         self.targets.fit((self.molecules, data_list))
         if self.targets_path.exists():
             warnings.warn('Overwriting existing targets.')
@@ -123,6 +129,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
             raw.mkdir(parents=True, exist_ok=True)
             molecules_path = raw / 'molecules.pt'
             torch.save(self._molecules, raw / 'molecules.pt')
+            print(f'Saved {len(self._molecules)} molecules to {molecules_path}.') if self.verbose else None
 
         if not raw_graph_path.exists() and not molecules_path.exists():
             raise FileNotFoundError('No molecules or graphs found in the raw directory.')
@@ -134,14 +141,14 @@ class GraphDataset(pyg.data.InMemoryDataset):
                 raw_graph.idx = idx
                 data_list.append(raw_graph.to_dict())
             torch.save(data_list, raw_graph_path)
-            print(f'Saved {len(data_list)} graphs to {raw_graph_path}.')
+            print(f'Saved {len(data_list)} raw graphs to {raw_graph_path}.') if self.verbose else None
         
         processed_graph_path = Path(self.processed_paths[0])
 
         if raw_graph_path.exists() and self.fit_tokenizer:
             data_list = torch.load(raw_graph_path, weights_only=False)
             data_list = [pyg.data.Data(**data_dict) for data_dict in data_list]
-            print(f'Loaded {len(data_list)} graphs from {raw_graph_path}.')
+            print(f'Loaded {len(data_list)} raw graphs from {raw_graph_path}.') if self.verbose else None
             data_list = [graph for graph in data_list if self.pre_filter(graph)]
             if not self.tokenizer.is_fitted_:
                 self.tokenizer.fit(data_list)
@@ -177,3 +184,6 @@ class GraphDataset(pyg.data.InMemoryDataset):
         else:
             return self._molecules
     
+    @property
+    def priors(self):
+        return {target: self.targets[target]['prior'] for target in self.targets}
