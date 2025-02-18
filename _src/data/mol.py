@@ -62,21 +62,21 @@ class MorganGenerator:
         if mol is None:
             return None
         if isinstance(mol, Chem.Mol):
-            return self.dense(mol, array=self.asarray)
-        else:
-            out = []
-            pbar = tqdm(
-                total=len(mol), disable=not self.verbose,
-                desc='Generating fingerprints'
-            )
-            for idx, m in enumerate(mol):
-                m = self.dense(m, array=self.asarray) if m is not None else np.full(self.fpsize, np.nan)
-                out.append(m)
-                pbar.update()
-            pbar.close()
-            if self.asarray:
-                out = np.array(out)
-            return out
+            mol = [mol]
+        verbosity = self.verbose if len(mol) > 1 else False
+        out = []
+        pbar = tqdm(
+            total=len(mol), disable=not verbosity,
+            desc='Generating fingerprints'
+        )
+        for idx, m in enumerate(mol):
+            m = self.dense(m, array=self.asarray) if m is not None else np.full(self.fpsize, np.nan)
+            out.append(m)
+            pbar.update()
+        pbar.close()
+        if self.asarray:
+            out = np.array(out)
+        return out
 
     def dense(
         self, mol: Chem.Mol, array: bool = False
