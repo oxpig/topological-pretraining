@@ -22,16 +22,22 @@ class PredHead(MLP):
             num_layers=num_layers, dropout=dropout, batch_norm=batch_norm,
             act=act, final_act=final_act
         )
+        
     
     @property
     def loss_fn(self):
         return torch.nn.Identity()
 
     def loss(self, x, y, mask=None):
+        device = x.device
+        y.to(device)
         preds = self(x)
         loss_vals = self.loss_fn(preds, y)
+
         if mask is not None:
+            mask.to(device)
             loss_vals = loss_vals * mask
+        loss_vals = loss_vals.mean(dim=0)
         return loss_vals
 
 class RegressionHead(PredHead):
@@ -57,7 +63,7 @@ class RegressionHead(PredHead):
     
     @property
     def loss_fn(self):
-        return torch.nn.MSELoss()
+        return torch.nn.MSELoss(reduction='mean')
 
 class BinaryHead(PredHead):
     """
@@ -102,10 +108,10 @@ class BinaryHead(PredHead):
         weights[y == 0] = class_weights[0, y == 0]
         weights[y == 1] = class_weights[1, y == 0]
         loss_vals = self.loss_fn(pred, y, weight=weights, reduction='none')
-        loss_vals = loss_vals.mean(dim=0)
-        loss_vals = loss_vals.sum()
+        loss_vals = loss_vals.mean(dim=1)
         if mask is not None:
             loss_vals = loss_vals * mask
+        loss_vals = loss_vals.mean(dim=0)
         return loss_vals
 
 class MultiClassHead(PredHead):
@@ -138,5 +144,21 @@ class MultiClassHead(PredHead):
 
     @property
     def loss_fn(self):
-        return torch.nn.CrossEntropyLoss(weight=self.class_weights)
+        return torch.nn.CrossEntropyLoss(weight=self.class_weights, reduction='none')
 
+class MultiTaskLoss(torch.nn.Module):
+    """
+    From https://openaccess.thecvf.com/content_cvpr_2018/papers/Kendall_Multi-Task_Learning_Using_CVPR_2018_paper.pdf
+
+    """
+    def __init__(self, is_regression: torch.BoolTensor):
+        super(MultiTaskLoss, self).__init__()
+        self.is_regression = torch.ones_like(is_regression)
+        self.is_regression[is_regression] = 2
+        self.num_heads = is_regression.size(0)
+        self.sigmas = torch.nn.Parameter(torch.zeros(self.num_heads))
+
+    def forward(self, losses: torch.Tensor):
+        assert losses.size(0) == self.num_heads, 'Number of losses must match the number of heads.'
+        losses = ((1 / (self.is_regression * self.sigmas**2)) * losses + torch.log(self.sigmas))
+        return losses.sum()
