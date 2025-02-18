@@ -27,9 +27,12 @@ class PredHead(MLP):
     def loss_fn(self):
         return torch.nn.Identity()
 
-    def loss(self, x, y):
+    def loss(self, x, y, mask=None):
         preds = self(x)
-        return self.loss_fn(preds, y)
+        loss_vals = self.loss_fn(preds, y)
+        if mask is not None:
+            loss_vals = loss_vals * mask
+        return loss_vals
 
 class RegressionHead(PredHead):
     """
@@ -43,6 +46,7 @@ class RegressionHead(PredHead):
         dropout: float = 0.0,
         batch_norm: bool = False,
         act: str = 'relu',
+        **kwargs,
     ):
         output_dim = 1
         super(RegressionHead, self).__init__(
@@ -54,10 +58,6 @@ class RegressionHead(PredHead):
     @property
     def loss_fn(self):
         return torch.nn.MSELoss()
-
-    def loss(self, x, y):
-        pred = self(x)
-        return self.loss_fn(pred, y)
 
 class BinaryHead(PredHead):
     """
@@ -72,7 +72,8 @@ class BinaryHead(PredHead):
         dropout: float = 0.0,
         batch_norm: bool = False,
         act: str = 'relu',
-        class_weights: tuple[float] = [1.0, 1.0]
+        class_weights: torch.Tensor = None,
+        **kwargs,
     ):
         final_act = 'sigmoid'
         super(BinaryHead, self).__init__(
@@ -80,18 +81,32 @@ class BinaryHead(PredHead):
             num_layers=num_layers, dropout=dropout, batch_norm=batch_norm,
             act=act, final_act=final_act
         )
-        self.class_weights = torch.tensor(class_weights)
+        if class_weights is None:
+            class_weights = torch.ones(size=(2, 1, output_dim))
+        if class_weights.dim() == 2:
+            class_weights = class_weights.unsqueeze(1)
+        assert class_weights.dim() == 3, 'Class weights must be a 3D tensor.'
+        assert class_weights.size(0) == 2, 'Class weights must have a value for each class at dim 0, 0 and 1.'
+        assert class_weights.size(1) == 1, 'Class weights must have a dimension at dim 1 of length 1 for repeats.'
+        assert class_weights.size(-1) == output_dim, 'Class weights must have a values for each task at dim 2.'
+        self.class_weights = class_weights
 
     @property
     def loss_fn(self):
         return torch.nn.functional.binary_cross_entropy
 
-    def loss(self, x, y):
+    def loss(self, x, y, mask=None):
         pred = self(x)
         weights = torch.zeros(size=y.size())
-        weights[y == 0] = self.class_weights[0]
-        weights[y == 1] = self.class_weights[1]
-        return self.loss_fn(pred, y, weight=weights)
+        class_weights = self.class_weights.repeat(1, weights.size(0), 1)
+        weights[y == 0] = class_weights[0, y == 0]
+        weights[y == 1] = class_weights[1, y == 0]
+        loss_vals = self.loss_fn(pred, y, weight=weights, reduction='none')
+        loss_vals = loss_vals.mean(dim=0)
+        loss_vals = loss_vals.sum()
+        if mask is not None:
+            loss_vals = loss_vals * mask
+        return loss_vals
 
 class MultiClassHead(PredHead):
     """
@@ -106,7 +121,8 @@ class MultiClassHead(PredHead):
         dropout: float = 0.0,
         batch_norm: bool = False,
         act: str = 'relu',
-        class_weights: tuple[float] = None
+        class_weights: tuple[float] = None,
+        **kwargs,
     ):
         final_act = 'softmax'
         super(MultiClassHead, self).__init__(
@@ -124,6 +140,3 @@ class MultiClassHead(PredHead):
     def loss_fn(self):
         return torch.nn.CrossEntropyLoss(weight=self.class_weights)
 
-    def loss(self, x, y):
-        pred = self(x)
-        return self.loss_fn(pred, y)
