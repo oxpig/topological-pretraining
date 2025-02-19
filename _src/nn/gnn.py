@@ -14,7 +14,7 @@ class BaseGNN(torch.nn.Module):
         self,
         input_dim: int,
         hidden_dim: int,
-        node_vocab_size: int = None,
+        node_embedding: tuple[int,int] = None,
         padding_idx: int = None,
         num_layers: int = 1,
         dropout: float = 0.0,
@@ -41,7 +41,12 @@ class BaseGNN(torch.nn.Module):
             gnn_kwargs['dropout'] = dropout
         if 'batch_norm' not in gnn_kwargs:
             gnn_kwargs['batch_norm'] = batch_norm
-        self.node_vocab_size = node_vocab_size
+        if node_embedding is not None:
+            self.node_vocab_size = node_embedding[0]
+            self.node_embedding_dim = node_embedding[1]
+        else:
+            self.node_vocab_size = None
+            self.node_embedding_dim = None
         self.share_weights = share_weights
         self.layers = torch.nn.ModuleDict({
                 'act': act_fn[act],
@@ -49,14 +54,14 @@ class BaseGNN(torch.nn.Module):
                 'batch_norm': torch.nn.BatchNorm1d(hidden_dim) if batch_norm else torch.nn.Identity(),
             })
         self.num_hidden_states = self.num_layers
-        if node_vocab_size is not None:
+        if self.node_vocab_size is not None:
             self.layers['node_embedding'] = torch.nn.Embedding(
-                node_vocab_size, hidden_dim, padding_idx=padding_idx
+                self.node_vocab_size, self.node_embedding_dim, padding_idx=padding_idx
             )
             node_tokens = input_dim
-            input_dim = hidden_dim*node_tokens
-            self.num_hidden_states += node_tokens
-        
+            input_dim = self.node_embedding_dim*node_tokens
+            if self.node_embedding_dim == self.hidden_dim:
+                self.num_hidden_states += node_tokens
         else:
             self.layers['node_embedding'] = None
 
@@ -83,22 +88,40 @@ class BaseGNN(torch.nn.Module):
     def _init_layer(self, input_dim, output_dim, **kwargs):
         raise NotImplementedError
     
-    def layer_pool(self, hidden_states: torch.Tensor):
+    def layer_pool(self, out: dict):
+        hidden_states = out['hidden_states']
+        node_embedding = out['node_embedding']
         if self.layer_pool_type == 'last':
-            return hidden_states[:, -1, :]
+            out = hidden_states[:, -1, :]
         elif self.layer_pool_type == 'sum':
-            return hidden_states.sum(dim=1)
+            out = hidden_states.sum(dim=1)
+            if node_embedding is not None:
+                node_embedding = node_embedding.sum(dim=1)
+                out = torch.cat((out, node_embedding), dim=-1)
         elif self.layer_pool_type == 'mean':
-            return hidden_states.mean(dim=1)
+            out = hidden_states.mean(dim=1)
+            if node_embedding is not None:
+                node_embedding = node_embedding.mean(dim=1)
+                out = torch.cat((out, node_embedding), dim=-1)
+
         elif self.layer_pool_type == 'max':
-            return hidden_states.max(dim=1)
+            out = hidden_states.max(dim=1).values
+            if node_embedding is not None:
+                node_embedding = node_embedding.max(dim=1).values
+                out = torch.cat((out, node_embedding), dim=-1)
+
         elif self.layer_pool_type == 'concat':
-            return hidden_states.view(hidden_states.size(0), -1)
+            out = hidden_states.view(hidden_states.size(0), -1)
+            if node_embedding is not None:
+                node_embedding = node_embedding.view(node_embedding.size(0), -1)
+                out = torch.cat((out, node_embedding), dim=-1)
         else:
             raise ValueError(
                 f'Invalid layer pooling method: {self.layer_pool_type}\n'\
                 'Valid options are: last, sum, mean, max, concat.'
             )
+        return out
+
     
     def graph_pool(self, final_state: torch.Tensor, batch: torch.Tensor):
         if self.graph_pool_type is None:
@@ -125,8 +148,12 @@ class BaseGNN(torch.nn.Module):
 
         if self.node_vocab_size is not None:
             x = self.layers['node_embedding'](x)
-            out['hidden_states'][:, :x.size(1), :] = x
-            state += x.size(1)
+            if self.node_embedding_dim == self.hidden_dim:
+                out['hidden_states'][:, :x.size(1), :] = x
+                out['node_embedding'] = None
+                state += x.size(1)
+            else:
+                out['node_embedding'] = x
             x = x.view(x.size(0), -1)
             
         
@@ -152,7 +179,7 @@ class BaseGNN(torch.nn.Module):
             out['hidden_states'][:, state, :] = x
             state += 1
 
-        out['final_state'] = self.layer_pool(out['hidden_states'])
+        out['final_state'] = self.layer_pool(out)
         out['global_state'] = self.graph_pool(out['final_state'], batch)
         return out
 
