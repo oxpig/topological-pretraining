@@ -83,15 +83,13 @@ class GraphDataset(pyg.data.InMemoryDataset):
             self.targets = None
 
         super(GraphDataset, self).__init__(
-            root=root, pre_filter=PreFilter(split), transform=self.load_graph_targets,
+            root=root, pre_filter=PreFilter(split),
         )
         if self.targets is not None:          
             if not self.targets.is_fitted_:
-                self.transform = None
                 print('Targets not fitted. Fitting...') if self.verbose else None
                 data_list = [self.get(i) for i in range(len(self))]
                 self.fit_targets(data_list)
-                self.transform = self.load_graph_targets
 
         print('Loading processed graphs into memory...') if self.verbose else None
         if Path(self.processed_paths[0]).exists():
