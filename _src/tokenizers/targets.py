@@ -86,9 +86,12 @@ class Targets(dict):
                     x.size(0) / (2 * zero_class.sum(dim=0)),
                     x.size(0) / (2 * x.sum(dim=0))
                 ])
+                weights.type(torch.float64)
 
             elif self[target_name]['prediction_head'] == 'multiclass':
-                weights = x.size(0) / (x.size(1) * x.sum(dim=0))
+                weights = torch.tensor(x.size(0) / (x.size(1) * x.sum(dim=0)))
+                weights.type(torch.float64)
+
             else:
                 weights = None
             self[target_name]['class_weights'] = weights
@@ -102,17 +105,23 @@ class Targets(dict):
                 continue
             input_type = self[target_name]['input_type']
             level = self[target_name]['level']
+            prediction_head = self[target_name]['prediction_head']
+            if prediction_head == 'regression':
+                dtype = torch.float32
+            else:
+                dtype = torch.long
 
             if input_type == 'molecule':
                 X = mol
             else:
                 X = graph
             y = self[target_name]['pipeline'].transform(X)
+
             if level == 'global':
-                graph[target_name] = torch.tensor(y)
+                graph[target_name] = torch.tensor(y, dtype=dtype)
             elif level == 'node':
                 y, mask = y
-                graph[target_name] = torch.tensor(y)
+                graph[target_name] = torch.tensor(y, dtype=dtype)
                 graph[f'{target_name}_mask'] = mask
             else:
                 raise ValueError(f'Level {level} not supported.')
