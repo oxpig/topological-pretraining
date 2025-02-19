@@ -254,7 +254,7 @@ class SortAndSlice:
         self,
         generator: MorganGenerator,
         molecules: list[Chem.Mol] = None,
-        fpsize: int = 2048,
+        fpsize: int = None,
         verbose: bool = False,
     ):
         self.generator = generator
@@ -338,6 +338,8 @@ class SortAndSlice:
             encoder (dict[str, int]): Dictionary of identifiers and their enumerated values.
         """
         if fpsize is None:
+            if self.fpsize is None:
+                self.fpsize = len(self.identifiers)
             fpsize = self.fpsize
         if self.verbose:
             print(f'Attempting to set bit length of encoder to a max of {fpsize}.')
