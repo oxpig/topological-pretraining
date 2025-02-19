@@ -59,8 +59,7 @@ class PDV(BaseTokenizer):
 
 class ECFP(BaseTokenizer):
 
-    is_fitted_ = True
-
+    is_fitted_ = False
     def _transform_base(self, **kwargs):
         gen = MorganGenerator(verbose=self.verbose, **kwargs)
         gen.asarray = True
@@ -75,7 +74,7 @@ class ECFP(BaseTokenizer):
         self.transform.fpsize = value
 
 class FCFP(ECFP):
-    is_fitted_ = True
+    is_fitted_ = False
     fixed_transform_kwargs = {'atom_inv': morgan_feat_inv}
 
 class SNS(BaseTokenizer):
