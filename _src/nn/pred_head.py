@@ -103,10 +103,12 @@ class BinaryHead(PredHead):
 
     def loss(self, x, y, mask=None):
         pred = self(x)
-        weights = torch.zeros(size=y.size())
+        y = y.type(pred.dtype)
+        weights = torch.zeros(size=y.size(), dtype=pred.dtype)
         class_weights = self.class_weights.repeat(1, weights.size(0), 1)
+        class_weights = class_weights.type(pred.dtype)
         weights[y == 0] = class_weights[0, y == 0]
-        weights[y == 1] = class_weights[1, y == 0]
+        weights[y == 1] = class_weights[1, y == 1]
         loss_vals = self.loss_fn(pred, y, weight=weights, reduction='none')
         loss_vals = loss_vals.mean(dim=1)
         if mask is not None:
