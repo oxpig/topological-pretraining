@@ -6,6 +6,7 @@ from pathlib import Path
 import torch_geometric as pyg
 from torch_geometric.data.dataset import _repr
 import torch
+import copy
 from tqdm import tqdm
 from rdkit import Chem
 
@@ -70,14 +71,17 @@ class GraphDataset(pyg.data.InMemoryDataset):
             
         self.tokenizer = tokenizer
         self.fit_tokenizer = fit_tokenizer
+        
         targets_path = Path(root) / 'processed' / f'targets{run_id}{self.split_name}.pt'
         if targets_path.exists():
+            print('Loading targets...') if self.verbose else None
             self.targets = Targets(targets_path=targets_path)
         elif isinstance(targets, dict):
+            print('Creating targets...') if self.verbose else None
             self.targets = Targets(targets=targets.copy())
         else:
             self.targets = None
-            
+
         super(GraphDataset, self).__init__(
             root=root, pre_filter=PreFilter(split), transform=self.load_graph_targets,
         )
@@ -90,8 +94,30 @@ class GraphDataset(pyg.data.InMemoryDataset):
                 self.transform = self.load_graph_targets
 
         print('Loading processed graphs into memory...') if self.verbose else None
-        self.load(self.processed_paths[0])
-        
+        if Path(self.processed_paths[0]).exists():
+            self.load(self.processed_paths[0])
+
+    def get(self, idx: int):
+        if self.len() == 1:
+            return copy.copy(self._data)
+
+        if not hasattr(self, '_data_list') or self._data_list is None:
+            self._data_list = self.len() * [None]
+        elif self._data_list[idx] is not None:
+            return copy.copy(self._data_list[idx])
+
+        data = pyg.data.separate.separate(
+            cls=self._data.__class__,
+            batch=self._data,
+            idx=idx,
+            slice_dict=self.slices,
+            decrement=False,
+        )
+        data = self.load_graph_targets(data)
+
+        self._data_list[idx] = copy.copy(data)
+
+        return data
 
     def load_graph_targets(self, graph: pyg.data.Data):
         idx = graph.idx.item()
@@ -121,7 +147,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
     def process(self):
         raw_dir = Path(self.raw_dir)
         molecules_path = raw_dir / 'molecules.pt'
-        raw_graph_path = raw_dir / f'graphs{self.run_id}.pt'
+        raw_graph_path = raw_dir / 'graphs.pt'
         if self._molecules is not None:
             assert all(isinstance(m, Chem.Mol|None) for m in self._molecules)
             root = Path(self.root)
@@ -179,10 +205,13 @@ class GraphDataset(pyg.data.InMemoryDataset):
     @property
     def molecules(self):
         molecules_path = Path(self.raw_dir) / 'molecules.pt'
-        if molecules_path.exists():
-            return torch.load(molecules_path, weights_only=False)
-        else:
+        if self._molecules is not None:
             return self._molecules
+        elif molecules_path.exists():
+            self._molecules = torch.load(molecules_path, weights_only=False)
+            return self._molecules
+        else:
+            raise ValueError('Molecules not found.')
     
     @property
     def priors(self):
