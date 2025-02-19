@@ -14,6 +14,7 @@ load_dotenv()
 
 parser = argparse.ArgumentParser(description='Topological Pretraining')
 parser.add_argument('--config', '-C', type=str, required=True, help='Path to the config file')
+parser.add_argument('--base_config', '-B', type=str, default=None, help='Base config')
 parser.add_argument('--data', '-D', type=str, required=True, help='Path to the data')
 parser.add_argument('--output', '-o', type=str, default='output', help='Path to save')
 
@@ -31,7 +32,13 @@ def load_base_config() -> dict:
 def main():
     args = parser.parse_args()
     config = load_base_config()
-    config.update(yaml.load(open(args.config), Loader=yaml.Loader))
+    if args.base_config is not None:
+        exp_base_config = yaml.load(open(args.base_config), Loader=yaml.Loader)
+    else:
+        exp_base_config = {}
+    exp_config = yaml.load(open(args.config), Loader=yaml.Loader)
+    config.update(exp_base_config)
+    config.update(exp_config)
     config['path'] = args.config
     if 'model' in config:
         config.update(config[config['model']])
