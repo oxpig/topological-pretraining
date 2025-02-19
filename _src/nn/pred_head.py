@@ -29,13 +29,13 @@ class PredHead(MLP):
         return torch.nn.Identity()
 
     def loss(self, x, y, mask=None):
-        device = x.device
-        y.to(device)
         preds = self(x)
+        dtype = preds.dtype
+        y = y.type(dtype)
         loss_vals = self.loss_fn(preds, y)
 
         if mask is not None:
-            mask.to(device)
+            mask.type(dtype)
             loss_vals = loss_vals * mask
         loss_vals = loss_vals.mean(dim=0)
         return loss_vals
