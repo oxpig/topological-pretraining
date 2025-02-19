@@ -24,17 +24,20 @@ def pretrain(config: dict):
     Run the pretraining process.
     """
     name: str = config['name']
+    experiment_name: str = config['experiment']
+    raw_name: str = config.get('raw_name', experiment_name)
     data_path: str = config['data']
     results_path: str = config['results']
     verbose: bool = config['verbose']
     pretrain_data: list[str]|str = config['pretrain_data']
     tokenizer_class = config['tokenizer']
-    tokenizer_kwargs = config.get('transform_kwargs', {})
+    tokenizer_kwargs = config.get('tokenizer_kwargs', {})
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     batch_size: int = config['batch_size']
     epochs: int = config['epochs']
     learning_rate: float = config['learning_rate']
     targets: dict = config['targets']
+    splits: list[str] = config.get('splits', [])
     
     model_class = get_nn(config['model'])
     model_kwargs = config.get('model_kwargs', {})
@@ -43,7 +46,7 @@ def pretrain(config: dict):
     print(f'Tokenizer: {tokenizer_class}') if verbose else None
     print(f'Model: {config['model']}') if verbose else None
     print(f'Data: {pretrain_data}') if verbose else None
-    # print(f'Target: {target}') if verbose else None
+    print(f'Splits: {splits}') if verbose else None
     print(f'Batch size: {batch_size}') if verbose else None
     print(f'Epochs: {epochs}') if verbose else None
     print(f'Learning rate: {learning_rate}') if verbose else None
@@ -52,29 +55,19 @@ def pretrain(config: dict):
 
     # Load the dataset as a dataframe
     df: BaseDataFrame = load_dataset(name=pretrain_data, root=data_path, verbose=verbose)
-    molecules = df.rdkit_mols
+    
 
     # Load the tokenizer
-    tokenizer = get_tokenizer(tokenizer_class, tokenizer_kwargs)
+    tokenizer = get_tokenizer(tokenizer_class)(transform_kwargs=tokenizer_kwargs)
 
-    root = Path(data_path) / pretrain_data / tokenizer_class
+    root = Path(data_path) / pretrain_data / raw_name
     root.mkdir(parents=True, exist_ok=True)
-    raw_dir = root / 'raw'
 
-    if not raw_dir.exists():
-        raw_dir.mkdir()
-        for i, mol in enumerate(molecules):
-            graph = tokenizer.raw(mol)
-            graph.idx = i
-            torch.save(graph, raw_dir / f'{i}.pt')
-
-    splits = [col for col in df.columns if 'butina_filter' in col]
     if len(splits) == 0:
         print('No splits found, using all data for pretraining.') if verbose else None
         df['butina_filter'] = 1
         splits = ['butina_filter']
-    # gen = MorganGenerator(verbose=verbose, radius=2, chirality=True)
-    # loss = torch.nn.BCELoss()
+
 
     # prepare raw graphs
     GraphDataset(
@@ -85,7 +78,7 @@ def pretrain(config: dict):
     )
 
     for split in splits:
-        
+        assert split in df.columns, f'{split} not found in dataframe.'
         idx = df[split]
         pretrain_dataset = GraphDataset(
             root=root, split=(split, idx), tokenizer=tokenizer,
@@ -93,24 +86,34 @@ def pretrain(config: dict):
         )
 
 
-        pretrain_loader = pyg.data.DataLoader(pretrain_dataset, batch_size=batch_size, shuffle=True)
+        pretrain_loader = pyg.loader.DataLoader(
+            pretrain_dataset, batch_size=batch_size, shuffle=True
+        )
+        model_kwargs['input_dim'] = pretrain_dataset[0].x.size(1)
+        if 'node_embedding' in model_kwargs:
+            model_kwargs['node_embedding'] = (
+                len(pretrain_dataset.tokenizer.node_types), model_kwargs['node_embedding']
+            )
+                
         model = torch.nn.ModuleDict({
             'main': model_class(**model_kwargs),
         })
         graph_0 = pretrain_dataset[0]
-        out = model['main'](graph_0.x, graph_0.edge_index, graph.edge_attr)
+        print(f'Graph 0: {graph_0}') if verbose else None
+        out = model['main'](graph_0.x, graph_0.edge_index, graph_0.edge_attr)
         head_input_dim = out['global_state'].size(-1)
         targets_key = pretrain_dataset.targets
+        
         is_regression = torch.full((len(targets_key),), False)
         
-        for i, target_name in enumerate(targets):
-            head_name = targets[target_name]['prediction_head']
+        for i, target_name in enumerate(targets_key):
+            head_name = targets_key[target_name]['prediction_head']
             head_cls = pred_head_map[head_name]
             
             output_dim = graph_0[target_name].size(1)
 
             if head_name == 'multiclass' or head_name == 'binary':
-                class_weights = targets[target_name]['class_weights']
+                class_weights = targets_key[target_name]['class_weights']
             
             else:
                 class_weights = None
@@ -118,11 +121,11 @@ def pretrain(config: dict):
 
             head = head_cls(
                 input_dim=head_input_dim,
-                hidden_dim=512,
+                hidden_dim=256,
                 output_dim=output_dim,
                 num_layers=2,
-                dropout=0.0,
-                batch_norm=True,
+                dropout=0.125,
+                batch_norm=False,
                 act='hardswish',
                 class_weights=class_weights
             )
@@ -139,7 +142,7 @@ def pretrain(config: dict):
         model.train()
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
         for epoch in range(epochs):
-            average_epoch_loss = 0
+            epoch_loss = 0
             for batch_num, batch in enumerate(pretrain_loader):
                 batch.to(device) 
                 optimizer.zero_grad()
@@ -147,7 +150,10 @@ def pretrain(config: dict):
                 losses = torch.empty(len(targets_key), device=device)
                 for i, target_name in enumerate(targets_key):
                     head = model[target_name]
-                    if targets_key['level'] == 'global':
+                    if targets_key[target_name]['level'] == 'global':
+                        pred = head(out['global_state'])
+                        y = batch[target_name].type(pred.dtype)
+                        losses[i] = torch.nn.BCELoss()(pred, y)
                         losses[i] = head.loss(
                             x = out['global_state'],
                             y = batch[target_name],
@@ -161,8 +167,18 @@ def pretrain(config: dict):
                 loss = model['losses'](losses)
                 loss.backward()
                 optimizer.step()
-                average_epoch_loss += loss.item() / batch_num
-            
+                epoch_loss += loss.item()
+                print(f'Batch {batch_num+1}/{len(pretrain_loader)} | Loss: {loss.item():.4f}') if verbose else None
+            average_loss = epoch_loss / len(pretrain_loader)
+            print(f'Epoch {epoch+1}/{epochs} | Loss: {average_loss:.4f}') if verbose else None
+
+        Path(pretrain_dataset.processed_paths[0]).unlink()
         model['tokenizer'] = pretrain_dataset.tokenizer
-        torch.save(model, results_path / name / f'model_{split}.pt')
+        save_path = results_path / experiment_name
+        save_path.mkdir(parents=True, exist_ok=True)
+        if len(splits) > 1:
+            file_name = f'{name}_{split}.pt'
+        else:
+            file_name = f'{name}.pt'
+        torch.save(model, results_path / experiment_name / file_name)
        
