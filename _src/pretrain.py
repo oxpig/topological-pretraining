@@ -120,6 +120,7 @@ def pretrain(config: dict):
         targets_key = pretrain_dataset.targets
         
         is_regression = torch.full((len(targets_key),), False)
+        head_kwargs = {}
         
         for i, target_name in enumerate(targets_key):
             head_name = targets_key[target_name]['prediction_head']
@@ -134,16 +135,18 @@ def pretrain(config: dict):
                 class_weights = None
                 is_regression[i] = True
 
-            head = head_cls(
-                input_dim=head_input_dim,
-                hidden_dim=256,
-                output_dim=output_dim,
-                num_layers=2,
-                dropout=model_kwargs.get('dropout', 0.0),
-                batch_norm=model_kwargs.get('batch_norm', 0.0),
-                act=model_kwargs.get('act', 'relu'),
-                class_weights=class_weights
-            )
+            head_kwargs[target_name] = {
+                'input_dim': head_input_dim,
+                'hidden_dim': 256,
+                'output_dim': output_dim,
+                'num_layers': 2,
+                'act': model_kwargs.get('act', 'relu'),
+                'dropout': model_kwargs.get('dropout', 0.0),
+                'batch_norm': model_kwargs.get('batch_norm', False),
+                'class_weights': class_weights,
+            }
+            
+            head = head_cls(**head_kwargs[target_name])
             model[target_name] = head
 
         if len(is_regression) == 1:
@@ -200,7 +203,18 @@ def pretrain(config: dict):
                 neptune_run[f'{split}/epoch_loss'].append(average_loss)
 
         Path(pretrain_dataset.processed_paths[0]).unlink()
-        model['tokenizer'] = pretrain_dataset.tokenizer
+        model = {
+            'tokenizer': tokenizer.to_dict(),
+            'main': model['main'].state_dict(),
+            'main_cls': model_class,
+            'main_kwargs': model_kwargs,
+        }
+        for i, target_name in enumerate(targets_key):
+            model[target_name] = model[target_name].state_dict()
+            head_name = targets_key[target_name]['prediction_head']
+            head_cls = pred_head_map[head_name]
+            model[f'{target_name}_cls'] = head_cls
+            model[f'{target_name}_kwargs'] = head_kwargs[target_name]
         
         torch.save(model, results_path / experiment_name / file_name)
        
