@@ -60,7 +60,6 @@ def pretrain(config: dict):
     # Load the dataset as a dataframe
     df: BaseDataFrame = load_dataset(name=pretrain_data, root=data_path, verbose=verbose)
     
-
     # Load the tokenizer
     tokenizer = get_tokenizer(tokenizer_class)(transform_kwargs=tokenizer_kwargs)
 
@@ -79,6 +78,7 @@ def pretrain(config: dict):
         tokenizer=tokenizer,
         molecules=df.rdkit_mols,
         fit_tokenizer=False,
+        verbose=verbose,
     )
     save_path = results_path / experiment_name
     save_path.mkdir(parents=True, exist_ok=True)
@@ -96,6 +96,7 @@ def pretrain(config: dict):
         pretrain_dataset = GraphDataset(
             root=root, split=(split, idx), tokenizer=tokenizer,
             targets=targets, run_id=name, fit_tokenizer=True,
+            verbose=verbose
         )
 
 
