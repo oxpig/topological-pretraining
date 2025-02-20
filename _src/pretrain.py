@@ -210,11 +210,11 @@ def pretrain(config: dict):
             'main_kwargs': model_kwargs,
         }
         for i, target_name in enumerate(targets_key):
-            model[target_name] = model[target_name].state_dict()
+            model_dict[target_name] = model[target_name].state_dict()
             head_name = targets_key[target_name]['prediction_head']
             head_cls = pred_head_map[head_name]
-            model[f'{target_name}_cls'] = head_cls
-            model[f'{target_name}_kwargs'] = head_kwargs[target_name]
+            model_dict[f'{target_name}_cls'] = head_cls
+            model_dict[f'{target_name}_kwargs'] = head_kwargs[target_name]
         
         torch.save(model_dict, results_path / experiment_name / file_name)
         Path(pretrain_dataset.processed_paths[0]).unlink()
