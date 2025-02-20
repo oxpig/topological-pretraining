@@ -78,7 +78,6 @@ class Targets(dict):
                 x = torch.tensor(self[target_name]['pipeline'].fit_transform(data[0]),  dtype=torch.float64)
             elif input_type == 'graph':
                 x = torch.tensor(self[target_name]['pipeline'].fit_transform(data[1]), dtype=torch.float64)
-            print(x.size())
             if self[target_name]['prediction_head'] == 'binary':
                 zero_class = torch.zeros_like(x, dtype=torch.float64)
                 zero_class[x == 0] = 1
@@ -87,10 +86,6 @@ class Targets(dict):
                     x.size(0) / (2 * x.sum(dim=0))
                 ])
                 weights.type(torch.float64)
-                print(zero_class.sum(dim=0))
-                print(x.sum(dim=0))
-                print(weights)
-                exit()
 
             elif self[target_name]['prediction_head'] == 'multiclass':
                 weights = torch.tensor(x.size(0) / (x.size(1) * x.sum(dim=0)))
