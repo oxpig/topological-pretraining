@@ -99,7 +99,6 @@ def pretrain(config: dict):
             verbose=verbose
         )
 
-
         pretrain_loader = pyg.loader.DataLoader(
             pretrain_dataset, batch_size=batch_size, shuffle=True
         )
@@ -128,7 +127,7 @@ def pretrain(config: dict):
             output_dim = graph_0[target_name].size(1)
 
             if head_name == 'multiclass' or head_name == 'binary':
-                class_weights = targets_key[target_name]['class_weights']
+                class_weights = targets_key[target_name]['class_weights'].to(device)
             
             else:
                 class_weights = None
@@ -151,7 +150,6 @@ def pretrain(config: dict):
 
         else:
             model['losses'] = MultiTaskLoss(is_regression=is_regression)
-
 
         model = model.to(device)
         model.train()
