@@ -78,9 +78,18 @@ def pretrain(config: dict):
         molecules=df.rdkit_mols,
         fit_tokenizer=False,
     )
+    save_path = results_path / experiment_name
+    save_path.mkdir(parents=True, exist_ok=True)
 
     for split in splits:
         assert split in df.columns, f'{split} not found in dataframe.'
+        if len(splits) > 1:
+            file_name = f'{name}_{split}.pt'
+        else:
+            file_name = f'{name}.pt'
+        if (save_path / file_name).exists():
+            print(f'Model {file_name} already exists, skipping.') if verbose else None
+            continue
         idx = df[split]
         pretrain_dataset = GraphDataset(
             root=root, split=(split, idx), tokenizer=tokenizer,
@@ -178,11 +187,6 @@ def pretrain(config: dict):
 
         Path(pretrain_dataset.processed_paths[0]).unlink()
         model['tokenizer'] = pretrain_dataset.tokenizer
-        save_path = results_path / experiment_name
-        save_path.mkdir(parents=True, exist_ok=True)
-        if len(splits) > 1:
-            file_name = f'{name}_{split}.pt'
-        else:
-            file_name = f'{name}.pt'
+        
         torch.save(model, results_path / experiment_name / file_name)
        
