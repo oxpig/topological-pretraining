@@ -11,6 +11,7 @@ import numpy as np
 import torch
 import torch_geometric as pyg
 
+
 pred_head_map = {
     'binary': BinaryHead,
     'regression': RegressionHead,
@@ -39,6 +40,7 @@ def pretrain(config: dict):
     weight_decay: float = config.get('weight_decay', 0.0)
     targets: dict = config['targets']
     splits: list[str] = config.get('splits', [])
+    neptune_run = config.get('neptune_run')
     
     model_class = get_nn(config['model'])
     model_kwargs = config.get('model_kwargs', {})
@@ -182,8 +184,12 @@ def pretrain(config: dict):
                 optimizer.step()
                 epoch_loss += loss.item()
                 print(f'Batch {batch_num+1}/{len(pretrain_loader)} | Loss: {loss.item():.4f}') if verbose else None
+                if neptune_run is not None:
+                    neptune_run[f'{split}/batch_loss'].append(loss.item())
             average_loss = epoch_loss / len(pretrain_loader)
             print(f'Epoch {epoch+1}/{epochs} | Loss: {average_loss:.4f}') if verbose else None
+            if neptune_run is not None:
+                neptune_run[f'{split}/epoch_loss'].append(average_loss)
 
         Path(pretrain_dataset.processed_paths[0]).unlink()
         model['tokenizer'] = pretrain_dataset.tokenizer

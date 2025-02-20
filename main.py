@@ -1,16 +1,20 @@
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-from _src.data.mol import MorganGenerator, Standardizer
-
 import argparse
+from copy import deepcopy
+import neptune
 from pathlib import Path
 import yaml
 from _src import benchmark, preprocess, evaluate, pretrain
 
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
+
+NEPTUNE_API_TOKEN = os.getenv("NEPTUNE_API_TOKEN")
+NEPTUNE_PROJECT = os.getenv("NEPTUNE_PROJECT")
 
 parser = argparse.ArgumentParser(description='Topological Pretraining')
 parser.add_argument('--config', '-C', type=str, required=True, help='Path to the config file')
@@ -47,6 +51,19 @@ def main():
         config['name'] = Path(args.config).stem
     config['data'] = Path(args.data)
     config['results'] = Path(args.output)
+
+    if NEPTUNE_PROJECT is not None and config.get('neptune', False):
+        neptune_run = neptune.init_run(
+            project=NEPTUNE_PROJECT,
+            api_token=NEPTUNE_API_TOKEN,
+            name=config['name'],
+        )
+        neptune_run['config'] = deepcopy(config)
+        config['neptune_run'] = neptune_run
+
+    else:
+        config['neptune_run'] = None
+
     if 'verbose' not in config:
         config['verbose'] = False
     if process == 'preprocess':
