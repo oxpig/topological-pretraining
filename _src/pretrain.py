@@ -202,7 +202,7 @@ def pretrain(config: dict):
             if neptune_run is not None:
                 neptune_run[f'{split}/epoch_loss'].append(average_loss)
 
-        Path(pretrain_dataset.processed_paths[0]).unlink()
+        
         model = {
             'tokenizer': tokenizer.to_dict(),
             'main': model['main'].state_dict(),
@@ -217,4 +217,5 @@ def pretrain(config: dict):
             model[f'{target_name}_kwargs'] = head_kwargs[target_name]
         
         torch.save(model, results_path / experiment_name / file_name)
+        Path(pretrain_dataset.processed_paths[0]).unlink()
        
