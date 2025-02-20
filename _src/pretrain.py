@@ -182,7 +182,9 @@ def pretrain(config: dict):
                             y = y,
                             mask = mask,
                         )
-                print(y, losses, head(x=embed))
+                pred = head(x=embed)
+                print(y.shape,pred.shape)
+                print(head.loss_fn(pred, y))
                 loss = model['losses'](losses)
                 print(loss)
                 exit()
