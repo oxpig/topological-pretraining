@@ -144,6 +144,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         if self.targets_path.exists():
             warnings.warn('Overwriting existing targets.')
         self.targets.save(self.targets_path)
+        exit()
 
 
     def process(self):
