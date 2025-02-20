@@ -173,10 +173,19 @@ def benchmark(config: dict):
         out = np.zeros((num_splits, len(df) + 1))
         complete = {}
         if (out_path / f'{benchmark.lower()}_preds.npz').exists():
-            print('Predictions already exist. Getting checkpoint.') if verbose else None
-            preds = np.load(out_path / f'{benchmark.lower()}_preds.npz')
-            out = preds['arr_0']
-            complete = {i: True for i in np.where(out[:, -1] == 1)[0]}
+            print(
+                'Predictions already exist. Getting checkpoint.'
+            ) if verbose else None
+            try:
+                preds = np.load(out_path / f'{benchmark.lower()}_preds.npz')
+                out = preds['arr_0']
+                complete = {i: True for i in np.where(out[:, -1] == 1)[0]}
+            except:
+                print(
+                    f'Error loading {benchmark.lower()} predictions '\
+                    f'for {name}. Starting from scratch.'
+                ) if verbose else None
+
         if out[-1, -1] == 1:
             print('All splits complete. Skipping') if verbose else None
             pbar.update(1)
