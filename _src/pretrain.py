@@ -110,7 +110,7 @@ def pretrain(config: dict):
             )
                 
         model = torch.nn.ModuleDict({
-            'main': model_class(**model_kwargs),
+            'main': model_class(device=device, **model_kwargs),
         })
         graph_0 = pretrain_dataset[0]
         print(f'Graph 0: {graph_0}') if verbose else None
@@ -152,7 +152,7 @@ def pretrain(config: dict):
             model['losses'] = MultiTaskLoss(is_regression=is_regression)
 
 
-        model.to(device)
+        model = model.to(device)
         model.train()
         optimizer = torch.optim.Adam(
             model.parameters(), lr=learning_rate, weight_decay=weight_decay
@@ -160,25 +160,28 @@ def pretrain(config: dict):
         for epoch in range(epochs):
             epoch_loss = 0
             for batch_num, batch in enumerate(pretrain_loader):
-                batch.to(device) 
+                batch = batch.to(device)
                 optimizer.zero_grad()
-                out = model['main'](batch.x, batch.edge_index, batch=batch.batch)
+                out = model['main'](x=batch.x, edge_index=batch.edge_index, batch=batch.batch)
                 losses = torch.empty(len(targets_key), device=device)
                 for i, target_name in enumerate(targets_key):
                     head = model[target_name]
                     if targets_key[target_name]['level'] == 'global':
-                        pred = head(out['global_state'])
-                        y = batch[target_name].type(pred.dtype)
-                        losses[i] = torch.nn.BCELoss()(pred, y)
+                        embed = out['global_state']
+                        embed.to(device)
+                        y = batch[target_name].type(embed.dtype)
                         losses[i] = head.loss(
-                            x = out['global_state'],
-                            y = batch[target_name],
+                            x = embed,
+                            y = y,
                         )
                     elif targets_key['level'] == 'node':
+                        embed = out['final_state']
+                        y = batch[target_name].type(embed.dtype)
+                        mask = batch[f'{target_name}_mask'].type(embed.dtype)
                         losses[i] = head.loss(
-                            x = out['final_state'],
-                            y = batch[target_name],
-                            mask = batch[f'{target_name}_mask']
+                            x = embed,
+                            y = y,
+                            mask = mask,
                         )
                 loss = model['losses'](losses)
                 loss.backward()

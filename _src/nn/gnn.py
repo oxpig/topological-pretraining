@@ -24,6 +24,7 @@ class BaseGNN(torch.nn.Module):
         graph_pool_type: Literal[None, 'sum', 'mean', 'max',] = 'max',
         gnn_kwargs: dict = {},
         share_weights: bool = False,
+        device: str = 'cpu',
     ):
         super(BaseGNN, self).__init__()
         self.input_dim = input_dim
@@ -115,7 +116,7 @@ class BaseGNN(torch.nn.Module):
             if node_embedding is not None:
                 node_embedding = node_embedding.view(node_embedding.size(0), -1)
                 print(node_embedding.device, out.device, hidden_states.device)
-                
+
                 exit()
                 out = torch.cat((out, node_embedding), dim=-1)
         else:
