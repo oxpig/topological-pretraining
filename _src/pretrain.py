@@ -162,8 +162,6 @@ def pretrain(config: dict):
             epoch_loss = 0
             for batch_num, batch in enumerate(pretrain_loader):
                 batch = batch.to(device)
-                print(batch.device)
-                print(batch.x.device)
                 optimizer.zero_grad()
                 out = model['main'](x=batch.x, edge_index=batch.edge_index, batch=batch.batch)
                 losses = torch.empty(len(targets_key), device=device)
