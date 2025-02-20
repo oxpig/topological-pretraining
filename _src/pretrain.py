@@ -182,7 +182,10 @@ def pretrain(config: dict):
                             y = y,
                             mask = mask,
                         )
+                print(y, losses, head(x=embed))
                 loss = model['losses'](losses)
+                print(loss)
+                exit()
                 loss.backward()
                 optimizer.step()
                 epoch_loss += loss.item()
