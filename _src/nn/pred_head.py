@@ -109,7 +109,6 @@ class BinaryHead(PredHead):
         class_weights = class_weights.type(pred.dtype)
         weights[y == 0] = class_weights[0, y == 0]
         weights[y == 1] = class_weights[1, y == 1]
-        print(weights)
         loss_vals = self.loss_fn(pred, y, weight=weights, reduction='none')
         loss_vals = loss_vals.mean(dim=1)
         if mask is not None:
