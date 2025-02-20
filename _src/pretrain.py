@@ -112,7 +112,8 @@ def pretrain(config: dict):
         model = torch.nn.ModuleDict({
             'main': model_class(device=device, **model_kwargs),
         })
-        graph_0 = pretrain_dataset[0]
+        model['main'].to(device)
+        graph_0 = pretrain_dataset[0].to(device)
         print(f'Graph 0: {graph_0}') if verbose else None
         out = model['main'](graph_0.x, graph_0.edge_index, graph_0.edge_attr)
         head_input_dim = out['global_state'].size(-1)
