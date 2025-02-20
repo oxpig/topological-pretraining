@@ -85,14 +85,15 @@ class GraphDataset(pyg.data.InMemoryDataset):
         super(GraphDataset, self).__init__(
             root=root, pre_filter=PreFilter(split),
         )
-        if self.targets is not None:          
-            if not self.targets.is_fitted_:
-                print('Targets not fitted. Fitting...') if self.verbose else None
-                data_list = [self.get(i) for i in range(len(self))]
-                self.fit_targets(data_list)
-
-        print('Loading processed graphs into memory...') if self.verbose else None
+        
         if Path(self.processed_paths[0]).exists():
+            if self.targets is not None:          
+                if not self.targets.is_fitted_:
+                    print('Targets not fitted. Fitting...') if self.verbose else None
+
+                    data_list = self.load_data_list(self.processed_paths[0])
+                    self.fit_targets(data_list)
+            print('Loading processed graphs into memory...') if self.verbose else None
             self.load(self.processed_paths[0])
 
     def get(self, idx: int):
@@ -143,6 +144,11 @@ class GraphDataset(pyg.data.InMemoryDataset):
             warnings.warn('Overwriting existing targets.')
         self.targets.save(self.targets_path)
 
+    def load_data_list(self, path: str):
+        data_list = torch.load(path, weights_only=False)
+        data_list = [pyg.data.Data(**data_dict) for data_dict in data_list]
+        return data_list
+
     def process(self):
         raw_dir = Path(self.raw_dir)
         molecules_path = raw_dir / 'molecules.pt'
@@ -167,8 +173,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         processed_graph_path = Path(self.processed_paths[0])
 
         if raw_graph_path.exists() and self.fit_tokenizer:
-            data_list = torch.load(raw_graph_path, weights_only=False)
-            data_list = [pyg.data.Data(**data_dict) for data_dict in data_list]
+            data_list = self.load_data_list(raw_graph_path)
             print(f'Loaded {len(data_list)} raw graphs from {raw_graph_path}.') if self.verbose else None
             data_list = [graph for graph in data_list if self.pre_filter(graph)]
             if not self.tokenizer.is_fitted_:
