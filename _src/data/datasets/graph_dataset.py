@@ -146,13 +146,9 @@ class GraphDataset(pyg.data.InMemoryDataset):
         raw_dir = Path(self.raw_dir)
         molecules_path = raw_dir / 'molecules.pt'
         raw_graph_path = raw_dir / 'graphs.pt'
-        if self._molecules is not None:
+        if self._molecules is not None and not molecules_path.exists():
             assert all(isinstance(m, Chem.Mol|None) for m in self._molecules)
-            root = Path(self.root)
-            raw = root / 'raw'
-            raw.mkdir(parents=True, exist_ok=True)
-            molecules_path = raw / 'molecules.pt'
-            torch.save(self._molecules, raw / 'molecules.pt')
+            torch.save(self._molecules, molecules_path)
             print(f'Saved {len(self._molecules)} molecules to {molecules_path}.') if self.verbose else None
 
         if not raw_graph_path.exists() and not molecules_path.exists():
