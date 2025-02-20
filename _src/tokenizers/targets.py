@@ -75,12 +75,12 @@ class Targets(dict):
             input_type = self[target_name]['input_type']
             
             if input_type == 'molecule':
-                x = torch.tensor(self[target_name]['pipeline'].fit_transform(data[0]))
+                x = torch.tensor(self[target_name]['pipeline'].fit_transform(data[0]),  dtype=torch.float64)
             elif input_type == 'graph':
-                x = torch.tensor(self[target_name]['pipeline'].fit_transform(data[1]))
+                x = torch.tensor(self[target_name]['pipeline'].fit_transform(data[1]), dtype=torch.float64)
             print(x.size())
             if self[target_name]['prediction_head'] == 'binary':
-                zero_class = torch.zeros_like(x)
+                zero_class = torch.zeros_like(x, dtype=torch.float64)
                 zero_class[x == 0] = 1
                 weights = torch.stack([
                     x.size(0) / (2 * zero_class.sum(dim=0)),

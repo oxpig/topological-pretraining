@@ -82,7 +82,7 @@ def pretrain(config: dict):
     )
     save_path = results_path / experiment_name
     save_path.mkdir(parents=True, exist_ok=True)
-
+    print(f'Looping through splits: {splits}') if verbose else None
     for split in splits:
         assert split in df.columns, f'{split} not found in dataframe.'
         if len(splits) > 1:

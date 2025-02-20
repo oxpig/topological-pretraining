@@ -137,6 +137,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
     
     def fit_targets(self, data_list: list[pyg.data.Data]):
         print('Fitting targets...') if self.verbose else None
+        molecules = [self.molecules[data.idx] for data in data_list]
         self.targets.fit((self.molecules, data_list))
         if self.targets_path.exists():
             warnings.warn('Overwriting existing targets.')
@@ -178,6 +179,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
             self.save(data_list, processed_graph_path)
             if self.targets is not None:
                 if not self.targets.is_fitted_:
+                    print('Fitting targets...') if self.verbose else None
                     self.fit_targets(data_list)
         
         else:
