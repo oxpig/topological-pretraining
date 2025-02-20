@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch_geometric as pyg
+from tqdm import tqdm
 
 
 pred_head_map = {
@@ -158,6 +159,7 @@ def pretrain(config: dict):
         )
         for epoch in range(epochs):
             epoch_loss = 0
+            pbar = tqdm(total=len(pretrain_loader), desc=f'Epoch {epoch+1}/{epochs} | Batch Loss: {torch.nan}', disable=not verbose,)
             for batch_num, batch in enumerate(pretrain_loader):
                 batch = batch.to(device)
                 optimizer.zero_grad()
@@ -187,11 +189,13 @@ def pretrain(config: dict):
                 loss.backward()
                 optimizer.step()
                 epoch_loss += loss.item()
-                print(f'Batch {batch_num+1}/{len(pretrain_loader)} | Loss: {loss.item():.4f}') if verbose else None
+                pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f}')
+                pbar.update(1)
                 if neptune_run is not None:
                     neptune_run[f'{split}/batch_loss'].append(loss.item())
             average_loss = epoch_loss / len(pretrain_loader)
-            print(f'Epoch {epoch+1}/{epochs} | Loss: {average_loss:.4f}') if verbose else None
+            pbar.set_description(f'Epoch {epoch+1}/{epochs} | Epoch Loss: {average_loss:.4f}')
+            pbar.close()
             if neptune_run is not None:
                 neptune_run[f'{split}/epoch_loss'].append(average_loss)
 
