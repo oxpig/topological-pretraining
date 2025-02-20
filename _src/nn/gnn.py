@@ -148,8 +148,7 @@ class BaseGNN(torch.nn.Module):
         }
         state = 0
         num_hidden_states = self.num_hidden_states
-        out['hidden_states'] = torch.zeros((x.size(0), num_hidden_states, self.hidden_dim))
-        out['hidden_states'].to(x.device)
+        out['hidden_states'] = torch.zeros((x.size(0), num_hidden_states, self.hidden_dim)).to(x.device)
         if self.node_vocab_size is not None:
             x = self.layers['node_embedding'](x)
             if self.node_embedding_dim == self.hidden_dim:
@@ -158,8 +157,6 @@ class BaseGNN(torch.nn.Module):
                 state += x.size(1)
             else:
                 out['node_embedding'] = x
-                out['node_embedding'].to(x.device)
-
             x = x.view(x.size(0), -1)
             
         
