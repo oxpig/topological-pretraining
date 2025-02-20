@@ -87,14 +87,14 @@ class GraphDataset(pyg.data.InMemoryDataset):
         )
         
         if Path(self.processed_paths[0]).exists():
+            print('Loading processed graphs into memory...') if self.verbose else None
+            self.load(self.processed_paths[0])
             if self.targets is not None:          
                 if not self.targets.is_fitted_:
                     print('Targets not fitted. Fitting...') if self.verbose else None
                     data_list = [graph for graph in self]
                     self.fit_targets(data_list)
-            print('Loading processed graphs into memory...') if self.verbose else None
-            self.load(self.processed_paths[0])
-
+            
     def get(self, idx: int):
         if self.len() == 1:
             return copy.copy(self._data)
