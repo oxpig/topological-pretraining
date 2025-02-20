@@ -97,6 +97,8 @@ class BaseGNN(torch.nn.Module):
             out = hidden_states.sum(dim=1)
             if node_embedding is not None:
                 node_embedding = node_embedding.sum(dim=1)
+                print(node_embedding.device, out.device, hidden_states.device)
+                exit()
                 out = torch.cat((out, node_embedding), dim=-1)
         elif self.layer_pool_type == 'mean':
             out = hidden_states.mean(dim=1)
@@ -154,7 +156,8 @@ class BaseGNN(torch.nn.Module):
                 state += x.size(1)
             else:
                 out['node_embedding'] = x
-                
+                out['node_embedding'].to(x.device)
+
             x = x.view(x.size(0), -1)
             
         
