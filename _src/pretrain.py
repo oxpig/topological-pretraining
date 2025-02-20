@@ -36,6 +36,7 @@ def pretrain(config: dict):
     batch_size: int = config['batch_size']
     epochs: int = config['epochs']
     learning_rate: float = config['learning_rate']
+    weight_decay: float = config.get('weight_decay', 0.0)
     targets: dict = config['targets']
     splits: list[str] = config.get('splits', [])
     
@@ -50,6 +51,7 @@ def pretrain(config: dict):
     print(f'Batch size: {batch_size}') if verbose else None
     print(f'Epochs: {epochs}') if verbose else None
     print(f'Learning rate: {learning_rate}') if verbose else None
+    print(f'Weight decay: {weight_decay}') if verbose else None
     print(f'Device: {device}') if verbose else None
     print(f'\n##################################################\n') if verbose else None
 
@@ -124,9 +126,9 @@ def pretrain(config: dict):
                 hidden_dim=256,
                 output_dim=output_dim,
                 num_layers=2,
-                dropout=0.125,
-                batch_norm=False,
-                act='hardswish',
+                dropout=model_kwargs.get('dropout', 0.0),
+                batch_norm=model_kwargs.get('batch_norm', 0.0),
+                act=model_kwargs.get('act', 'relu'),
                 class_weights=class_weights
             )
             model[target_name] = head
@@ -140,7 +142,9 @@ def pretrain(config: dict):
 
         model.to(device)
         model.train()
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        optimizer = torch.optim.Adam(
+            model.parameters(), lr=learning_rate, weight_decay=weight_decay
+        )
         for epoch in range(epochs):
             epoch_loss = 0
             for batch_num, batch in enumerate(pretrain_loader):
