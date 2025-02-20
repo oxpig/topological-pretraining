@@ -97,8 +97,8 @@ class SNS(BaseTokenizer):
         self = super().fit(mols=mols, y=y)
         self.transform.clear()
         self.transform.update(mols)
-        self.transform.slice()
         self.transform.sort()
+        self.transform.slice()
         return self
         
     @property
