@@ -2,6 +2,7 @@ process: benchmark
 verbose: True
 tokenizer: SNS
 tokenizer_kwargs:
+  transform_kwargs:
     fpsize: 2048
     morgan_kwargs:
       radius: 2

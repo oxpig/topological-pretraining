@@ -2,7 +2,8 @@ process: benchmark
 verbose: True
 tokenizer: ECFP
 tokenizer_kwargs:
-    radius: 2
-    chirality: True
-    fpsize: 2048
+    transform_kwargs:
+        radius: 2
+        chirality: True
+        fpsize: 2048
 model: LGBM
