@@ -187,7 +187,6 @@ def pretrain(config: dict):
                             y = y,
                             mask = mask,
                         )
-                pred = head(x=embed)
                 loss = model['losses'](losses)
                 loss.backward()
                 optimizer.step()
@@ -209,7 +208,19 @@ def pretrain(config: dict):
             'main_cls': model_class,
             'main_kwargs': model_kwargs,
         }
+        # model_dict['heads'] = {}
         for i, target_name in enumerate(targets_key):
+            # state = model[target_name].state_dict()
+            # head_name = targets_key[target_name]['prediction_head']
+            # head_cls = pred_head_map[head_name]
+            # head_kwargs = head_kwargs[target_name]
+
+            # model_dict['heads'][target_name] = {
+            #     'name': head_name,
+            #     'state': state,
+            #     'cls': head_cls,
+            #     'kwargs': head_kwargs,
+            # }
             model_dict[target_name] = model[target_name].state_dict()
             head_name = targets_key[target_name]['prediction_head']
             head_cls = pred_head_map[head_name]
@@ -218,4 +229,8 @@ def pretrain(config: dict):
         
         torch.save(model_dict, results_path / experiment_name / file_name)
         Path(pretrain_dataset.processed_paths[0]).unlink()
+        del pretrain_dataset
+        del model
+        del model_dict
+        del pretrain_loader
        
