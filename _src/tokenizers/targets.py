@@ -2,6 +2,7 @@ from . import PDV, SNS, ECFP, FCFP
 from ..nn import pred_head
 from .. import tokenizers 
 
+from copy import deepcopy
 from rdkit import Chem
 from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import VarianceThreshold
@@ -57,6 +58,7 @@ class Targets(dict):
     def __init__(
         self, targets: dict[str, dict[str, str]] = {}, targets_path: str = None
     ):
+        targets = deepcopy(targets)
         super(Targets, self).__init__(**targets)
         self.targets_path = targets_path
         if self.targets_path is not None:
