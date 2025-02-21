@@ -46,6 +46,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         targets: dict[str, dict[str, str]] = None,
         verbose: bool = False,
     ):
+        Path(root).mkdir(parents=True, exist_ok=True)
         if run_id is None:
             run_id = ''
         else:
@@ -59,7 +60,6 @@ class GraphDataset(pyg.data.InMemoryDataset):
         self._molecules = molecules
         self.run_id = run_id
         self.verbose = verbose
-        
         
         tokenizer_path = Path(root) / 'processed' / f'tokenizer{run_id}{self.split_name}.pt'
         if tokenizer_path.exists():
@@ -148,6 +148,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
 
     def process(self):
         raw_dir = Path(self.raw_dir)
+        raw_dir.mkdir(parents=True, exist_ok=True)
         molecules_path = raw_dir / 'molecules.pt'
         raw_graph_path = raw_dir / 'graphs.pt'
         if self._molecules is not None and not molecules_path.exists():
