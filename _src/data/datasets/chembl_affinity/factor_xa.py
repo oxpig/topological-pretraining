@@ -25,7 +25,7 @@ class FactorXA(BaseDataFrame):
                 },
                 inplace=True,
             )
-            self.y = self.y.apply(lambda x: -np.log10(x))
+            self.y = self.y.apply(lambda x: -np.log10(x) + 9)
             self.mol_standardize_check()
             self.save()
     
