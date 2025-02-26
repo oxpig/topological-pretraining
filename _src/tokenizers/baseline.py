@@ -51,7 +51,7 @@ default_descriptors: list[str] = [
 
 
 class PDV(BaseTokenizer):
-
+    precomputed = True
     def _transform_base(self, **kwargs):
         if 'descriptors' not in kwargs:
             kwargs['descriptors'] = default_descriptors 
@@ -60,6 +60,7 @@ class PDV(BaseTokenizer):
 class ECFP(BaseTokenizer):
 
     is_fitted_ = False
+    precomputed = True
     def _transform_base(self, **kwargs):
         gen = MorganGenerator(verbose=self.verbose, **kwargs)
         gen.asarray = True
@@ -74,11 +75,13 @@ class ECFP(BaseTokenizer):
         self.transform.fpsize = value
 
 class FCFP(ECFP):
+    precomputed = True
     is_fitted_ = False
     fixed_transform_kwargs = {'atom_inv': morgan_feat_inv}
 
 class SNS(BaseTokenizer):
     is_fitted_ = False
+    precomputed = False
 
     def __init__(self, identifiers: dict = {}, encoder: dict = {}, **kwargs):
         super().__init__(**kwargs)
