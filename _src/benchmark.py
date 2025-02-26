@@ -23,15 +23,17 @@ import yaml
 import optuna
 
 class HyperOpt:
-
+    trial_count = 0
     def __init__(
         self, model, model_kwargs: dict,
         task: str, hyperparameters: dict, dataset: MolDataset,
         splits: list, scorer: Callable,
         direction: str = 'minimize', val_size: float = 0.2,
-        verbose: bool = False
+        verbose: bool = False, neptune_run = None, name: str = 'name',
     ):
         self.model = model
+        self.neptune_run = neptune_run
+        self.name = name
         self.model_kwargs = model_kwargs
         self.model_kwargs['verbose'] = -1
         self.dataset = dataset
@@ -87,7 +89,11 @@ class HyperOpt:
             model.fit(train_X, train_y)
             test_pred = model.predict(val_X)
             out[idx] = self.scorer(val_y, test_pred)
-
+            if self.neptune_run is not None:
+                self.neptune_run[f'{self.name}/trial_{self.trial_count}/tuning_scores'].append(out[idx])
+        self.neptune_run[f'{self.name}/trial_{self.trial_count}/tuning_mean'] = out.mean()
+        self.neptune_run[f'{self.name}/trial_{self.trial_count}/params'] = params
+        self.trial_count += 1
         return out.mean()
     
     def run(self, trials: int = 50):
@@ -124,6 +130,9 @@ def benchmark(config: dict):
             - transform_kwargs: dict
                 The keyword arguments for the tokenizer.
     """
+    neptune_run = config.pop('neptune_run')
+    if neptune_run is not None:
+        neptune_run['config'] = config
     name: str = config['name']
     data_path: str = config['data']
     results_path: str = config['results']
@@ -156,6 +165,7 @@ def benchmark(config: dict):
     hyperparam_path = Path(data_path) / f'hyperparameters/{name}'
     hyperparam_path.mkdir(parents=True, exist_ok=True)
 
+
     pbar = tqdm(total=len(benchmark_data), desc='Benchmarking', disable=not verbose)
     for benchmark in benchmark_data:
         model_kwargs = {**base_model_kwargs}
@@ -169,6 +179,18 @@ def benchmark(config: dict):
         )
         splits: list = list(df.splits)
         num_splits = df.num_splits
+        if df.task == 'regression':
+            scorer = mean_absolute_error
+            direction = 'minimize'
+        else:
+            scorer = average_precision_score
+            direction = 'maximize'
+
+        if neptune_run is not None:
+            neptune_run[f'{benchmark}/num_splits'] = num_splits
+            neptune_run[f'{benchmark}/task'] = df.task
+            neptune_run[f'{benchmark}/scorer'] = str(scorer)
+            
         out_path = Path(results_path) / name
         out_path.mkdir(parents=True, exist_ok=True)
         out = np.zeros((num_splits, len(df) + 1))
@@ -188,11 +210,23 @@ def benchmark(config: dict):
                 ) if verbose else None
 
         if out[-1, -1] == 1:
-            print('All splits complete. Skipping') if verbose else None
+            print('All splits complete.') if verbose else None
+            if neptune_run is not None:
+                print('Calculating scores.') if verbose else None
+                for idx, (train, test) in enumerate(splits):
+                    train_y = df.y[train]
+                    test_y = df.y[test]
+                    train_pred = out[idx, train]
+                    test_pred = out[idx, test]
+                    train_score = scorer(train_y, train_pred)
+                    test_score = scorer(test_y, test_pred)
+                    neptune_run[f'{benchmark}/train_score'].append(train_score)
+                    neptune_run[f'{benchmark}/test_score'].append(test_score)
+                print('Scores calculated and logged to neptune.') if verbose else None
+            print('Skipping to next benchmark.') if verbose else None
             pbar.update(1)
             continue
         print(f'Task type: {df.task}') if verbose else None
-        
         print(f'Number of splits: {num_splits}') if verbose else None
         print('Loading molecules') if verbose else None
         mols = df.rdkit_mols
@@ -220,18 +254,12 @@ def benchmark(config: dict):
         
             if tuning:
                 print('Running hyperparameter tuning.') if verbose else None
-                if df.task == 'regression':
-                    scorer = mean_absolute_error
-                    direction = 'minimize'
-                else:
-                    scorer = average_precision_score
-                    direction = 'maximize'
                 hyperopt_splits = [splits[i] for i in range(num_hyp_splits)]
                 opt = HyperOpt(
                     model=model_class, model_kwargs=model_kwargs, task=df.task,
                     hyperparameters=hyperparameters, dataset=dataset,
                     splits=hyperopt_splits, scorer=scorer, direction=direction,
-                    verbose=verbose
+                    verbose=verbose, neptune_run=neptune_run, name=benchmark,
                 )
                 best_params = opt.run(trials=trials)
                 print(f'Best hyperparameters: {best_params}') if verbose else None
@@ -241,9 +269,20 @@ def benchmark(config: dict):
 
             else:
                 print('Using default hyperparameters.') if verbose else None
+        if neptune_run is not None:
+            neptune_run[f'{benchmark}/model_kwargs'] = model_kwargs
         kbar = tqdm(total=num_splits, desc='Splits', disable=not verbose)
         for idx, (train, test) in enumerate(splits):
             if idx in complete:
+                if neptune_run is not None:
+                    train_y = df.y[train]
+                    test_y = df.y[test]
+                    train_pred = out[idx, train]
+                    test_pred = out[idx, test]
+                    train_score = scorer(train_y, train_pred)
+                    test_score = scorer(test_y, test_pred)
+                    neptune_run[f'{benchmark}/train_score'].append(train_score)
+                    neptune_run[f'{benchmark}/test_score'].append(test_score)
                 kbar.update(1)
                 continue
             print('\n') if verbose == 2 else None
@@ -266,8 +305,13 @@ def benchmark(config: dict):
             test_pred = model.predict(test_X)
             out[idx, test] = test_pred
             out[idx, -1] = 1 # Mark as complete
-            np.savez_compressed(out_path / f'{benchmark.lower()}_preds.npz', out)
 
+            if neptune_run is not None:
+                test_score = scorer(df.y[test], test_pred)
+                train_score = scorer(df.y[train], train_pred)
+                neptune_run[f'{benchmark}/train_score'].append(train_score)
+                neptune_run[f'{benchmark}/test_score'].append(test_score)
+            np.savez_compressed(out_path / f'{benchmark.lower()}_preds.npz', out)
             kbar.update(1)
         kbar.close()
         
