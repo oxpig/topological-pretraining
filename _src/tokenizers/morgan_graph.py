@@ -39,12 +39,15 @@ class MorganGraph(BaseGraph):
         max_vocab_size: int = 2048,
         **kwargs
     ):
-        super(MorganGraph, self).__init__(node_types=node_types, edge_types=edge_types, max_vocab_size=max_vocab_size)
+        super(MorganGraph, self).__init__(
+            node_types=node_types, edge_types=edge_types, max_vocab_size=max_vocab_size,
+            verbose=verbose
+        )
         morgan = MorganGenerator(**kwargs)
         self.sort_and_slice = SortAndSlice(
             generator=morgan, verbose=verbose  
         )
-
+    
     def get_nodes(self, mol):
         envs = self.sort_and_slice.generator.environments(mol)
         x = torch.tensor(envs, dtype=torch.long)
