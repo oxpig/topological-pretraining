@@ -1,7 +1,8 @@
-from .utils import get_model, get_tokenizer
-from .data.utils import load_dataset
-from .data.datasets import BaseDataFrame, MolDataset
-from .tokenizers.base import BaseTokenizer
+from _src.models import get_model
+from _src.tokenizers import get_tokenizer
+from _src.data.utils import load_dataset
+from _src.data.datasets import BaseDataFrame, MolDataset
+from _src.tokenizers.base import BaseTokenizer
 
 from copy import deepcopy
 
