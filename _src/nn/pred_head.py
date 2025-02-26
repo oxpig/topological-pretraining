@@ -104,7 +104,7 @@ class BinaryHead(PredHead):
     def score(self, x, y, mask=None):
         pred = self(x)
         y = y.type(pred.dtype)
-        pred = pred > 0.5
+        pred = (pred > 0.5).type(torch.int)
         tp = (y * pred).sum(dim=0)
         fp = ((1 - y) * pred).sum(dim=0)
         fn = (y * (1 - pred)).sum(dim=0)
