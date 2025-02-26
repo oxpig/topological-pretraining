@@ -106,11 +106,11 @@ def pretrain(config: dict):
             pretrain_dataset, batch_size=batch_size, shuffle=True
         )
         model_kwargs['input_dim'] = pretrain_dataset[0].x.size(1)
-        if 'node_embedding' in model_kwargs:
+        if 'node_embedding' in model_kwargs and isinstance(model_kwargs['node_embedding'], int):
             model_kwargs['node_embedding'] = (
                 len(pretrain_dataset.tokenizer.node_types), model_kwargs['node_embedding']
             )
-                
+
         model = torch.nn.ModuleDict({
             'main': model_class(device=device, **model_kwargs),
         })
@@ -181,7 +181,7 @@ def pretrain(config: dict):
                         y = batch[target_name].type(embed.dtype)
                         losses[i] = head.loss(x=embed, y=y,)
                         scores[i] = head.score(x=embed, y=y,)
-                    elif targets_key['level'] == 'node':
+                    elif targets_key[target_name]['level'] == 'node':
                         embed = out['final_state']
                         y = batch[target_name].type(embed.dtype)
                         mask = batch[f'{target_name}_mask'].type(embed.dtype)
@@ -193,15 +193,16 @@ def pretrain(config: dict):
                 loss.backward()
                 optimizer.step()
                 epoch_loss += loss.item()
-                pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f}')
-                pbar.update(1)
                 if neptune_run is not None:
                     neptune_run[f'{split}/batch_loss'].append(loss.item())
                     for i, target_name in enumerate(targets_key):
                         neptune_run[f'{split}/{target_name}_score'].append(scores[i].item())
-            
+                        
+                pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f}')
+                pbar.update(1)
+                
             average_loss = epoch_loss / len(pretrain_loader)
-            pbar.set_description(f'Epoch {epoch+1}/{epochs} | Epoch Loss: {average_loss:.4f}')
+            pbar.set_description(f'Epoch {epoch+1}/{epochs} | Epoch Loss: {average_loss:.4f} | Last Batch Loss: {loss.item():.4f}')
             pbar.close()
             if neptune_run is not None:
                 average_scores = epoch_scores / len(pretrain_loader)
