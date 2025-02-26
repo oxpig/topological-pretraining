@@ -189,9 +189,6 @@ def pretrain(config: dict):
                         scores[i] = head.score(x=embed, y=y, mask=mask,)
                         
                     epoch_scores[i] += scores[i].item()
-                    if neptune_run is not None:
-                        print(batch_num, scores[i].item())
-                        neptune_run[f'{split}/{target_name}_score'].append(scores[i].item())
 
                 loss = model['losses'](losses)
                 loss.backward()
@@ -199,6 +196,7 @@ def pretrain(config: dict):
                 epoch_loss += loss.item()
                 if neptune_run is not None:
                     neptune_run[f'{split}/batch_loss'].append(loss.item())
+                    neptune_run[f'{split}/SNS_score'].append(scores[0].item())
 
                 pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f}')
                 pbar.update(1)
