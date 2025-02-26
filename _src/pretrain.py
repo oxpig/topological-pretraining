@@ -180,7 +180,7 @@ def pretrain(config: dict):
                         embed.to(device)
                         y = batch[target_name].type(embed.dtype)
                         losses[i] = head.loss(x=embed, y=y,)
-                        scores[i] = head.score(x=embed, y=y,)
+                        score_now = head.score(x=embed, y=y,)
                     elif targets_key[target_name]['level'] == 'node':
                         embed = out['final_state']
                         y = batch[target_name].type(embed.dtype)
