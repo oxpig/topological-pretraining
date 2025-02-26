@@ -1,10 +1,12 @@
-from .utils import get_model, get_tokenizer, get_nn
-from .data.utils import load_dataset
-from .data.datasets import BaseDataFrame
-from .data.mol import MorganGenerator, SortAndSlice
-from .data.datasets import GraphDataset
+from _src.nn import get_nn
+from _src.tokenizers import get_tokenizer
+from _src.models import get_model
+from _src.data.utils import load_dataset
+from _src.data.datasets import BaseDataFrame
+from _src.data.mol import MorganGenerator, SortAndSlice
+from _src.data.datasets import GraphDataset
 
-from .nn.pred_head import (BinaryHead, RegressionHead, MultiClassHead, MultiTaskLoss)
+from _src.nn.pred_head import (BinaryHead, RegressionHead, MultiClassHead, MultiTaskLoss)
 
 from pathlib import Path
 import numpy as np
@@ -205,7 +207,7 @@ def pretrain(config: dict):
         model_dict = {
             'tokenizer': tokenizer.to_dict(),
             'main': model['main'].state_dict(),
-            'main_cls': model_class,
+            'main_cls': model_class.__name__,
             'main_kwargs': model_kwargs,
         }
         # model_dict['heads'] = {}
@@ -224,7 +226,7 @@ def pretrain(config: dict):
             model_dict[target_name] = model[target_name].state_dict()
             head_name = targets_key[target_name]['prediction_head']
             head_cls = pred_head_map[head_name]
-            model_dict[f'{target_name}_cls'] = head_cls
+            model_dict[f'{target_name}_cls'] = head_cls.__name__
             model_dict[f'{target_name}_kwargs'] = head_kwargs[target_name]
         
         torch.save(model_dict, results_path / experiment_name / file_name)
