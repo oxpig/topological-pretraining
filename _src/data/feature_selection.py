@@ -1,6 +1,7 @@
 import numpy as np
+from sklearn.base import BaseEstimator, TransformerMixin
 
-class CoCorr:
+class CoCorr(BaseEstimator, TransformerMixin):
     """
     Fetaure selection based on collinearity.
 
@@ -19,10 +20,11 @@ class CoCorr:
         The indices of the features to keep.
     """
     def __init__(self, threshold: float = 0.9):
+        super(CoCorr, self).__init__()
         self.threshold = threshold
         self.to_keep = []
 
-    def fit(self, X: np.ndarray):
+    def fit(self, X: np.ndarray, y: np.ndarray = None):
         """
         Determine which features to keep based on multilinearity and variance.
 
@@ -41,6 +43,7 @@ class CoCorr:
             out = i if var[i] < var[j] else j
             exclude.append(int(out))
         self.to_keep = np.array([i for i in range(X.shape[1]) if i not in set(exclude)])
+        return self
 
     def transform(self, X: np.ndarray) -> np.ndarray:
         """
@@ -58,34 +61,14 @@ class CoCorr:
         """
         return X[:, self.to_keep]
 
-    def fit_transform(self, X: np.ndarray):
-        """
-        Fit CoCorr to X and return the transformed X.
-
-        Parameters
-        ----------
-        X : np.ndarray
-            The input data. The shape is (n_samples, n_features).
-
-        Returns
-        -------
-        np.ndarray
-            The transformed data. The shape is (n_samples, len(self.to_keep)).
-        """
-        self.fit(X)
-        return self.transform(X)
-
     
-class SelectAll:
+class SelectAll(BaseEstimator, TransformerMixin):
     """
     Dummy class to select all features.
     """
     named_steps = {}
     def fit(self, X: np.ndarray, y: np.ndarray = None):
-        pass
+        return self
 
     def transform(self, X: np.ndarray, y: np.ndarray = None) -> np.ndarray:
-        return X if y is None else (X, y)
-
-    def fit_transform(self, X: np.ndarray, y: np.ndarray = None) -> np.ndarray:
         return X if y is None else (X, y)
