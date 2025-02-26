@@ -111,7 +111,7 @@ class BinaryHead(PredHead):
         f1 = (2 * tp) / (2 * tp + fp + fn)
         if mask is not None:
             f1 = f1 * mask
-        return f1
+        return f1.mean()
 
     def loss(self, x, y, mask=None):
         pred = self(x)
