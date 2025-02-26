@@ -186,10 +186,10 @@ def pretrain(config: dict):
                         y = batch[target_name].type(embed.dtype)
                         mask = batch[f'{target_name}_mask'].type(embed.dtype)
                         losses[i] = head.loss(x=embed, y=y, mask=mask,)
-                        scores[i] = head.score(x=embed, y=y, mask=mask,)
-                    score_now = scores[i].item()
+                        score_now = head.score(x=embed, y=y, mask=mask,)
+                    scores[i] = score_now
                     if neptune_run is not None:
-                        neptune_run[f'{split}/batch_{target_name}_score'].append(score_now)
+                        neptune_run[f'{split}/batch_{target_name}_score'].append(score_now.item())
                     epoch_scores[i] += scores[i].item()
 
 
