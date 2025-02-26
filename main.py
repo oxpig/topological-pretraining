@@ -56,7 +56,7 @@ def main():
         neptune_run = neptune.init_run(
             project=NEPTUNE_PROJECT,
             api_token=NEPTUNE_API_TOKEN,
-            name=config['name'],
+            name=f'{process}_{config['name']}',
         )
         neptune_run['config'] = deepcopy(config)
         config['neptune_run'] = neptune_run
