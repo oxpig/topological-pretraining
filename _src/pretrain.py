@@ -190,6 +190,7 @@ def pretrain(config: dict):
                         
                     epoch_scores[i] += scores[i].item()
                     if neptune_run is not None:
+                        print(batch_num, scores[i].item())
                         neptune_run[f'{split}/{target_name}_score'].append(scores[i].item())
 
                 loss = model['losses'](losses)
