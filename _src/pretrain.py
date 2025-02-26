@@ -163,32 +163,32 @@ def pretrain(config: dict):
             model.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
         for epoch in range(epochs):
+            
             epoch_loss = 0
+            epoch_scores = torch.zeros(len(targets_key), device=device)
             pbar = tqdm(total=len(pretrain_loader), desc=f'Epoch {epoch+1}/{epochs} | Batch Loss: {torch.nan}', disable=not verbose,)
             for batch_num, batch in enumerate(pretrain_loader):
                 batch = batch.to(device)
                 optimizer.zero_grad()
                 out = model['main'](x=batch.x, edge_index=batch.edge_index, batch=batch.batch)
                 losses = torch.empty(len(targets_key), device=device)
+                scores = torch.empty(len(targets_key), device=device)
                 for i, target_name in enumerate(targets_key):
                     head = model[target_name]
                     if targets_key[target_name]['level'] == 'global':
                         embed = out['global_state']
                         embed.to(device)
                         y = batch[target_name].type(embed.dtype)
-                        losses[i] = head.loss(
-                            x = embed,
-                            y = y,
-                        )
+                        losses[i] = head.loss(x=embed, y=y,)
+                        scores[i] = head.score(x=embed, y=y,)
                     elif targets_key['level'] == 'node':
                         embed = out['final_state']
                         y = batch[target_name].type(embed.dtype)
                         mask = batch[f'{target_name}_mask'].type(embed.dtype)
-                        losses[i] = head.loss(
-                            x = embed,
-                            y = y,
-                            mask = mask,
-                        )
+                        losses[i] = head.loss(x=embed, y=y, mask=mask,)
+                        scores[i] = head.score(x=embed, y=y, mask=mask,)
+                    epoch_scores[i] += scores[i]
+
                 loss = model['losses'](losses)
                 loss.backward()
                 optimizer.step()
@@ -197,37 +197,38 @@ def pretrain(config: dict):
                 pbar.update(1)
                 if neptune_run is not None:
                     neptune_run[f'{split}/batch_loss'].append(loss.item())
+                    for i, target_name in enumerate(targets_key):
+                        neptune_run[f'{split}/{target_name}_score'].append(scores[i].item())
+            
             average_loss = epoch_loss / len(pretrain_loader)
             pbar.set_description(f'Epoch {epoch+1}/{epochs} | Epoch Loss: {average_loss:.4f}')
             pbar.close()
             if neptune_run is not None:
-                neptune_run[f'{split}/epoch_loss'].append(average_loss)
-
-        
+                average_scores = epoch_scores / len(pretrain_loader)
+                neptune_run[f'{split}/epoch_average_loss'].append(average_loss)
+                for i, target_name in enumerate(targets_key):
+                    neptune_run[f'{split}/{target_name}_epoch_average_score'].append(average_scores[i].item())
+                     
         model_dict = {
             'tokenizer': tokenizer.to_dict(),
-            'main': model['main'].state_dict(),
-            'main_cls': model_class.__name__,
-            'main_kwargs': model_kwargs,
+            'main': {
+                'state': model['main'].state_dict(),
+                'cls': model_class.__name__,
+                'kwargs': model_kwargs
+            }
         }
-        # model_dict['heads'] = {}
+        model_dict['heads'] = {}
         for i, target_name in enumerate(targets_key):
-            # state = model[target_name].state_dict()
-            # head_name = targets_key[target_name]['prediction_head']
-            # head_cls = pred_head_map[head_name]
-            # head_kwargs = head_kwargs[target_name]
-
-            # model_dict['heads'][target_name] = {
-            #     'name': head_name,
-            #     'state': state,
-            #     'cls': head_cls,
-            #     'kwargs': head_kwargs,
-            # }
-            model_dict[target_name] = model[target_name].state_dict()
+            state = model[target_name].state_dict()
             head_name = targets_key[target_name]['prediction_head']
-            head_cls = pred_head_map[head_name]
-            model_dict[f'{target_name}_cls'] = head_cls.__name__
-            model_dict[f'{target_name}_kwargs'] = head_kwargs[target_name]
+            head_cls = pred_head_map[head_name].__name__
+            head_kwargs = head_kwargs[target_name]
+
+            model_dict['heads'][target_name] = {
+                'state': state,
+                'cls': head_cls,
+                'kwargs': head_kwargs,
+            }
         
         torch.save(model_dict, results_path / experiment_name / file_name)
         Path(pretrain_dataset.processed_paths[0]).unlink()

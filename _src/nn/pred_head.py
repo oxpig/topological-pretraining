@@ -1,5 +1,6 @@
 from .mlp import MLP
 
+from sklearn.metrics import f1_score
 import torch
 
 class PredHead(MLP):
@@ -22,8 +23,7 @@ class PredHead(MLP):
             num_layers=num_layers, dropout=dropout, batch_norm=batch_norm,
             act=act, final_act=final_act
         )
-        
-    
+
     @property
     def loss_fn(self):
         return torch.nn.Identity()
@@ -100,6 +100,18 @@ class BinaryHead(PredHead):
     @property
     def loss_fn(self):
         return torch.nn.functional.binary_cross_entropy
+    
+    def score(self, x, y, mask=None):
+        pred = self(x)
+        y = y.type(pred.dtype)
+        pred = pred > 0.5
+        tp = (y * pred).sum(dim=0)
+        fp = ((1 - y) * pred).sum(dim=0)
+        fn = (y * (1 - pred)).sum(dim=0)
+        f1 = (2 * tp) / (2 * tp + fp + fn)
+        if mask is not None:
+            f1 = f1 * mask
+        return f1
 
     def loss(self, x, y, mask=None):
         pred = self(x)
