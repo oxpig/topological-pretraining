@@ -1,9 +1,10 @@
-from ...tokenizers import (
+from _src.tokenizers import (
     BaseTokenizer,
     ECFP, FCFP, PDV, SNS,
-    AtomGraphTokenizer, MorganGraphTokenizer
+    AtomGraphTokenizer, MorganGraphTokenizer,
+    PreTrainedTokenizer
 )
-from ..feature_selection import CoCorr, SelectAll
+from _src.data.feature_selection import CoCorr, SelectAll
 
 from pathlib import Path
 import numpy as np
@@ -27,6 +28,7 @@ tokenizers_dict = {
     'SNS': SNS,
     'AtomGraphTokenizer': AtomGraphTokenizer,
     'MorganGraphTokenizer': MorganGraphTokenizer,
+    'PreTrainedTokenizer': PreTrainedTokenizer,
 }
 
 extra_transform_classes = {
@@ -83,6 +85,7 @@ class MolDataset:
         tokenizer_kwargs: dict = {}, extra_transform_kwargs: dict = {},
         verbose: bool = False, fit_transform: bool = False,
     ):
+        self.verbose = verbose
         self.mols = mols
         self.X = None
         self.y = y
@@ -91,11 +94,16 @@ class MolDataset:
         self.set_extra_transform(extra_transform_kwargs)
 
         if self.tokenizer is not None:
+            print('Setting tokenizer...') if self.verbose else None
+            if self.tokenizer not in tokenizers_dict:
+                raise ValueError(f'Invalid tokenizer: {self.tokenizer}')
             self.tokenizer: BaseTokenizer = tokenizers_dict[self.tokenizer]
             self.tokenizer = self.tokenizer(verbose=verbose, **self.tokenizer_kwargs)
+            print(f'Tokenizer set.\n{self.tokenizer}') if self.verbose else None
 
         if train_idx is None:
             train_idx = np.arange(len(mols))
+            test_idx = np.array([])
 
         if fit_transform:
             self.reset(train_idx, test_idx)
@@ -112,6 +120,7 @@ class MolDataset:
 
         Sets self._extra_transform as a sklearn.pipeline.Pipeline object.
         """
+        print('Setting extra transforms...') if self.verbose else None
         self.extra_transform_kwargs = kwargs
         _extra_transform = []
         for name, vals in kwargs.items():
@@ -121,6 +130,7 @@ class MolDataset:
             _extra_transform.append((name, extra_transform(**vals)))
         if len(_extra_transform) > 0:
             self._extra_transform = Pipeline(_extra_transform)
+        print(f'Extra transforms set.\nPipeline: {self._extra_transform}') if self.verbose else None
     
     def __len__(self):
         return len(self.mols)
@@ -154,22 +164,30 @@ class MolDataset:
 
         Sets self.train_idx and self.test_idx as the input indices.
         """
+        print('Resetting train and test indices...') if self.verbose else None
         self.train_idx, self.test_idx = train_idx, test_idx
         # Fit the tokenizer if it is not precomputed or if the tokenized data is not available
         # Precomputed tokenizers do not need to be refit (e.g. Morgan fingerprints)
         if not self.tokenizer.precomputed or self.X is None:
+            print('Fitting tokenizer...') if self.verbose else None
             train_mols = [self.mols[i] for i in train_idx]
             y = self.y[train_idx] if self.y is not None else None
             self.tokenizer.fit(train_mols, y)
             self.X = self.tokenizer.transform(self.mols) 
+        else:
+            print('Tokenizer is precomputed. Skipping fit.') if self.verbose else None
         
         # Set k to the number of samples - 1 for SelectKBest
-        if 'selectkbest' in self._extra_transform.named_steps:
-            self._extra_transform.set_params(selectkbest__k=self.X.shape[0] - 1)
+        if 'select_k_best' in self._extra_transform.named_steps:
+            k = self.train_idx.shape[0] - 1
+            print(f'Setting k for SelectKBest to number of train samples - 1...') if self.verbose else None
+            self._extra_transform.set_params(select_k_best__k=k)
+            print(f'k set to {k}.') if self.verbose else None
         
         # Fit the extra transforms 
+        print('Fitting extra transforms...') if self.verbose else None
         y = self.y[train_idx] if self.y is not None else None
-        train_X = [self[i] for i in train_idx]
+        train_X = [self.X[i] for i in train_idx]
         self._extra_transform.fit(train_X, y)
 
 
@@ -180,9 +198,7 @@ class MolDataset:
             train_X = self.X[self.train_idx]
         else:
             train_X = [self[i] for i in self.train_idx]
-        
-        # Apply the extra transforms
-        train_X = self._extra_transform.transform(train_X)
+    
         return train_X
 
     @property
@@ -208,9 +224,7 @@ class MolDataset:
             test_X = self.X[self.test_idx]
         else:
             test_X = [self[i] for i in self.test_idx]
-
-        # Apply the extra transforms
-        test_X = self._extra_transform.transform(test_X)
+            
         return test_X
     
     @property
