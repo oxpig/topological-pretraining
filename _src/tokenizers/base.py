@@ -137,10 +137,12 @@ class BaseGraph:
 
     def __init__(
         self, node_types: dict = None, edge_types: dict = None, max_vocab_size: int = None,
+        verbose: bool = False,
     ):
         self.node_types = node_types or self.node_types
         self.edge_types = edge_types or self.edge_types
         self.max_vocab_size = max_vocab_size
+        self.verbose = verbose
 
     def get_edges(self, mol: Chem.Mol):
         """
