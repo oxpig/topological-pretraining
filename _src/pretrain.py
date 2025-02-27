@@ -193,7 +193,6 @@ def pretrain(config: dict):
                     scores[i] = score_now.item()
                     epoch_scores[i] += score_now.item()
 
-
                 loss = model['losses'](losses)
                 loss.backward()
                 optimizer.step()
@@ -201,14 +200,14 @@ def pretrain(config: dict):
                 if neptune_run is not None:
                     neptune_run[f'{split}/batch_loss'].append(loss.item())
                 
-                pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f}')
+                pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch 0th Score: {score_now.item():.4f}')
                 pbar.update(1)
                 
             average_loss = epoch_loss / len(pretrain_loader)
-            pbar.set_description(f'Epoch {epoch+1}/{epochs} | Epoch Loss: {average_loss:.4f} | Last Batch Loss: {loss.item():.4f}')
+            average_scores = epoch_scores / len(pretrain_loader)
+            pbar.set_description(f'Epoch {epoch+1}/{epochs} | Epoch Loss: {average_loss:.4f} | Last Batch Loss: {loss.item():.4f} | Last Batch 0th Score: {score_now.item():.4f}')
             pbar.close()
             if neptune_run is not None:
-                average_scores = epoch_scores / len(pretrain_loader)
                 neptune_run[f'{split}/epoch_average_loss'].append(average_loss)
                 for i, target_name in enumerate(targets_key):
                     score_now = average_scores[i].item()
