@@ -156,7 +156,7 @@ def pretrain(config: dict):
 
         else:
             model['losses'] = MultiTaskLoss(is_regression=is_regression)
-
+        print(f'Model: {model}') if verbose else None
         model = model.to(device)
         model.train()
         optimizer = torch.optim.Adam(
