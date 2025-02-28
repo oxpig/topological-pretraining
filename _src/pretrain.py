@@ -157,6 +157,12 @@ def pretrain(config: dict):
         else:
             model['losses'] = MultiTaskLoss(is_regression=is_regression)
         print(f'Model: {model}') if verbose else None
+        num_params = sum(p.numel() for p in model.parameters())
+        print(f'Number of parameters: {num_params}') if verbose else None
+        if neptune_run:
+            neptune_run['model/num_params'] = num_params
+            neptune_run['model/num_heads'] = len(targets_key)
+            neptune_run['model/summary'] = str(model)
         model = model.to(device)
         model.train()
         optimizer = torch.optim.Adam(
