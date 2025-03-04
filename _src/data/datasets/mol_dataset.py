@@ -194,41 +194,33 @@ class MolDataset:
 
     @property
     def train_X(self):
-        return self[self.train_idx]
+        return self[self.train_idx][0]
 
     @property
     def train_y(self):
-        if self.y is None:
-            return
-        else:
-            return self.y[self.train_idx]
+        self[self.train_idx][1]
     
     @property
     def train(self):
-        if self.y is None:
-            return self.train_X
-        else:
-            return self.train_X, self.train_y
+        return self[self.train_idx]
     
     @property
     def test_X(self):
         if self.test_idx is None:
             return None
-        # Get the tokenized representation of the training data
-        return self[self.test_idx]
+        else:
+            return self[self.test_idx][0]
     
     @property
     def test_y(self):
         if self.test_idx is None:
             return None
-        elif self.y is None:
-            return None
         else:
-            return self.y[self.test_idx]
+            return self[self.test_idx][1]
     
     @property
     def test(self):
-        if self.y is None:
-            return self.test_X
+        if self.test_idx is None:
+            return None
         else:
-            return self.test_X, self.test_y
+            return self[self.test_idx]
