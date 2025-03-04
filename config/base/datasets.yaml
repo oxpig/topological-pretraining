@@ -1,11 +1,5 @@
 pretrain: QMugs
 benchmark:
-  - Efflux
-  - Human_CLint
-  - Human_PPB
-  - Rat_CLint
-  - Rat_PPB
-  - Solu
   - DRD2
   - FactorXA
   - Lipo
@@ -40,3 +34,9 @@ benchmark:
   - SR_HSE
   - SR_MMP
   - SR_p53
+  - Efflux
+  - Human_CLint
+  - Human_PPB
+  - Rat_CLint
+  - Rat_PPB
+  - Solu
