@@ -14,6 +14,7 @@ from sklearn.feature_selection import (
     SelectKBest, VarianceThreshold,
     mutual_info_classif, mutual_info_regression,
 )
+from sklearn.impute import SimpleImputer
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.pipeline import Pipeline
@@ -181,6 +182,15 @@ class MolDataset:
         else:
             print('Tokenizer is precomputed. Skipping fit.') if self.verbose else None
         
+        if np.any(np.isnan(self.X)):
+            num_cols = len(np.where(np.isnan(self.X).sum(axis=0))[0])
+            num_rows = len(np.where(np.isnan(self.X).sum(axis=1))[0])
+            num_nans = np.isnan(self.X).sum()
+            print(f'NaN values found in X; number of cols = {num_cols}; number of rows = {num_rows}; total NaNs = {num_nans}.')
+            print('Imputing NaN values with mean...')
+            imputer = SimpleImputer(strategy='mean')
+            self.X = imputer.fit_transform(self.X)
+
         # Set k to the number of samples - 1 for SelectKBest
         if 'select_k_best' in self._extra_transform.named_steps:
             k = self.train_idx.shape[0]
