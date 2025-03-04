@@ -209,6 +209,8 @@ class MolDataset:
         print('Fitting extra transforms...') if self.verbose else None
         y = self.y[train_idx] if self.y is not None else None
         train_X = [self.X[i] for i in train_idx]
+        if self.imputer is not None:
+            train_X = self.imputer.transform(train_X)
         self._extra_transform.fit(train_X, y)
 
     @property
