@@ -14,7 +14,8 @@ from sklearn.feature_selection import (
     SelectKBest, VarianceThreshold,
     mutual_info_classif, mutual_info_regression,
 )
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.pipeline import Pipeline
 import torch
 import torch_geometric as pyg
@@ -32,11 +33,13 @@ tokenizers_dict = {
 }
 
 extra_transform_classes = {
-            'variance_threshold': VarianceThreshold,
-            'cocorr': CoCorr,
-            'select_k_best': SelectKBest,
-            'scaler': MinMaxScaler,
-        }
+    'variance_threshold': VarianceThreshold,
+    'cocorr': CoCorr,
+    'select_k_best': SelectKBest,
+    'pca': PCA,
+    'minmax_scaler': MinMaxScaler,
+    'standard_scaler': StandardScaler,
+}
 
 class MolDataset:
     """
@@ -143,8 +146,7 @@ class MolDataset:
         if isinstance(X, np.ndarray):
             # If the representation is a 1D array, reshape it to a 2D array
             if len(X.shape) == 1:
-                X = X.reshape(-1, 1)
-
+                X = X.reshape(1,-1)
         if self.y is None:
             return self._extra_transform.transform(X)
         else:
@@ -179,7 +181,7 @@ class MolDataset:
         
         # Set k to the number of samples - 1 for SelectKBest
         if 'select_k_best' in self._extra_transform.named_steps:
-            k = self.train_idx.shape[0] - 1
+            k = self.train_idx.shape[0]
             print(f'Setting k for SelectKBest to number of train samples - 1...') if self.verbose else None
             self._extra_transform.set_params(select_k_best__k=k)
             print(f'k set to {k}.') if self.verbose else None
@@ -190,16 +192,9 @@ class MolDataset:
         train_X = [self.X[i] for i in train_idx]
         self._extra_transform.fit(train_X, y)
 
-
     @property
     def train_X(self):
-        # Get the tokenized representation of the training data
-        if isinstance(self.X, np.ndarray|torch.Tensor):
-            train_X = self.X[self.train_idx]
-        else:
-            train_X = [self[i] for i in self.train_idx]
-    
-        return train_X
+        return self[self.train_idx]
 
     @property
     def train_y(self):
@@ -220,12 +215,7 @@ class MolDataset:
         if self.test_idx is None:
             return None
         # Get the tokenized representation of the training data
-        if isinstance(self.X, np.ndarray|torch.Tensor):
-            test_X = self.X[self.test_idx]
-        else:
-            test_X = [self[i] for i in self.test_idx]
-            
-        return test_X
+        return self[self.test_idx]
     
     @property
     def test_y(self):
