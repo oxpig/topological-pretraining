@@ -189,7 +189,8 @@ class MolDataset:
             print(f'NaN values found in X; number of cols = {num_cols}; number of rows = {num_rows}; total NaNs = {num_nans}.')
             print('Imputing NaN values with mean...')
             imputer = SimpleImputer(strategy='mean')
-            self.X = imputer.fit_transform(self.X)
+            imputer.fit(self.X[train_idx])
+            self.X = imputer.transform(self.X)
 
         # Set k to the number of samples - 1 for SelectKBest
         if 'select_k_best' in self._extra_transform.named_steps:
