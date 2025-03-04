@@ -232,6 +232,12 @@ def benchmark(config: dict):
         mols = df.rdkit_mols
         y = df.y.to_numpy()
 
+        if 'select_k_best' in extra_transform_kwargs:
+            extra_transform_kwargs['select_k_best']['score_func'] = {
+                'regression': mutual_info_regression,
+                'classification': mutual_info_classif
+            }[df.task]
+
         dataset = MolDataset(
             mols=mols, y=y,
             tokenizer=tokenizer_class, tokenizer_kwargs=tokenizer_kwargs,
