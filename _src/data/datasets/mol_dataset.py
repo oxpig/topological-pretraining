@@ -130,6 +130,8 @@ class MolDataset:
             if name not in extra_transform_classes:
                 raise ValueError(f'Invalid extra transform name: {name}')
             extra_transform = extra_transform_classes[name]
+            if name == 'select_k_best':
+                assert 'score_func' in vals, 'score_func must be provided for SelectKBest'
             _extra_transform.append((name, extra_transform(**vals)))
         if len(_extra_transform) > 0:
             self._extra_transform = Pipeline(_extra_transform)
