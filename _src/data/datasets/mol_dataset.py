@@ -77,6 +77,7 @@ class MolDataset:
     """
 
     _extra_transform = SelectAll()
+    imputer = None
 
     def __init__(
         self,
@@ -150,6 +151,10 @@ class MolDataset:
             # If the representation is a 1D array, reshape it to a 2D array
             if len(X.shape) == 1:
                 X = X.reshape(1,-1)
+
+        if self.imputer is not None:
+            X = self.imputer.transform(X)
+
         if self.y is None:
             return self._extra_transform.transform(X)
         else:
@@ -187,10 +192,11 @@ class MolDataset:
             num_rows = len(np.where(np.isnan(self.X).sum(axis=1))[0])
             num_nans = np.isnan(self.X).sum()
             print(f'NaN values found in X; number of cols = {num_cols}; number of rows = {num_rows}; total NaNs = {num_nans}.')
-            print('Imputing NaN values with mean...')
-            imputer = SimpleImputer(strategy='mean')
-            imputer.fit(self.X[train_idx])
-            self.X = imputer.transform(self.X)
+            print('Fitting imputer on train data for replacing NaN values with mean...')
+            self.imputer = SimpleImputer(strategy='mean')
+            self.imputer.fit(self.X[train_idx])
+        else:
+            self.imputer = None
 
         # Set k to the number of samples - 1 for SelectKBest
         if 'select_k_best' in self._extra_transform.named_steps:
