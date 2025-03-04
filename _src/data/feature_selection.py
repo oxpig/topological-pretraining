@@ -34,7 +34,7 @@ class CoCorr(BaseEstimator, TransformerMixin):
             The input data. The shape is (n_samples, n_features).
         """
         var = X.std(axis=0)
-        corr_matrix = np.corrcoef(X, rowvar=False)
+        corr_matrix = np.abs(np.corrcoef(X, rowvar=False))
         upper = np.triu(corr_matrix, k=1)
         idx = np.where(upper >= self.threshold)
         idx = zip(*idx)
