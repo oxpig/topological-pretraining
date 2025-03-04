@@ -130,7 +130,7 @@ def pretrain(config: dict):
             
             output_dim = graph_0[target_name].size(1)
 
-            if head_name == 'multiclass' or head_name == 'binary':
+            if head_name == 'multiclass' or head_name == 'binary' and config.get('class_weights', False):
                 class_weights = targets_key[target_name]['class_weights'].to(device)
             
             else:
