@@ -139,7 +139,7 @@ def pretrain(config: dict):
 
             head_kwargs[target_name] = {
                 'input_dim': head_input_dim,
-                'hidden_dim': 256,
+                'hidden_dim': 512,
                 'output_dim': output_dim,
                 'num_layers': 2,
                 'act': model_kwargs.get('act', 'relu'),
@@ -241,7 +241,7 @@ def pretrain(config: dict):
                         'kwargs': head_kwargs_to_save,
                     }
                 
-                torch.save(model_dict, results_path / experiment_name / f'{epoch}_{file_name}')
+                torch.save(model_dict, results_path / experiment_name / f'epoch_{epoch+1}_{file_name}')
 
         model_dict = {
             'tokenizer': tokenizer.to_dict(),
