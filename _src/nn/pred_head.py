@@ -119,6 +119,7 @@ class BinaryHead(PredHead):
         weights = torch.zeros(size=y.size(), dtype=pred.dtype).to(y.device)
         class_weights = self.class_weights.repeat(1, weights.size(0), 1)
         class_weights = class_weights.type(pred.dtype)
+        class_weights = class_weights.to(y.device)
         weights[y == 0] = class_weights[0, y == 0]
         weights[y == 1] = class_weights[1, y == 1]
         loss_vals = self.loss_fn(pred, y, weight=weights, reduction='none')
@@ -127,6 +128,7 @@ class BinaryHead(PredHead):
             loss_vals = loss_vals * mask
         loss_vals = loss_vals.mean(dim=0)
         return loss_vals
+    
 
 class MultiClassHead(PredHead):
     """
