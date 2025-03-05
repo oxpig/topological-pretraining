@@ -233,12 +233,12 @@ def pretrain(config: dict):
                     state = model[target_name].state_dict()
                     head_name = targets_key[target_name]['prediction_head']
                     head_cls = pred_head_map[head_name].__name__
-                    head_kwargs = head_kwargs[target_name]
+                    head_kwargs_to_save = head_kwargs[target_name]
 
                     model_dict['heads'][target_name] = {
                         'state': state,
                         'cls': head_cls,
-                        'kwargs': head_kwargs,
+                        'kwargs': head_kwargs_to_save,
                     }
                 
                 torch.save(model_dict, results_path / experiment_name / f'{epoch}_{file_name}')
@@ -256,12 +256,12 @@ def pretrain(config: dict):
             state = model[target_name].state_dict()
             head_name = targets_key[target_name]['prediction_head']
             head_cls = pred_head_map[head_name].__name__
-            head_kwargs = head_kwargs[target_name]
+            head_kwargs_to_save = head_kwargs[target_name]
 
             model_dict['heads'][target_name] = {
                 'state': state,
                 'cls': head_cls,
-                'kwargs': head_kwargs,
+                'kwargs': head_kwargs_to_save,
             }
         
         torch.save(model_dict, results_path / experiment_name / file_name)
