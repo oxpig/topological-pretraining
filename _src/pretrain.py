@@ -74,7 +74,6 @@ def pretrain(config: dict):
         df['butina_filter'] = 1
         splits = ['butina_filter']
 
-
     # prepare raw graphs
     GraphDataset(
         root=root,
@@ -129,13 +128,13 @@ def pretrain(config: dict):
             head_cls = pred_head_map[head_name]
             
             output_dim = graph_0[target_name].size(1)
-
+            class_weights = None
+            print(f'Head: {head_name} | Output dim: {output_dim}') if verbose else None
             if head_name == 'multiclass' or head_name == 'binary':
                 if config.get('class_weights', False):
                     class_weights = targets_key[target_name]['class_weights'].to(device)
             
             else:
-                class_weights = None
                 is_regression[i] = True
 
             head_kwargs[target_name] = {
@@ -219,7 +218,31 @@ def pretrain(config: dict):
                 for i, target_name in enumerate(targets_key):
                     score_now = average_scores[i].item()
                     neptune_run[f'{split}/{target_name}_epoch_average_score'].append(score_now)
-                     
+
+            if epoch % 10 == 0:
+                model_dict = {
+                    'tokenizer': tokenizer.to_dict(),
+                    'main': {
+                        'state': model['main'].state_dict(),
+                        'cls': model_class.__name__,
+                        'kwargs': model_kwargs
+                    }
+                }
+                model_dict['heads'] = {}
+                for i, target_name in enumerate(targets_key):
+                    state = model[target_name].state_dict()
+                    head_name = targets_key[target_name]['prediction_head']
+                    head_cls = pred_head_map[head_name].__name__
+                    head_kwargs = head_kwargs[target_name]
+
+                    model_dict['heads'][target_name] = {
+                        'state': state,
+                        'cls': head_cls,
+                        'kwargs': head_kwargs,
+                    }
+                
+                torch.save(model_dict, results_path / experiment_name / f'{epoch}_{file_name}')
+
         model_dict = {
             'tokenizer': tokenizer.to_dict(),
             'main': {
