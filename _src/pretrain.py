@@ -219,7 +219,7 @@ def pretrain(config: dict):
                     score_now = average_scores[i].item()
                     neptune_run[f'{split}/{target_name}_epoch_average_score'].append(score_now)
 
-            if (epoch + 1) % 10 == 0:
+            if (epoch + 1) % 15 == 0:
                 model_dict = {
                     'tokenizer': pretrain_dataset.tokenizer.to_dict(),
                     'main': {
