@@ -221,7 +221,7 @@ def pretrain(config: dict):
 
             if (epoch + 1) % 10 == 0:
                 model_dict = {
-                    'tokenizer': tokenizer.to_dict(),
+                    'tokenizer': pretrain_dataset.tokenizer.to_dict(),
                     'main': {
                         'state': model['main'].state_dict(),
                         'cls': model_class.__name__,
@@ -244,7 +244,7 @@ def pretrain(config: dict):
                 torch.save(model_dict, results_path / experiment_name / f'epoch_{epoch+1}_{file_name}')
 
         model_dict = {
-            'tokenizer': tokenizer.to_dict(),
+            'tokenizer': pretrain_dataset.tokenizer.to_dict(),
             'main': {
                 'state': model['main'].state_dict(),
                 'cls': model_class.__name__,
