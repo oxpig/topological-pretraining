@@ -101,8 +101,6 @@ def pretrain(config: dict):
             verbose=verbose
         )
 
-        torch.save(pretrain_dataset.tokenizer.to_dict(), save_path / f'{name}_tokenizer.pt')
-        exit()
         pretrain_loader = pyg.loader.DataLoader(
             pretrain_dataset, batch_size=batch_size, shuffle=True
         )
