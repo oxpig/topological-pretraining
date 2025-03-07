@@ -30,7 +30,9 @@ class HyperOpt:
         splits: list, scorer: Callable,
         direction: str = 'minimize', val_size: float = 0.2,
         verbose: bool = False, neptune_run = None, name: str = 'name',
+        seed: int = 42,
     ):
+        self.seed = seed
         self.model = model
         self.neptune_run = neptune_run
         self.name = name
@@ -85,7 +87,7 @@ class HyperOpt:
 
             train_X, train_y = self.dataset.train
             val_X, val_y = self.dataset.test
-            model = self.model(seed=42, task=self.task, **params)
+            model = self.model(seed=self.seed, task=self.task, **params)
             model.fit(train_X, train_y)
             test_pred = model.predict(val_X)
             out[idx] = self.scorer(val_y, test_pred)
@@ -144,6 +146,11 @@ def benchmark(config: dict):
     tokenizer_class = config['tokenizer']
     tokenizer_kwargs = config.get('tokenizer_kwargs', {})
     extra_transform_kwargs = config.get('extra_transform_kwargs', {})
+
+    seed = config.get('seed', 42)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
 
     print(f'\n##################################################\n') if verbose else None
     print(f'Run {name}.') if verbose else None
@@ -266,6 +273,7 @@ def benchmark(config: dict):
                     hyperparameters=hyperparameters, dataset=dataset,
                     splits=hyperopt_splits, scorer=scorer, direction=direction,
                     verbose=verbose, neptune_run=neptune_run, name=benchmark,
+                    seed=seed,
                 )
                 best_params = opt.run(trials=trials)
                 print(f'Best hyperparameters: {best_params}') if verbose else None
@@ -300,7 +308,7 @@ def benchmark(config: dict):
                 model_kwargs['verbose'] = 1
             else:
                 model_kwargs['verbose'] = -1
-            model = model_class(seed=42, task=df.task, **model_kwargs)
+            model = model_class(seed=seed, task=df.task, **model_kwargs)
             train_X, train_y = dataset.train
             model.fit(train_X, train_y)
             train_pred = model.predict(train_X)
