@@ -316,12 +316,12 @@ class SortAndSlice:
             pbar.update(1)
         pbar.close()
 
-    def sort(self):
+    def sort(self, key_order = ('num_mols', 'count')):
         """
         Sorts the identifiers by the number of molecules they appear in and their total count.
         """                
         self.identifiers = dict(sorted(
-            self.identifiers.items(), key=lambda x: (x[1]['num_mols'], x[1]['count']), reverse=True,
+            self.identifiers.items(), key=lambda x: (x[1][key_order[0]], x[1][key_order[1]]), reverse=True,
         ))
 
     def slice(self, fpsize: int|None = None):
