@@ -16,6 +16,8 @@ import torch_geometric as pyg
 from tqdm import tqdm
 
 
+
+
 pred_head_map = {
     'binary': BinaryHead,
     'regression': RegressionHead,
@@ -45,6 +47,10 @@ def pretrain(config: dict):
     targets: dict = config['targets']
     splits: list[str] = config.get('splits', [])
     neptune_run = config.get('neptune_run')
+    seed = config['seed']
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
     
     model_class = get_nn(config['model'])
     model_kwargs = config.get('model_kwargs', {})
@@ -249,6 +255,7 @@ def pretrain(config: dict):
                         'state': state,
                         'cls': head_cls,
                         'kwargs': head_kwargs_to_save,
+                        'level': targets_key[target_name]['level'],
                     }
                 
                 torch.save(model_dict, results_path / experiment_name / f'epoch_{epoch+1}_{file_name}')
