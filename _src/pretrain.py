@@ -10,6 +10,7 @@ from _src.nn.pred_head import (BinaryHead, RegressionHead, MultiClassHead, Multi
 
 from pathlib import Path
 import numpy as np
+from rdkit import Chem
 import torch
 import torch_geometric as pyg
 from tqdm import tqdm
@@ -74,11 +75,20 @@ def pretrain(config: dict):
         df['butina_filter'] = 1
         splits = ['butina_filter']
 
+    if not config.get('standardization', True):
+        print('Loading molecules without standardization...') if verbose else None
+        mols = df.SMILES.to_list()
+        mols = [Chem.MolFromSmiles(mol) for mol in mols]
+    
+    else:
+        mols = df.rdkit_mols
+
     # prepare raw graphs
     GraphDataset(
         root=root,
         tokenizer=tokenizer,
-        molecules=df.rdkit_mols,
+        # molecules=df.rdkit_mols,
+        molecules=mols,
         fit_tokenizer=False,
         verbose=verbose,
     )
