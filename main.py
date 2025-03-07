@@ -22,6 +22,7 @@ parser.add_argument('--base_config', '-B', type=str, default=None, help='Base co
 parser.add_argument('--data', '-D', type=str, required=True, help='Path to the data')
 parser.add_argument('--output', '-o', type=str, default='output', help='Path to save')
 
+
 def load_base_config() -> dict:
     config_dir = Path(__file__).parent / 'config' / 'base'
     base_config = {}
@@ -63,6 +64,8 @@ def main():
 
     else:
         config['neptune_run'] = None
+
+    config['seed'] = config.get('seed', 42)
 
     if 'verbose' not in config:
         config['verbose'] = False
