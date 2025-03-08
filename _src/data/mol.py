@@ -444,6 +444,7 @@ class MolDesc:
     def __init__(self, descriptors: list[str], verbose: bool = False, **kwargs):
         self.verbose = verbose
         self.set_generator(descriptors=descriptors)
+        self.descriptors = descriptors
 
     def set_generator(self, descriptors):
         self.generator = MolecularDescriptorCalculator(descriptors)
