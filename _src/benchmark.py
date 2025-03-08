@@ -13,7 +13,7 @@ from sklearn.feature_selection import (
     SelectKBest, RFE, RFECV, VarianceThreshold,
     mutual_info_regression, mutual_info_classif
 )
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GroupShuffleSplit
 from sklearn.metrics import mean_absolute_error, average_precision_score
 import torch
 from tqdm import tqdm
@@ -30,7 +30,7 @@ class HyperOpt:
         splits: list, scorer: Callable,
         direction: str = 'minimize', val_size: float = 0.2,
         verbose: bool = False, neptune_run = None, name: str = 'name',
-        seed: int = 42,
+        seed: int = 42, data_clusters: np.ndarray = None
     ):
         self.seed = seed
         self.model = model
@@ -46,6 +46,7 @@ class HyperOpt:
         self.task = task
         self.val_size = val_size
         self.verbose = verbose
+        self.data_clusters = data_clusters
         if verbose == 2:
             optuna.logging.set_verbosity(optuna.logging.DEBUG)
         elif verbose == 1:
@@ -80,11 +81,18 @@ class HyperOpt:
         filler = np.inf if self.direction == 'minimize' else -np.inf
         out = np.full((len(self.splits,)), filler)
         for idx, (train, test) in enumerate(self.splits):
-            train_idx, val_idx = train_test_split(
-                train, test_size=self.val_size, random_state=42, shuffle=True
-            )
+            if self.data_clusters is not None:
+                train_clusters = self.data_clusters[train]
+                splitter = GroupShuffleSplit(
+                    n_splits=1, random_state=self.seed,
+                    test_size=self.val_size
+                )
+                train_idx, val_idx = next(splitter.split(train, groups=train_clusters))
+            else:
+                train_idx, val_idx = train_test_split(
+                    train, test_size=self.val_size, random_state=42, shuffle=True
+                )
             self.dataset.reset(train_idx, val_idx)
-
             train_X, train_y = self.dataset.train
             val_X, val_y = self.dataset.test
             model = self.model(seed=self.seed, task=self.task, **params)
@@ -146,6 +154,7 @@ def benchmark(config: dict):
     tokenizer_class = config['tokenizer']
     tokenizer_kwargs = config.get('tokenizer_kwargs', {})
     extra_transform_kwargs = config.get('extra_transform_kwargs', {})
+    clusters = config.get('clusters', None)
 
     seed = config.get('seed', 42)
     np.random.seed(seed)
@@ -192,6 +201,7 @@ def benchmark(config: dict):
         else:
             scorer = average_precision_score
             direction = 'maximize'
+
 
         if neptune_run is not None:
             neptune_run[f'{benchmark}/num_splits'] = num_splits
@@ -268,12 +278,19 @@ def benchmark(config: dict):
             if tuning:
                 print('Running hyperparameter tuning.') if verbose else None
                 hyperopt_splits = [splits[i] for i in range(num_hyp_splits)]
+                data_clusters = None
+                if clusters is not None:
+                    if clusters not in df.columns:
+                        print('Clusters not found in dataframe. Skipping using clusters for hyperopt') if verbose else None
+                    else:
+                        data_clusters = df[clusters]
+                        data_clusters = data_clusters.to_numpy().astype(int)
                 opt = HyperOpt(
                     model=model_class, model_kwargs=model_kwargs, task=df.task,
                     hyperparameters=hyperparameters, dataset=dataset,
                     splits=hyperopt_splits, scorer=scorer, direction=direction,
                     verbose=verbose, neptune_run=neptune_run, name=benchmark,
-                    seed=seed,
+                    seed=seed, data_clusters=data_clusters
                 )
                 best_params = opt.run(trials=trials)
                 print(f'Best hyperparameters: {best_params}') if verbose else None
