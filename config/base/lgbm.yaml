@@ -9,10 +9,6 @@ LGBM:
       target: int
       low: 10
       high: 100
-    max_depth:
-      target: int
-      low: 5
-      high: 50
     learning_rate:
       target: float
       log: True
@@ -40,5 +36,13 @@ LGBM:
       log: False
       low: 0.5
       high: 1.0
-  high: 1.0
-
+    reg_alpha:
+      target: float
+      log: True
+      low: 0.001
+      high: 10.0
+    reg_lambda:
+      target: float
+      log: True
+      low: 0.001
+      high: 10.0
