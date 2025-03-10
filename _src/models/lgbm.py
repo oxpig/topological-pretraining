@@ -5,6 +5,8 @@ class LGBM:
     def __init__(self, task, seed=42, **kwargs):
         self.task = task
         if task == 'classification':
+            if 'is_unbalance' not in kwargs:
+                kwargs['is_unbalance'] = True
             self.model = LGBMClassifier(random_state=seed, **kwargs)
         elif task == 'regression':
             self.model = LGBMRegressor(random_state=seed, **kwargs)
