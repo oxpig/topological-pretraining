@@ -93,7 +93,7 @@ class SNS(BaseTokenizer):
         return params
     
     def preprocess(self, mols: list[Chem.Mol]) -> list[np.ndarray]:
-        return [self.transform.generator.environments(mol) for mol in mols]
+        return [self.transform.generator.environments(mol) if mol is not None else mol for mol in mols]
 
     
 
