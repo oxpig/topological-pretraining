@@ -125,6 +125,12 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
     def __sklearn_is_fitted__(self):
         return self.is_fitted_
     
+    def preprocess(self, mols: list[Chem.Mol]):
+        """
+        Optionally implement a preprocessing step for the data.
+        """
+        return mols
+
 class BaseGraph:
 
     edge_types = {
