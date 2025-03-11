@@ -91,6 +91,9 @@ class SNS(BaseTokenizer):
         params['identifiers'] = self.identifiers
         params['encoder'] = self.encoder
         return params
+    
+    def preprocess(self, mols: list[Chem.Mol]) -> list[np.ndarray]:
+        return [self.transform.generator.environments(mol) for mol in mols]
 
     
 
