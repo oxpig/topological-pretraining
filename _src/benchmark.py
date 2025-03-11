@@ -148,6 +148,12 @@ def benchmark(config: dict):
     results_path: str = config['results']
     verbose: bool = config['verbose']
     benchmark_data: list[str]|str = config['benchmark']
+    if benchmark_data == 'biogen':
+        benchmark_data = [
+            'Human_PPB', 'Rat_PPB',
+            'Solu', 'Efflux',
+            'Human_CLint', 'Rat_CLint',
+        ]
     model_class = get_model(config['model'])
     base_model_kwargs = config.get('model_kwargs', {})
 
