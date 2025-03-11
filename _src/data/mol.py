@@ -361,7 +361,7 @@ class SortAndSlice:
         if self.verbose:
             print(f'Encoder set to {len(encoder)} bits.')
 
-    def encode(self, mol: Chem.Mol) -> np.ndarray:
+    def encode(self, mol: Chem.Mol|np.ndarray) -> np.ndarray:
         """
         Encodes a molecule into a binary sort and slice vector.
 
@@ -376,7 +376,12 @@ class SortAndSlice:
         out = np.zeros(len(self.encoder))
         if mol is None:
             return np.full(len(self.encoder), np.nan)
-        bitmap = self.generator.bitinfo(mol)
+        elif isinstance(mol, np.ndarray):
+            bitmap = np.unique(mol).astype(int)
+        elif isinstance(mol, Chem.Mol):
+            bitmap = self.generator.bitinfo(mol)
+        else:
+            raise ValueError('Input must be a RDKit molecule or an envs array.')
         for identifier in bitmap:
             if identifier in self.encoder:
                 out[self.encoder[identifier]] = 1
