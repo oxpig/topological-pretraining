@@ -110,6 +110,10 @@ class MolDataset:
             train_idx = np.arange(len(mols))
             test_idx = np.array([])
 
+        if self.tokenizer is not None:
+            print('Preprocessing molecules...') if self.verbose else None
+            self.mols = self.tokenizer.preprocess(self.mols)
+
         if fit_transform:
             self.reset(train_idx, test_idx)
 
