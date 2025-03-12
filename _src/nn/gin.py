@@ -16,7 +16,6 @@ class GINLayer(pyg.nn.conv.GINConv):
         dropout: float = 0.0,
         batch_norm: bool = False,
         act: str = 'relu',
-        final_act: str = None,
         eps: float = 0.0,
         train_eps: bool = False,
         **kwargs,
@@ -25,7 +24,7 @@ class GINLayer(pyg.nn.conv.GINConv):
             mlp = MLP(
                 input_dim=input_dim, output_dim=output_dim, hidden_dim=hidden_dim,
                 num_layers=num_layers, dropout=dropout, batch_norm=batch_norm,
-                act=act, final_act=final_act
+                act=act, final_act=act
             )
         else:
             mlp = mlp
