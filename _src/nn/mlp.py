@@ -58,3 +58,11 @@ class MLP(torch.nn.Module):
                 x = self.batch_norm(x)
         x = self.final_act(x)
         return x
+    
+    def reset_parameters(self) -> None:
+        """
+        Reset the parameters of the MLP.
+        """
+        for layer in self.layers:
+            torch.nn.init.xavier_normal_(layer.weight)
+            torch.nn.init.zeros_(layer.bias)

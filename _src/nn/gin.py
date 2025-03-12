@@ -53,6 +53,10 @@ class GIN(BaseGNN):
             return GINLayer(mlp=None, input_dim=input_dim, output_dim=output_dim, **kwargs)
         else:
             return GINLayer(mlp=mlp, **kwargs)
+        
+    def reset_parameters(self):
+        for layer in self.layers.values():
+            layer.reset_parameters()
 
 
             
