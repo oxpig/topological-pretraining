@@ -191,7 +191,7 @@ def pretrain(config: dict):
             optimizer=optimizer, start_factor=0.5, total_iters=5000,
         )
         exp_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            optimizer=optimizer, gamma=0.99,
+            optimizer=optimizer, gamma=0.99995,
         )
 
         lr_scheduler = torch.optim.lr_scheduler.SequentialLR(
