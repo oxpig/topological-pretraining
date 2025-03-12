@@ -129,6 +129,7 @@ def pretrain(config: dict):
         model = torch.nn.ModuleDict({
             'main': model_class(device=device, **model_kwargs),
         })
+        model['main'].reset_parameters()
         model['main'].to(device)
         graph_0 = pretrain_dataset[0].to(device)
         print(f'Graph 0: {graph_0}') if verbose else None
