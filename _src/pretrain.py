@@ -42,6 +42,7 @@ def pretrain(config: dict):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     batch_size: int = config['batch_size']
     epochs: int = config['epochs']
+    learning_rate: float = config['learning_rate']
     weight_decay: float = config.get('weight_decay', 0.0)
     targets: dict = config['targets']
     splits: list[str] = config.get('splits', [])
@@ -61,6 +62,7 @@ def pretrain(config: dict):
     print(f'Splits: {splits}') if verbose else None
     print(f'Batch size: {batch_size}') if verbose else None
     print(f'Epochs: {epochs}') if verbose else None
+    print(f'Learning rate: {learning_rate}') if verbose else None
     print(f'Weight decay: {weight_decay}') if verbose else None
     print(f'Device: {device}') if verbose else None
     print(f'\n##################################################\n') if verbose else None
@@ -179,26 +181,10 @@ def pretrain(config: dict):
             neptune_run['model/summary'] = str(model)
         model = model.to(device)
         model.train()
-
-        num_params = sum(p.numel() for p in model.parameters())
-        learning_rate = num_params ** -0.5
-        print(f'Learning rate: {learning_rate}') if verbose else None
         optimizer = torch.optim.Adam(
             model.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
         
-        linear_scheduler = torch.optim.lr_scheduler.LinearLR(
-            optimizer=optimizer, start_factor=0.5, total_iters=5000,
-        )
-        exp_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            optimizer=optimizer, gamma=0.99995,
-        )
-
-        lr_scheduler = torch.optim.lr_scheduler.SequentialLR(
-            optimizer=optimizer,
-            schedulers=[linear_scheduler, exp_scheduler],
-            milestones=[5000],
-        )
         for epoch in range(epochs):
             
             epoch_loss = 0
@@ -233,15 +219,13 @@ def pretrain(config: dict):
                 loss = model['losses'](losses)
                 loss.backward()
                 optimizer.step()
-                lr_scheduler.step()
-
                 epoch_loss += loss.item()
                 if neptune_run is not None:
                     neptune_run[f'{split}/batch_loss'].append(loss.item())
                 
                 pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch 0th Score: {score_now.item():.4f}')
                 pbar.update(1)
-            
+                
             average_loss = epoch_loss / len(pretrain_loader)
             average_scores = epoch_scores / len(pretrain_loader)
             pbar.set_description(f'Epoch {epoch+1}/{epochs} | Epoch Loss: {average_loss:.4f} | Last Batch Loss: {loss.item():.4f} | Last Batch 0th Score: {score_now.item():.4f}')
