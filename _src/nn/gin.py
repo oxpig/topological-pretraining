@@ -56,7 +56,7 @@ class GIN(BaseGNN):
     def reset_parameters(self):
         for layer in self.layers.values():
             if isinstance(layer, GINLayer):
-                layer.reset_parameters()
+                layer.nn.reset_parameters()
 
 
             
