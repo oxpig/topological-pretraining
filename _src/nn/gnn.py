@@ -69,14 +69,21 @@ class BaseGNN(torch.nn.Module):
         layer_count = 0
         if input_dim != hidden_dim:
             self.layers[f'conv_{layer_count}'] = self._init_layer(
-                input_dim, hidden_dim, **gnn_kwargs
+                input_dim=input_dim, hidden_dim=hidden_dim, **gnn_kwargs
             )
             layer_count += 1
 
         if share_weights:
             self.layers[f'conv_{layer_count}'] = self._init_layer(
-                hidden_dim, hidden_dim, **gnn_kwargs
+                input_dim=hidden_dim, hidden_dim=hidden_dim, **gnn_kwargs
             )
+            # note: only works for GIN-like models at the moment
+            for i in range(layer_count+1, num_layers):
+                self.layers[f'conv_{i}'] = self._init_layer(
+                    mlp=self.layers[f'conv_{layer_count}'].nn,
+                    **gnn_kwargs
+                )
+
             self.shared_layer = f'conv_{layer_count}'
             layer_count += 1
 
