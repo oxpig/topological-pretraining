@@ -88,14 +88,15 @@ class BinaryHead(PredHead):
             act=act, final_act=final_act
         )
         if class_weights is None:
-            class_weights = torch.ones(size=(2, 1, output_dim))
-        if class_weights.dim() == 2:
-            class_weights = class_weights.unsqueeze(1)
-        assert class_weights.dim() == 3, 'Class weights must be a 3D tensor.'
-        assert class_weights.size(0) == 2, 'Class weights must have a value for each class at dim 0, 0 and 1.'
-        assert class_weights.size(1) == 1, 'Class weights must have a dimension at dim 1 of length 1 for repeats.'
-        assert class_weights.size(-1) == output_dim, 'Class weights must have a values for each task at dim 2.'
-        self.class_weights = class_weights
+            self.class_weights = None
+        else:
+            if class_weights.dim() == 2:
+                class_weights = class_weights.unsqueeze(1)
+            assert class_weights.dim() == 3, 'Class weights must be a 3D tensor.'
+            assert class_weights.size(0) == 2, 'Class weights must have a value for each class at dim 0, 0 and 1.'
+            assert class_weights.size(1) == 1, 'Class weights must have a dimension at dim 1 of length 1 for repeats.'
+            assert class_weights.size(-1) == output_dim, 'Class weights must have a values for each task at dim 2.'
+            self.class_weights = class_weights
 
     @property
     def loss_fn(self):
@@ -116,6 +117,8 @@ class BinaryHead(PredHead):
     def loss(self, x, y, mask=None):
         pred = self(x)
         y = y.type(pred.dtype)
+        if self.class_weights is None:
+            return self.loss_fn(pred, y,)
         weights = torch.zeros(size=y.size(), dtype=pred.dtype).to(y.device)
         class_weights = self.class_weights.repeat(1, weights.size(0), 1)
         class_weights = class_weights.type(pred.dtype)
@@ -126,7 +129,9 @@ class BinaryHead(PredHead):
         loss_vals = loss_vals.mean(dim=1)
         if mask is not None:
             loss_vals = loss_vals * mask
-        loss_vals = loss_vals.mean(dim=0)
+            loss_vals = loss_vals.sum(dim=0) / mask.sum()
+        else:
+            loss_vals = loss_vals.mean(dim=0)
         return loss_vals
     
 
