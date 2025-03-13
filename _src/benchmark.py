@@ -154,6 +154,12 @@ def benchmark(config: dict):
             'Solu', 'Efflux',
             'Human_CLint', 'Rat_CLint',
         ]
+    if benchmark_data == 'subset':
+        benchmark_data = [
+            'Human_PPB', 'Solu', 'Efflux',
+            'Human_CLint', 'MUV466',
+            'DRD2', 'Lipo', 'NR_AR',
+        ]
     model_class = get_model(config['model'])
     base_model_kwargs = config.get('model_kwargs', {})
 
