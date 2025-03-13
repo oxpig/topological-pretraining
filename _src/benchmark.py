@@ -110,7 +110,7 @@ class HyperOpt:
         print(f'Running hyperparameter tuning with {trials} trials.') if self.verbose else None
         study = optuna.create_study(direction=self.direction, sampler=optuna.samplers.TPESampler(seed=42), )
         study.optimize(self.objective, n_trials=trials)
-        return study.best_params
+        return study.best_params, study.best_trial.number
 
 def benchmark(config: dict):
     """
@@ -285,6 +285,7 @@ def benchmark(config: dict):
             print(
                 f'Using saved hyperparameters: \n{best_params}'
             ) if verbose else None
+            best_trial_num = best_params.pop('best_trial')
             model_kwargs.update(best_params)
         
         else:
@@ -307,10 +308,11 @@ def benchmark(config: dict):
                     verbose=verbose, neptune_run=neptune_run, name=benchmark,
                     seed=seed, data_clusters=data_clusters
                 )
-                best_params = opt.run(trials=trials)
+                best_params, best_trial_num = opt.run(trials=trials)
                 model_kwargs.update(best_params)
                 print(f'Best hyperparameters: {best_params}') if verbose else None
-
+                print(f'Best trial: {best_trial_num}') if verbose else None
+                best_params['best_trial'] = best_trial_num
                 torch.save(best_params, benchmark_hp_path)
                 print('Saved hyperparameters.') if verbose else None
 
@@ -318,6 +320,7 @@ def benchmark(config: dict):
                 print('Using default hyperparameters.') if verbose else None
         if neptune_run is not None:
             neptune_run[f'{benchmark}/model_kwargs'] = model_kwargs
+            neptune_run[f'{benchmark}/best_trial'] = best_trial_num
         kbar = tqdm(total=num_splits, desc='Splits', disable=not verbose)
         for idx, (train, test) in enumerate(splits):
             if idx in complete:
