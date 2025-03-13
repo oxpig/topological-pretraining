@@ -190,7 +190,10 @@ def benchmark(config: dict):
         'num_splits'
     ) if 'num_splits' in hyperparameters else 5
 
-    hyperparam_path = Path(data_path) / f'hyperparameters/{name}'
+    hyperparam_path = Path(data_path) / f'hyperparameters'
+    if 'experiment' in config:
+        hyperparam_path = hyperparam_path / config['experiment']
+    hyperparam_path  = hyperparam_path / name
     hyperparam_path.mkdir(parents=True, exist_ok=True)
 
 
