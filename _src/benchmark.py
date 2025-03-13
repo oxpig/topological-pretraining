@@ -100,9 +100,11 @@ class HyperOpt:
             test_pred = model.predict(val_X)
             out[idx] = self.scorer(val_y, test_pred)
             if self.neptune_run is not None:
-                self.neptune_run[f'{self.name}/trial_{self.trial_count}/tuning_scores'].append(out[idx])
-        self.neptune_run[f'{self.name}/trial_{self.trial_count}/tuning_mean'] = out.mean()
-        self.neptune_run[f'{self.name}/trial_{self.trial_count}/params'] = params
+                self.neptune_run[f'{self.name}/tuning_scores'].append(out[idx])
+                self.neptune_run[f'{self.name}/trial_num_for_scores'].append(self.trial_count)
+        self.neptune_run[f'{self.name}/tuning_means'].append(out.mean())
+        self.neptune_run[f'{self.name}/trial_{self.trial_count}'] = params
+        
         self.trial_count += 1
         return out.mean()
     
