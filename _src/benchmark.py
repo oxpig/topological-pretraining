@@ -305,6 +305,7 @@ def benchmark(config: dict):
                     seed=seed, data_clusters=data_clusters
                 )
                 best_params = opt.run(trials=trials)
+                model_kwargs.update(best_params)
                 print(f'Best hyperparameters: {best_params}') if verbose else None
 
                 torch.save(best_params, benchmark_hp_path)
