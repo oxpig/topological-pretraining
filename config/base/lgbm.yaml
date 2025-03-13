@@ -16,33 +16,34 @@ LGBM:
       high: 0.3
     n_estimators:
       target: int
-      low: 50
-      high: 150
+      low: 10
+      high: 120
     subsample_for_bin:
       target: int
-      low: 50000
-      high: 300000
+      low: 20000
+      high: 200000
     min_data_in_leaf:
       target: int
-      low: 10
-      high: 100
+      log: True
+      low: 1
+      high: 1000
     bagging_fraction:
       target: float
       log: False
-      low: 0.5
+      low: 0.25
       high: 1.0
     feature_fraction:
       target: float
       log: False
-      low: 0.5
+      low: 0.25
       high: 1.0
     reg_alpha:
       target: float
       log: True
-      low: 0.001
+      low: 0.01
       high: 10.0
     reg_lambda:
       target: float
       log: True
-      low: 0.001
+      low: 0.01
       high: 10.0
