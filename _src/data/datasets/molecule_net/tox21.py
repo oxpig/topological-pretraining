@@ -98,7 +98,25 @@ class Tox21_Subset(Tox21, BaseDataFrame):
         else:
             raise ValueError('SMILES column not found in the dataset and no saved molecules')
    
+"""
+Target types:
+    NR = Nuclear Receptor
+    SR = Stress Response
 
+Target abbreviations:
+    AR = Androgen Receptor
+    LBD = Ligand binding domain
+    AhR = Aryl hydrocarbon receptor
+    ER = Estrogen receptor
+    PPAR = Peroxisome proliferator-activated receptor
+    ARE = Antioxidant response element
+    ATAD5 = ATPase family AAA domain containing 5
+    HSE = Heat shock factor response element
+    p53 = Tumor protein p53
+
+Other abbreviations:
+    MMP = Mitochondrial membrane potential
+"""
 
 class NR_AR(Tox21_Subset):
 
@@ -122,7 +140,6 @@ class NR_AR_LBD(Tox21_Subset):
             standardizer=standardizer
         )
 
-
 class NR_AhR(Tox21_Subset):
 
     def __init__(
@@ -134,7 +151,6 @@ class NR_AhR(Tox21_Subset):
             standardizer=standardizer
         )
 
-
 class NR_Aromatase(Tox21_Subset):
     def __init__(
             self, root: str|None = None, compression: bool = True,
@@ -144,8 +160,7 @@ class NR_Aromatase(Tox21_Subset):
             root=root, compression=compression, verbose=verbose,
             standardizer=standardizer
         )
-
-        
+     
 class NR_ER(Tox21_Subset):
     def __init__(
             self, root: str|None = None, compression: bool = True,
@@ -155,7 +170,6 @@ class NR_ER(Tox21_Subset):
             root=root, compression=compression, verbose=verbose,
             standardizer=standardizer
         )
-
 
 class NR_ER_LBD(Tox21_Subset):
     def __init__(
@@ -167,7 +181,6 @@ class NR_ER_LBD(Tox21_Subset):
             standardizer=standardizer
         )
 
-
 class NR_PPAR_gamma(Tox21_Subset):
     def __init__(
             self, root: str|None = None, compression: bool = True,
@@ -177,7 +190,6 @@ class NR_PPAR_gamma(Tox21_Subset):
             root=root, compression=compression, verbose=verbose,
             standardizer=standardizer
         )
-
 
 class SR_ARE(Tox21_Subset):
     def __init__(
@@ -189,7 +201,6 @@ class SR_ARE(Tox21_Subset):
             standardizer=standardizer
         )
 
-
 class SR_ATAD5(Tox21_Subset):
     def __init__(
             self, root: str|None = None, compression: bool = True,
@@ -200,7 +211,6 @@ class SR_ATAD5(Tox21_Subset):
             standardizer=standardizer
         )
 
-
 class SR_HSE(Tox21_Subset):
     def __init__(
             self, root: str|None = None, compression: bool = True,
@@ -210,7 +220,6 @@ class SR_HSE(Tox21_Subset):
             root=root, compression=compression, verbose=verbose,
             standardizer=standardizer
         )
-
 
 class SR_MMP(Tox21_Subset):
     def __init__(
