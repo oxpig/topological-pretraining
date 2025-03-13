@@ -156,7 +156,7 @@ def pretrain(config: dict):
 
             head_kwargs[target_name] = {
                 'input_dim': head_input_dim,
-                'hidden_dim': 512,
+                'hidden_dim': model_kwargs.get('hidden_dim', 128),
                 'output_dim': output_dim,
                 'num_layers': 2,
                 'act': model_kwargs.get('act', 'relu'),
