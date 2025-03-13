@@ -90,7 +90,7 @@ class BaseGNN(torch.nn.Module):
         else:
             for i in range(layer_count, num_layers):
                 self.layers[f'conv_{i}'] = self._init_layer(
-                    hidden_dim, hidden_dim, **gnn_kwargs
+                    input_dim=hidden_dim, hidden_dim=hidden_dim, **gnn_kwargs
                 )
 
     def _init_layer(self, input_dim, output_dim, **kwargs):
