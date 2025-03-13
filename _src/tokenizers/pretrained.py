@@ -15,10 +15,12 @@ class PreTrainedModel(torch.nn.Module):
         path: str|None = None,
         params: dict|None = None,
         embed_state: Literal['node', 'global', 'all'] = 'global',
+        layer_pool_type: Literal['last', 'sum', 'mean', 'max', 'concat'] = 'concat',
         device: str = None,
         asarray: bool = True
     ):
         super(PreTrainedModel, self).__init__()
+        self.layer_pool_type = layer_pool_type
         self.asarray = asarray
         self.embed_state = embed_state
         if device is None:
@@ -42,6 +44,8 @@ class PreTrainedModel(torch.nn.Module):
         main_cls = get_nn(main_cls)
         self.model = main_cls(**main_model['kwargs'])
         self.model.load_state_dict(main_model['state'])
+        self.model.layer_pool_type = self.layer_pool_type
+        self.model.eval()
         self.heads = torch.nn.ModuleDict()
         self.heads_kwargs = {}
         for head in params['heads']:
@@ -51,6 +55,7 @@ class PreTrainedModel(torch.nn.Module):
             head_state = params['heads'][head]['state']
             self.heads[head] = head_cls(**head_kwargs)
             self.heads[head].load_state_dict(head_state)
+            self.heads[head].eval()
             self.heads_kwargs[head] = head_kwargs
 
         self.to_device()
