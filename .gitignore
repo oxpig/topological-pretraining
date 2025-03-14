@@ -6,4 +6,4 @@ bin/cache/
 *.ipynb
 *__pycache__/
 results/
-data/
+data_files
