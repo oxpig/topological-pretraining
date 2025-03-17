@@ -54,6 +54,12 @@ def pretrain(config: dict):
     
     model_class = get_nn(config['model'])
     model_kwargs = config.get('model_kwargs', {})
+    if model_kwargs.get('graph_pool_type', None) == 'global_node':
+        tokenizer_kwargs['global_token'] = True
+    else:
+        tokenizer_kwargs['global_token'] = False
+
+
     print(f'\n##################################################\n') if verbose else None
     print(f'Pretraining run {name}') if verbose else None
     print(f'Tokenizer: {tokenizer_class}') if verbose else None
