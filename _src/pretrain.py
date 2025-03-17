@@ -93,7 +93,6 @@ def pretrain(config: dict):
     GraphDataset(
         root=root,
         tokenizer=tokenizer,
-        # molecules=df.rdkit_mols,
         molecules=mols,
         fit_tokenizer=False,
         verbose=verbose,
