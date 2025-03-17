@@ -201,7 +201,7 @@ def pretrain(config: dict):
             model.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
         scheduler = torch.optim.lr_scheduler.LinearLR(
-            optimizer, start_factor=1.0, end_factor=0.1,
+            optimizer, start_factor=1.0, end_factor=0.05,
             total_steps=epochs
         )
         
