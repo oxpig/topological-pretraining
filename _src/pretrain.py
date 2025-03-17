@@ -139,7 +139,10 @@ def pretrain(config: dict):
         model['main'].to(device)
         graph_0 = pretrain_dataset[0].to(device)
         print(f'Graph 0: {graph_0}') if verbose else None
-        out = model['main'](graph_0.x, graph_0.edge_index, graph_0.edge_attr)
+        out = model['main'](
+            x=graph_0.x, edge_index=graph_0.edge_index,
+            edge_attr=graph_0.edge_attr, global_idx=graph_0.global_idx,
+        )
         head_input_dim = out['global_state'].size(-1)
         targets_key = pretrain_dataset.targets
         
