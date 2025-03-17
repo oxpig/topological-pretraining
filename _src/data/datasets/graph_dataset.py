@@ -145,7 +145,6 @@ class GraphDataset(pyg.data.InMemoryDataset):
             warnings.warn('Overwriting existing targets.')
         self.targets.save(self.targets_path)
 
-
     def process(self):
         raw_dir = Path(self.raw_dir)
         raw_dir.mkdir(parents=True, exist_ok=True)
@@ -198,9 +197,19 @@ class GraphDataset(pyg.data.InMemoryDataset):
     
     def __getitem__(self, idx):
         graph = super(GraphDataset, self).__getitem__(idx)
-        if 'x' not in graph:
-            raise Warning('Graph does not contain node features.')
-        return graph
+        if isinstance(graph, GraphDataset):
+            for G in graph:
+                assert isinstance(G, pyg.data.Data), 'Graph must be a PyG Data object.'
+                if 'x' not in G:
+                    raise Warning(f'Graph {int(G.idx)} does not contain node features.')
+            return graph
+        elif isinstance(graph, pyg.data.Data):
+            assert isinstance(graph, pyg.data.Data), 'Graph must be a PyG Data object.'
+            if 'x' not in graph:
+                raise Warning(f'Graph {int(graph.idx)} does not contain node features.')
+            return graph
+        else:
+            raise ValueError('Graph must be a PyG Data object or subset of GraphDataset.')
     
     @property
     def molecules(self):
