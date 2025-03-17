@@ -200,7 +200,10 @@ def pretrain(config: dict):
         optimizer = torch.optim.Adam(
             model.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+        scheduler = torch.optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1.0, end_factor=0.1,
+            total_steps=epochs
+        )
         
         for epoch in range(epochs):
             
