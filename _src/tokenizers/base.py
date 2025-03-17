@@ -142,13 +142,14 @@ class BaseGraph:
     node_types: dict = {'UNK': 0}
 
     def __init__(
-        self, node_types: dict = None, edge_types: dict = None, max_vocab_size: int = None,
-        verbose: bool = False,
+        self, node_types: dict = None, edge_types: dict = None,
+        max_vocab_size: int = None, verbose: bool = False, global_token: bool = False
     ):
         self.node_types = node_types or self.node_types
         self.edge_types = edge_types or self.edge_types
         self.max_vocab_size = max_vocab_size
         self.verbose = verbose
+        self.global_token = global_token
 
     def get_edges(self, mol: Chem.Mol):
         """
@@ -211,7 +212,35 @@ class BaseGraph:
             node_types[node.item()] = len(node_types)
 
         node_types['UNK'] = len(node_types)
+        if self.global_token:
+            num_tokens_per_node = x.size(1)
+            for i in range(num_tokens_per_node):
+                node_types[f'GLOBAL_{i}'] = len(node_types)
         self.node_types = node_types
+
+    def add_global_token(self, graph: pyg.data.Data):
+        """
+        Add a global token to the graph.
+        """
+        if 'x' not in graph:
+            raise ValueError('Graph does not contain node features.')
+        if graph.raw:
+            raise ValueError('Graph must be encoded.')
+        graph = graph.clone()
+        num_tokens_per_node = graph.x.size(1)
+        global_token = torch.empty(1, num_tokens_per_node, dtype=torch.long)
+        for i in range(num_tokens_per_node):
+            global_token[0, i] = self.node_types[f'GLOBAL_{i}']
+
+        global_edges = torch.full((2, graph.num_nodes), fill_value=-1, dtype=torch.long)
+        for i in range(graph.num_nodes):
+            global_edges[0, i] = i
+            global_edges[1, i] = graph.num_nodes
+
+        graph.x = torch.cat([graph.x, global_token], dim=0)
+        graph.edge_index = torch.cat([graph.edge_index, global_edges], dim=1)
+        graph.global_idx = graph.x.size(0) - 1
+        return graph
     
     def raw(self, mol: Chem.Mol):
         """
@@ -262,6 +291,9 @@ class BaseGraph:
             for j in range(graph.x.size(1)):
                 graph.x[i, j] = self.node_types.get(int(graph.x[i, j]), unk)
         graph.raw = False
+        if self.global_token:
+            graph = self.add_global_token(graph)
+
         return graph
 
     def transform(self, mol: Chem.Mol):
