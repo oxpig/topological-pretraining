@@ -138,8 +138,12 @@ def pretrain(config: dict):
         model['main'].reset_parameters()
         model['main'].to(device)
         graph_0 = pretrain_dataset[0].to(device)
-        print(graph_0.raw)
-        print(tokenizer.transform.global_token)
+        if model_kwargs.get('graph_pool_type', None) == 'global_node':
+            if 'global_idx' not in graph_0:
+                raise ValueError('Global node pooling requires global node embeddings.')
+            if graph_0.global_idx is None:
+                raise ValueError('Global node pooling requires global node embeddings.')
+        
         print(f'Graph 0: {graph_0}') if verbose else None
         out = model['main'](
             x=graph_0.x, edge_index=graph_0.edge_index,
