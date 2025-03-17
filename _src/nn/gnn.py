@@ -172,6 +172,8 @@ class BaseGNN(torch.nn.Module):
             x = x.view(x.size(0), -1)
             
         for i in range(self.num_layers):
+            x = self.layers['dropout'](x)
+            x = self.layers['batch_norm'](x)
             conv = self.layers[f'conv_{i}']
             if self.use_edge_weight and self.use_edge_attr:
                 x = conv(
@@ -185,8 +187,6 @@ class BaseGNN(torch.nn.Module):
             else:
                 x = conv(x, edge_index)
             x = self.layers['act'](x)
-            x = self.layers['dropout'](x)
-            x = self.layers['batch_norm'](x)
             out['hidden_states'][:, state, :] = x
             state += 1
 
