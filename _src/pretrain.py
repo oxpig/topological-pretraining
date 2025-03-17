@@ -194,7 +194,10 @@ def pretrain(config: dict):
             for batch_num, batch in enumerate(pretrain_loader):
                 batch = batch.to(device)
                 optimizer.zero_grad()
-                out = model['main'](x=batch.x, edge_index=batch.edge_index, batch=batch.batch)
+                out = model['main'](
+                    x=batch.x, edge_index=batch.edge_index, batch=batch.batch,
+                    global_idx=batch.global_idx
+                )
                 losses = torch.empty(len(targets_key), device=device)
                 scores = torch.empty(len(targets_key), device=device)
                 for i, target_name in enumerate(targets_key):
