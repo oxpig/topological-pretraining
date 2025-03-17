@@ -37,11 +37,12 @@ class MorganGraph(BaseGraph):
         node_types: dict = {},
         edge_types: dict = {},
         max_vocab_size: int = 2048,
+        global_token: bool = False,
         **kwargs
     ):
         super(MorganGraph, self).__init__(
             node_types=node_types, edge_types=edge_types, max_vocab_size=max_vocab_size,
-            verbose=verbose
+            verbose=verbose, global_token=global_token
         )
         morgan = MorganGenerator(**kwargs)
         self.sort_and_slice = SortAndSlice(
@@ -64,6 +65,7 @@ class MorganGraph(BaseGraph):
         """
         self.sort_and_slice.clear()
         if all(isinstance(m, pyg.data.Data) for m in mols):
+            print(mols[0])
             mols = pyg.data.Batch.from_data_list(mols)
             assert torch.all(mols.raw), 'Data must be raw graphs.'
             envs = mols.x.numpy()
@@ -76,7 +78,13 @@ class MorganGraph(BaseGraph):
         self.sort_and_slice.sort()
         self.sort_and_slice.slice(self.max_vocab_size)
         self.sort_and_slice.encoder['UNK'] = len(self.sort_and_slice.encoder)
+
+        if self.global_token:
+            num_tokens_per_node = self.sort_and_slice.generator.radius + 1
+            for i in range(num_tokens_per_node):
+                self.sort_and_slice.encoder[f'GLOBAL_{i}'] = len(self.sort_and_slice.encoder)
         self.node_types = self.sort_and_slice.encoder
+
 
 
 class MorganGraphTokenizer(GraphTokenizer):
