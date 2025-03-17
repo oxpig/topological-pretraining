@@ -21,7 +21,7 @@ class BaseGNN(torch.nn.Module):
         batch_norm: bool = False,
         act: str = 'relu',
         layer_pool_type: Literal['last', 'sum', 'mean', 'max', 'concat'] = 'concat',
-        graph_pool_type: Literal[None, 'sum', 'mean', 'max',] = 'max',
+        graph_pool_type: Literal[None, 'sum', 'mean', 'max', 'global_node'] = 'max',
         gnn_kwargs: dict = {},
         share_weights: bool = False,
         device: str = 'cpu',
@@ -131,7 +131,10 @@ class BaseGNN(torch.nn.Module):
         return out
 
     
-    def graph_pool(self, final_state: torch.Tensor, batch: torch.Tensor):
+    def graph_pool(
+        self, final_state: torch.Tensor, batch: torch.Tensor,
+        global_idx: torch.Tensor = None
+    ):
         if self.graph_pool_type is None:
             return None
         elif self.graph_pool_type == 'sum':
@@ -140,13 +143,20 @@ class BaseGNN(torch.nn.Module):
             return pyg.nn.pool.global_mean_pool(final_state, batch)
         elif self.graph_pool_type == 'max':
             return pyg.nn.pool.global_max_pool(final_state, batch)
+        elif self.graph_pool_type == 'global_node':
+            assert global_idx is not None, 'Global node index must be provided for global node pooling.'
+            return final_state[global_idx]
         else:
             raise ValueError(
                 f'Invalid graph pooling method: {self.graph_pool_type}\n'\
                 'Valid options are: sum, mean, max.'
             )
     
-    def forward(self, x, edge_index, edge_weight = None, edge_attr = None, batch = None):
+    def forward(
+        self, x, edge_index,
+        edge_weight = None, edge_attr = None, batch = None,
+        global_idx = None
+    ):
         out = {
             'input': x,
         }
@@ -187,7 +197,9 @@ class BaseGNN(torch.nn.Module):
             state += 1
 
         out['final_state'] = self.layer_pool(out)
-        out['global_state'] = self.graph_pool(out['final_state'], batch)
+        out['global_state'] = self.graph_pool(
+            out['final_state'], batch, global_idx
+        )
         return out
 
 
