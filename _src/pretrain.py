@@ -202,7 +202,7 @@ def pretrain(config: dict):
         )
         scheduler = torch.optim.lr_scheduler.LinearLR(
             optimizer, start_factor=1.0, end_factor=0.05,
-            total_steps=epochs
+            total_iters=epochs,
         )
         
         for epoch in range(epochs):
