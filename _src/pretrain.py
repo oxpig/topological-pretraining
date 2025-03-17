@@ -200,6 +200,7 @@ def pretrain(config: dict):
         optimizer = torch.optim.Adam(
             model.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
         
         for epoch in range(epochs):
             
@@ -244,7 +245,7 @@ def pretrain(config: dict):
                 
                 pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch 0th Score: {score_now.item():.4f}')
                 pbar.update(1)
-                
+            scheduler.step()
             average_loss = epoch_loss / len(pretrain_loader)
             average_scores = epoch_scores / len(pretrain_loader)
             pbar.set_description(f'Epoch {epoch+1}/{epochs} | Epoch Loss: {average_loss:.4f} | Last Batch Loss: {loss.item():.4f} | Last Batch 0th Score: {score_now.item():.4f}')
