@@ -138,6 +138,8 @@ def pretrain(config: dict):
         model['main'].reset_parameters()
         model['main'].to(device)
         graph_0 = pretrain_dataset[0].to(device)
+        print(graph_0.raw)
+        print(tokenizer.transform.global_token)
         print(f'Graph 0: {graph_0}') if verbose else None
         out = model['main'](
             x=graph_0.x, edge_index=graph_0.edge_index,
