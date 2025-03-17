@@ -65,7 +65,6 @@ class MorganGraph(BaseGraph):
         """
         self.sort_and_slice.clear()
         if all(isinstance(m, pyg.data.Data) for m in mols):
-            print(mols[0])
             mols = pyg.data.Batch.from_data_list(mols)
             assert torch.all(mols.raw), 'Data must be raw graphs.'
             envs = mols.x.numpy()
