@@ -5,6 +5,7 @@ from _src.data.utils import load_dataset
 from _src.data.datasets import BaseDataFrame
 from _src.data.mol import MorganGenerator, SortAndSlice
 from _src.data.datasets import GraphDataset
+from _src.data.loader import DataLoader
 
 from _src.nn.pred_head import (BinaryHead, RegressionHead, MultiClassHead, MultiTaskLoss)
 
@@ -122,7 +123,7 @@ def pretrain(config: dict):
             verbose=verbose
         )
 
-        pretrain_loader = pyg.loader.DataLoader(
+        pretrain_loader = DataLoader(
             pretrain_dataset, batch_size=batch_size, shuffle=True
         )
         model_kwargs['input_dim'] = pretrain_dataset[0].x.size(1)
