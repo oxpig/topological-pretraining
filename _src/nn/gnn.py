@@ -84,9 +84,6 @@ class BaseGNN(torch.nn.Module):
                     **gnn_kwargs
                 )
 
-            self.shared_layer = f'conv_{layer_count}'
-            layer_count += 1
-
         else:
             for i in range(layer_count, num_layers):
                 self.layers[f'conv_{i}'] = self._init_layer(
@@ -163,6 +160,7 @@ class BaseGNN(torch.nn.Module):
         state = 0
         num_hidden_states = self.num_hidden_states
         out['hidden_states'] = torch.zeros((x.size(0), num_hidden_states, self.hidden_dim)).to(x.device)
+        
         if self.node_vocab_size is not None:
             x = self.layers['node_embedding'](x)
             if self.node_embedding_dim == self.hidden_dim:
@@ -173,12 +171,8 @@ class BaseGNN(torch.nn.Module):
                 out['node_embedding'] = x
             x = x.view(x.size(0), -1)
             
-        
         for i in range(self.num_layers):
-            if self.share_weights and i > 0:
-                conv = self.layers[self.shared_layer]
-            else:
-                conv = self.layers[f'conv_{i}']
+            conv = self.layers[f'conv_{i}']
             if self.use_edge_weight and self.use_edge_attr:
                 x = conv(
                     x, edge_index, edge_weight=edge_weight,
