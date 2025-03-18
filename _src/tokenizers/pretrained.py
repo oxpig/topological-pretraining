@@ -68,6 +68,15 @@ class PreTrainedModel(torch.nn.Module):
     def tokenize(self, x: Chem.Mol|list[Chem.Mol]):
         return self.tokenizer.transform(x)
     
+    def batch_global_idx(self, batch: pyg.data.Batch):
+        if 'global_idx' in batch:
+            batch.global_idx[0] -= 1
+            batch.global_idx += 1
+            batch.global_idx = batch.global_idx.cumsum(0)
+        else:
+            batch.global_idx = None
+        return batch
+    
     def embed(self, mol: Chem.Mol|list[Chem.Mol], embed_state: Literal['node', 'global', 'all'] = None):
         if embed_state is not None:
             self.embed_state = embed_state
@@ -75,8 +84,12 @@ class PreTrainedModel(torch.nn.Module):
         if isinstance(graph, list):
             graph = pyg.data.Batch.from_data_list(graph)
             graph = graph.to(self.device)
+            graph = self.batch_global_idx(graph)
 
-        x = self.model(x=graph.x, edge_index=graph.edge_index, edge_attr=graph.edge_attr, batch=graph.batch)
+        x = self.model(
+            x=graph.x, edge_index=graph.edge_index, edge_attr=graph.edge_attr,
+            batch=graph.batch, global_idx=graph.global_idx
+        )
         if self.embed_state == 'node':
             return x['final_state']
         elif self.embed_state == 'global':
