@@ -293,6 +293,8 @@ class BaseGraph:
         graph.raw = False
         if self.global_token:
             graph = self.add_global_token(graph)
+        else:
+            graph.global_idx = None
 
         return graph
 
