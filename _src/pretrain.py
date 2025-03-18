@@ -197,12 +197,25 @@ def pretrain(config: dict):
             neptune_run['model/summary'] = str(model)
         model = model.to(device)
         model.train()
+        lr = num_params ** -0.5
         optimizer = torch.optim.Adam(
-            model.parameters(), lr=learning_rate, weight_decay=weight_decay
+            model.parameters(), lr=lr, weight_decay=weight_decay
         )
-        scheduler = torch.optim.lr_scheduler.LinearLR(
-            optimizer, start_factor=1.0, end_factor=0.05,
-            total_iters=epochs,
+        warmup_steps = int(len(pretrain_loader) * 2)
+        steps_in_5_epochs = int(len(pretrain_loader) * 5)
+        gamma_for_halflife_5_epochs = 0.5 ** (1 / steps_in_5_epochs)
+        scheduler = torch.optim.lr_scheduler.SequentialLR(
+            optimizer=optimizer,
+            milestones=[warmup_steps],
+            schedulers=[
+                torch.optim.lr_scheduler.LinearLR(
+                    optimizer, start_factor=0.5, end_factor=1.0,
+                    total_iters=warmup_steps
+                ),
+                torch.optim.lr_scheduler.ExponentialLR(
+                    optimizer, gamma=gamma_for_halflife_5_epochs
+                )
+            ]
         )
         
         for epoch in range(epochs):
@@ -248,7 +261,8 @@ def pretrain(config: dict):
                 
                 pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch 0th Score: {score_now.item():.4f}')
                 pbar.update(1)
-            scheduler.step()
+                scheduler.step()
+
             average_loss = epoch_loss / len(pretrain_loader)
             average_scores = epoch_scores / len(pretrain_loader)
             pbar.set_description(f'Epoch {epoch+1}/{epochs} | Epoch Loss: {average_loss:.4f} | Last Batch Loss: {loss.item():.4f} | Last Batch 0th Score: {score_now.item():.4f}')
