@@ -43,7 +43,9 @@ def pretrain(config: dict):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     batch_size: int = config['batch_size']
     epochs: int = config['epochs']
-    learning_rate: float = config['learning_rate']
+    # learning_rate: float = config['learning_rate']
+    warmup_epochs: int = config.get('warmup_epochs', 0)
+    lr_decay_half_life: int = config.get('lr_decay_half_life', 5)
     weight_decay: float = config.get('weight_decay', 0.0)
     targets: dict = config['targets']
     splits: list[str] = config.get('splits', [])
@@ -69,7 +71,8 @@ def pretrain(config: dict):
     print(f'Splits: {splits}') if verbose else None
     print(f'Batch size: {batch_size}') if verbose else None
     print(f'Epochs: {epochs}') if verbose else None
-    print(f'Learning rate: {learning_rate}') if verbose else None
+    print(f'Warmup epochs: {warmup_epochs}') if verbose else None
+    print(f'Learning rate decay half life: {lr_decay_half_life}') if verbose else None
     print(f'Weight decay: {weight_decay}') if verbose else None
     print(f'Device: {device}') if verbose else None
     print(f'\n##################################################\n') if verbose else None
@@ -198,11 +201,13 @@ def pretrain(config: dict):
         model = model.to(device)
         model.train()
         lr = num_params ** -0.5
+        if neptune_run:
+            neptune_run[f'{split}/lr'] = lr
         optimizer = torch.optim.Adam(
             model.parameters(), lr=lr, weight_decay=weight_decay
         )
-        warmup_steps = int(len(pretrain_loader) * 2)
-        steps_in_5_epochs = int(len(pretrain_loader) * 5)
+        warmup_steps = int(len(pretrain_loader) * warmup_epochs)
+        steps_in_5_epochs = int(len(pretrain_loader) * lr_decay_half_life)
         gamma_for_halflife_5_epochs = 0.5 ** (1 / steps_in_5_epochs)
         scheduler = torch.optim.lr_scheduler.SequentialLR(
             optimizer=optimizer,
