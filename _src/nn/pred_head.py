@@ -3,7 +3,7 @@ from .mlp import MLP
 import numpy as np
 from sklearn.metrics import average_precision_score
 import torch
-from torcheval.metrics.functional import binary_auprc
+from torcheval.metrics import BinaryAUPRC, MulticlassAUPRC
 
 import warnings
 
@@ -104,11 +104,17 @@ class BinaryHead(PredHead):
             assert class_weights.size(1) == 1, 'Class weights must have a dimension at dim 1 of length 1 for repeats.'
             assert class_weights.size(-1) == output_dim, 'Class weights must have a values for each task at dim 2.'
             self.class_weights = class_weights
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        if self.output_dim == 1:
+            self.score_fn = BinaryAUPRC(num_tasks=1, device=self.device)
+        else:
+            self.score_fn = MulticlassAUPRC(num_tasks=self.output_dim, device=self.device, average='macro')
+    
 
     @property
     def loss_fn(self):
         return torch.nn.functional.binary_cross_entropy
-    
+
     def score(self, y, pred, mask=None):
 
         y = y.type(pred.dtype)
@@ -117,7 +123,7 @@ class BinaryHead(PredHead):
             pred = pred[mask]
         y = y.transpose(0, 1)
         pred = pred.transpose(0, 1)
-        return binary_auprc(input=pred, target=y, num_tasks=self.output_dim).mean()
+        return self.score_fn(pred, y)
 
     def loss(self, y, pred, mask=None):
         y = y.type(pred.dtype)
