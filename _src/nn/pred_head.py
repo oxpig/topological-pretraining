@@ -3,7 +3,7 @@ from .mlp import MLP
 import numpy as np
 from sklearn.metrics import average_precision_score
 import torch
-from torcheval.metrics import BinaryAUPRC, MulticlassAUPRC
+from torcheval.metrics import BinaryAUPRC, MultilabelAUPRC
 
 import warnings
 
@@ -108,7 +108,7 @@ class BinaryHead(PredHead):
         if self.output_dim == 1:
             self.score_fn = BinaryAUPRC(num_tasks=1, device=self.device)
         else:
-            self.score_fn = MulticlassAUPRC(num_tasks=self.output_dim, device=self.device, average='macro')
+            self.score_fn = MultilabelAUPRC(num_tasks=self.output_dim, device=self.device,)
     
 
     @property
