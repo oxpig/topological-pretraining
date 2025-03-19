@@ -3,6 +3,7 @@ from .mlp import MLP
 import numpy as np
 from sklearn.metrics import average_precision_score
 import torch
+from torcheval.metrics.functional import binary_auprc
 
 import warnings
 
@@ -111,15 +112,12 @@ class BinaryHead(PredHead):
     def score(self, y, pred, mask=None):
 
         y = y.type(pred.dtype)
-        y = y.detach().cpu().numpy()
-        pred = pred.detach().cpu().numpy()
         if mask is not None:
-            mask = mask.detach().cpu().numpy()
             y = y[mask]
             pred = pred[mask]
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            return average_precision_score(y_true=y, y_score=pred, average="weighted")
+        y = y.view(-1)
+        pred = pred.view(-1)
+        return binary_auprc(input=pred, target=y, num_tasks=self.output_dim)
 
     def loss(self, y, pred, mask=None):
         y = y.type(pred.dtype)
