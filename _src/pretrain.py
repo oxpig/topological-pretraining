@@ -245,7 +245,10 @@ def pretrain(config: dict):
                         pred = head(embed)
                         y = batch[target_name].type(embed.dtype)
                         losses[i] = head.loss(pred=pred, y=y,)
-                        score_now = head.score(pred=pred, y=y,)
+                        if batch_num % 100 == 0:
+                            score_now = head.score(pred=pred, y=y,)
+                        else:
+                            score_now = None
                     elif targets_key[target_name]['level'] == 'node':
                         embed = out['final_state']
                         embed.to(device)
@@ -254,11 +257,11 @@ def pretrain(config: dict):
                         mask = batch[f'{target_name}_mask'].type(embed.dtype)
                         losses[i] = head.loss(pred=pred, y=y, mask=mask,)
                         score_now = head.score(pred=pred, y=y, mask=mask,)
-                    
-                    if neptune_run is not None:
-                        neptune_run[f'{split}/batch_{target_name}_score'].append(score_now.item())
-                    scores[i] = score_now.item()
-                    epoch_scores[i] += score_now.item()
+                    if score_now is not None:
+                        if neptune_run is not None:
+                            neptune_run[f'{split}/batch_{target_name}_score'].append(score_now.item())
+                        scores[i] = score_now.item()
+                        epoch_scores[i] += score_now.item()
 
                 loss = model['losses'](losses)
                 loss.backward()
