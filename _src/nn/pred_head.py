@@ -114,7 +114,7 @@ class BinaryHead(PredHead):
             mask = mask.detach().cpu().numpy()
             y = y[mask]
             pred = pred[mask]
-        return average_precision_score(y=y, y_score=pred, average="weighted")
+        return average_precision_score(y_true=y, y_score=pred, average="weighted")
 
     def loss(self, y, pred, mask=None):
         y = y.type(pred.dtype)
