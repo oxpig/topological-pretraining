@@ -1,5 +1,6 @@
 from .mlp import MLP
 
+import numpy as np
 from sklearn.metrics import average_precision_score
 import torch
 
@@ -28,17 +29,19 @@ class PredHead(MLP):
     def loss_fn(self):
         return torch.nn.Identity()
 
-    def loss(self, x, y, mask=None):
-        preds = self(x)
-        dtype = preds.dtype
+    def loss(self, y, pred, mask=None):
+        dtype = pred.dtype
         y = y.type(dtype)
-        loss_vals = self.loss_fn(preds, y)
+        loss_vals = self.loss_fn(pred, y)
 
         if mask is not None:
             mask.type(dtype)
             loss_vals = loss_vals * mask
         loss_vals = loss_vals.mean(dim=0)
         return loss_vals
+    
+    def score(self, y, pred, mask=None):
+        return -np.inf
 
 class RegressionHead(PredHead):
     """
