@@ -150,7 +150,7 @@ def pretrain(config: dict):
         print(f'Graph 0: {graph_0}') if verbose else None
         out = model['main'](
             x=graph_0.x, edge_index=graph_0.edge_index,
-            edge_attr=graph_0.edge_attr, global_idx=graph_0.global_idx,
+            edge_attr=graph_0.edge_attr, global_idx=graph_0.get('global_idx'),
         )
         head_input_dim = out['global_state'].size(-1)
         targets_key = pretrain_dataset.targets
@@ -233,7 +233,7 @@ def pretrain(config: dict):
                 optimizer.zero_grad()
                 out = model['main'](
                     x=batch.x, edge_index=batch.edge_index, batch=batch.batch,
-                    global_idx=batch.global_idx
+                    global_idx=batch.get('global_idx'),
                 )
                 losses = torch.empty(len(targets_key), device=device)
                 scores = torch.empty(len(targets_key), device=device)
