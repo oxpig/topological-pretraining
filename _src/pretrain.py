@@ -200,7 +200,7 @@ def pretrain(config: dict):
             neptune_run['model/summary'] = str(model)
         model = model.to(device)
         model.train()
-        lr = (num_params ** -0.5) / 2
+        lr = num_params ** -0.5
         if neptune_run:
             neptune_run[f'{split}/lr'] = lr
         optimizer = torch.optim.Adam(
