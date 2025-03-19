@@ -242,15 +242,18 @@ def pretrain(config: dict):
                     if targets_key[target_name]['level'] == 'global':
                         embed = out['global_state']
                         embed.to(device)
+                        pred = head(embed)
                         y = batch[target_name].type(embed.dtype)
-                        losses[i] = head.loss(x=embed, y=y,)
-                        score_now = head.score(x=embed, y=y,)
+                        losses[i] = head.loss(pred=pred, y=y,)
+                        score_now = head.score(pred=pred, y=y,)
                     elif targets_key[target_name]['level'] == 'node':
                         embed = out['final_state']
+                        embed.to(device)
+                        pred = head(embed)
                         y = batch[target_name].type(embed.dtype)
                         mask = batch[f'{target_name}_mask'].type(embed.dtype)
-                        losses[i] = head.loss(x=embed, y=y, mask=mask,)
-                        score_now = head.score(x=embed, y=y, mask=mask,)
+                        losses[i] = head.loss(pred=pred, y=y, mask=mask,)
+                        score_now = head.score(pred=pred, y=y, mask=mask,)
                     
                     if neptune_run is not None:
                         neptune_run[f'{split}/batch_{target_name}_score'].append(score_now.item())
