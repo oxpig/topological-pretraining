@@ -4,6 +4,9 @@ import numpy as np
 from sklearn.metrics import average_precision_score
 import torch
 
+import warnings
+
+
 class PredHead(MLP):
     """
     Prediction head for the model
@@ -114,7 +117,9 @@ class BinaryHead(PredHead):
             mask = mask.detach().cpu().numpy()
             y = y[mask]
             pred = pred[mask]
-        return average_precision_score(y_true=y, y_score=pred, average="weighted")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return average_precision_score(y_true=y, y_score=pred, average="weighted")
 
     def loss(self, y, pred, mask=None):
         y = y.type(pred.dtype)
