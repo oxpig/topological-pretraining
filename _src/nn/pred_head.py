@@ -117,7 +117,7 @@ class BinaryHead(PredHead):
             pred = pred[mask]
         y = y.transpose(0, 1)
         pred = pred.transpose(0, 1)
-        return binary_auprc(input=pred, target=y, num_tasks=self.output_dim)
+        return binary_auprc(input=pred, target=y, num_tasks=self.output_dim).mean()
 
     def loss(self, y, pred, mask=None):
         y = y.type(pred.dtype)
