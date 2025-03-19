@@ -17,8 +17,6 @@ class Collater(pyg.loader.dataloader.Collater):
             batch.global_idx[0] -= 1
             batch.global_idx += 1
             batch.global_idx = batch.global_idx.cumsum(0)
-        else:
-            batch.global_idx = None
         return batch
     
 class DataLoader(torch.utils.data.DataLoader):
