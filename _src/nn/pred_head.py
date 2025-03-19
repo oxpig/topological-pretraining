@@ -108,7 +108,7 @@ class BinaryHead(PredHead):
         if self.output_dim == 1:
             self.score_fn = BinaryAUPRC(num_tasks=1, device=self.device)
         else:
-            self.score_fn = MultilabelAUPRC(num_tasks=self.output_dim, device=self.device,)
+            self.score_fn = MultilabelAUPRC(num_labels=self.output_dim, device=self.device,)
     
 
     @property
