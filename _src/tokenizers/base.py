@@ -222,10 +222,7 @@ class BaseGraph:
         """
         Add a global token to the graph.
         """
-        if not self.global_token:
-            graph.global_idx = None
-            return graph
-        else:
+        if self.global_token:
             if 'x' not in graph:
                 raise ValueError('Graph does not contain node features.')
             if graph.raw:
@@ -244,7 +241,9 @@ class BaseGraph:
             graph.x = torch.cat([graph.x, global_token], dim=0)
             graph.edge_index = torch.cat([graph.edge_index, global_edges], dim=1)
             graph.global_idx = graph.x.size(0) - 1
-            return graph
+            
+        return graph
+        
     
     def raw(self, mol: Chem.Mol):
         """
