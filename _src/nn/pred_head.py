@@ -115,8 +115,8 @@ class BinaryHead(PredHead):
         if mask is not None:
             y = y[mask]
             pred = pred[mask]
-        y = y.view(-1)
-        pred = pred.view(-1)
+        y = y.transpose(0, 1)
+        pred = pred.transpose(0, 1)
         return binary_auprc(input=pred, target=y, num_tasks=self.output_dim)
 
     def loss(self, y, pred, mask=None):
