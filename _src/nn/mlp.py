@@ -48,6 +48,14 @@ class MLP(torch.nn.Module):
         self.batch_norm = torch.nn.BatchNorm1d(hidden_dim) if batch_norm else torch.nn.Identity()
         self.act = act_fn[act]
         self.final_act = act_fn[final_act]
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.output_dim = output_dim
+        self.num_layers = num_layers
+        self.dropout_value = dropout
+        self.use_batch_norm = batch_norm
+        self.act_type = act
+        self.final_act_type = final_act
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
