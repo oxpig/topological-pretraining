@@ -121,8 +121,6 @@ class BinaryHead(PredHead):
         if mask is not None:
             y = y[mask]
             pred = pred[mask]
-        y = y.transpose(0, 1)
-        pred = pred.transpose(0, 1)
         self.score_fn.update(pred, y)
         return self.score_fn.compute()
 
