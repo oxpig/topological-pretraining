@@ -105,16 +105,16 @@ class BinaryHead(PredHead):
     def loss_fn(self):
         return torch.nn.functional.binary_cross_entropy
     
-    def score(self, y_true, y_score, mask=None):
+    def score(self, y, pred, mask=None):
 
-        y_true = y_true.type(y_score.dtype)
-        y_true = y_true.detach().cpu().numpy()
-        y_score = y_score.detach().cpu().numpy()
+        y = y.type(pred.dtype)
+        y = y.detach().cpu().numpy()
+        pred = pred.detach().cpu().numpy()
         if mask is not None:
             mask = mask.detach().cpu().numpy()
-            y_true = y_true[mask]
-            y_score = y_score[mask]
-        return average_precision_score(y_true=y_true, y_score=y_score, average="weighted")
+            y = y[mask]
+            pred = pred[mask]
+        return average_precision_score(y=y, y_score=pred, average="weighted")
 
     def loss(self, y, pred, mask=None):
         y = y.type(pred.dtype)
