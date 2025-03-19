@@ -269,7 +269,7 @@ def pretrain(config: dict):
                 
                 pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch 0th Score: {score_now.item():.4f}')
                 pbar.update(1)
-                scheduler.step()
+                # scheduler.step()
 
             average_loss = epoch_loss / len(pretrain_loader)
             average_scores = epoch_scores / len(pretrain_loader)
