@@ -245,8 +245,7 @@ def pretrain(config: dict):
                         pred = head(embed)
                         y = batch[target_name].type(embed.dtype)
                         losses[i] = head.loss(pred=pred, y=y,)
-                        # score_now = head.score(pred=pred, y=y,)
-                        score_now = torch.tensor(0.0, device=device)
+                        score_now = head.score(pred=pred, y=y,)
                     elif targets_key[target_name]['level'] == 'node':
                         embed = out['final_state']
                         embed.to(device)
