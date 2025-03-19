@@ -9,6 +9,7 @@ from _src.data.loader import DataLoader
 
 from _src.nn.pred_head import (BinaryHead, RegressionHead, MultiClassHead, MultiTaskLoss)
 
+from copy import deepcopy
 from pathlib import Path
 import numpy as np
 from rdkit import Chem
@@ -248,7 +249,7 @@ def pretrain(config: dict):
                         losses[i] = head.loss(pred=pred, y=y,)
                         if batch_num % 100 == 0:
                             score_now = head.score(pred=pred, y=y,)
-                            last_score = score_now.item()
+                            last_score = deepcopy(score_now.item())
                         else:
                             score_now = None
                     elif targets_key[target_name]['level'] == 'node':
@@ -260,7 +261,7 @@ def pretrain(config: dict):
                         losses[i] = head.loss(pred=pred, y=y, mask=mask,)
                         if batch_num % 100 == 0:
                             score_now = head.score(pred=pred, y=y,)
-                            last_score = score_now
+                            last_score = deepcopy(score_now.item())
                         else:
                             score_now = None
                     else:
