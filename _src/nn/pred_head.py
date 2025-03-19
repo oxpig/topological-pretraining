@@ -123,7 +123,8 @@ class BinaryHead(PredHead):
             pred = pred[mask]
         y = y.transpose(0, 1)
         pred = pred.transpose(0, 1)
-        return self.score_fn(pred, y)
+        self.score_fn.update(pred, y)
+        return self.score_fn.compute()
 
     def loss(self, y, pred, mask=None):
         y = y.type(pred.dtype)
