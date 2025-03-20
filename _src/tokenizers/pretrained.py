@@ -15,7 +15,7 @@ class PreTrainedModel(torch.nn.Module):
         path: str|None = None,
         params: dict|None = None,
         embed_state: Literal['node', 'global', 'all'] = 'global',
-        layer_pool_type: Literal['last', 'sum', 'mean', 'max', 'concat'] = 'concat',
+        layer_pool_type: Literal['last', 'sum', 'mean', 'max', 'concat'] = None,
         device: str = None,
         asarray: bool = True
     ):
@@ -44,7 +44,8 @@ class PreTrainedModel(torch.nn.Module):
         main_cls = get_nn(main_cls)
         self.model = main_cls(**main_model['kwargs'])
         self.model.load_state_dict(main_model['state'])
-        self.model.layer_pool_type = self.layer_pool_type
+        if self.layer_pool_type is not None:
+            self.model.layer_pool_type = self.layer_pool_type
         self.model.eval()
         self.heads = torch.nn.ModuleDict()
         self.heads_kwargs = {}
@@ -68,14 +69,6 @@ class PreTrainedModel(torch.nn.Module):
     def tokenize(self, x: Chem.Mol|list[Chem.Mol]):
         return self.tokenizer.transform(x)
     
-    def batch_global_idx(self, batch: pyg.data.Batch):
-        if 'global_idx' in batch:
-            batch.global_idx[0] -= 1
-            batch.global_idx += 1
-            batch.global_idx = batch.global_idx.cumsum(0)
-        else:
-            batch.global_idx = None
-        return batch
     
     def embed(self, mol: Chem.Mol|list[Chem.Mol], embed_state: Literal['node', 'global', 'all'] = None):
         if embed_state is not None:
@@ -83,12 +76,10 @@ class PreTrainedModel(torch.nn.Module):
         graph = self.tokenize(mol)
         if isinstance(graph, list):
             graph = pyg.data.Batch.from_data_list(graph)
-            graph = graph.to(self.device)
-            graph = self.batch_global_idx(graph)
-
+        graph = graph.to(self.device)
         x = self.model(
             x=graph.x, edge_index=graph.edge_index, edge_attr=graph.edge_attr,
-            batch=graph.batch, global_idx=graph.global_idx
+            batch=graph.batch, global_idx=graph.get('global_idx')
         )
         if self.embed_state == 'node':
             return x['final_state']
