@@ -244,7 +244,6 @@ class BaseGraph:
             
         return graph
         
-    
     def raw(self, mol: Chem.Mol):
         """
         Generate the raw graph data for a molecule.
@@ -260,7 +259,10 @@ class BaseGraph:
             The raw graph data.
         """
         if mol is None:
-            return pyg.data.Data(raw=True)
+            return pyg.data.Data(
+                raw=True, x=torch.tensor([], dtype=torch.long), edge_index=torch.tensor([], dtype=torch.long),
+                edge_attr=torch.tensor([], dtype=torch.long),
+            )
         x = self.get_nodes(mol)
         # initialize edge index and edge attributes
         edge_index, edge_attr = self.get_edges(mol)
@@ -294,7 +296,8 @@ class BaseGraph:
             for j in range(graph.x.size(1)):
                 graph.x[i, j] = self.node_types.get(int(graph.x[i, j]), unk)
         graph.raw = False
-        graph = self.add_global_token(graph)
+        if len(graph.x) > 0:
+            graph = self.add_global_token(graph)
 
         return graph
 
@@ -313,7 +316,7 @@ class BaseGraph:
     
     def __call__(self, X: Chem.Mol|list[Chem.Mol]):
 
-        if isinstance(X, Chem.Mol):
+        if isinstance(X, Chem.Mol|None):
             return self.transform(X)
         
         assert all(isinstance(m, Chem.Mol|None) for m in X)
@@ -321,10 +324,7 @@ class BaseGraph:
         out = []
         pbar = tqdm(total=len(X), desc='Generating graphs', disable=not self.verbose)
         for idx, mol in enumerate(X):
-            if not isinstance(mol, Chem.Mol):
-                out.append(None)
-            else:
-                out.append(self.transform(mol))
+            out.append(self.transform(mol))
             pbar.update(1)
         pbar.close()
         return out
