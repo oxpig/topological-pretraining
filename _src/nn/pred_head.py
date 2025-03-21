@@ -55,13 +55,13 @@ class RegressionHead(PredHead):
         self,
         input_dim: int, 
         hidden_dim: int = None, 
+        output_dim: int = 1,
         num_layers: int = 1,
         dropout: float = 0.0,
         batch_norm: bool = False,
         act: str = 'relu',
         **kwargs,
     ):
-        output_dim = 1
         super(RegressionHead, self).__init__(
             input_dim=input_dim, output_dim=output_dim, hidden_dim=hidden_dim,
             num_layers=num_layers, dropout=dropout, batch_norm=batch_norm,
