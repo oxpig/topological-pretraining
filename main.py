@@ -77,6 +77,8 @@ def main():
         benchmark.benchmark(config=config)
     elif process == 'evaluate':
         evaluate.evaluate(config=config)
+    elif process == 'pretrain_autoencoder':
+        pretrain.pretrain_autoencoder(config=config)
     else:
         raise ValueError('Invalid process')
 
