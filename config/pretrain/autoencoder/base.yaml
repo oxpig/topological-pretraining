@@ -15,8 +15,8 @@ AutoEncoder:
     class_weight: True
     hidden_dim: 512
     latent_dim: 256
-    encoder_layers: 3
-    decoder_layers: 3
+    encoder_layers: 5
+    decoder_layers: 5
     dropout: 0.2
     act: hardswish
     batch_norm: False
