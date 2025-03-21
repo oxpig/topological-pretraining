@@ -6,10 +6,9 @@ splits:
 verbose: True
 tokenizer: ECFP
 tokenizer_kwargs:
-  transform_kwargs:
-    fpsize: 2048
-    radius: 2
-    chirality: True
+  fpsize: 2048
+  radius: 2
+  chirality: True
 model: AutoEncoder
 AutoEncoder:
   class_weight: True
