@@ -501,7 +501,7 @@ def pretrain_autoencoder(config: dict):
             pbar = tqdm(total=len(loader), desc=f'Epoch {epoch+1}/{epochs} | Batch Loss: {torch.nan}', disable=not verbose,)
             for batch_num, batch in enumerate(loader):
                 batch = batch[0]
-                batch = batch.to(device)
+                batch = batch.to(dtype=torch.float32, device=device)
                 optimizer.zero_grad()
                 if batch_num % 100 == 0:
                     loss, score = model.loss(batch, score=True)
