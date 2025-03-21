@@ -20,8 +20,14 @@ class BaseGNN(torch.nn.Module):
         dropout: float = 0.0,
         batch_norm: bool = False,
         act: str = 'relu',
-        layer_pool_type: Literal['last', 'sum', 'mean', 'max', 'concat'] = 'concat',
-        graph_pool_type: Literal[None, 'sum', 'mean', 'max', 'global_node'] = 'max',
+        layer_pool_type: slice|int|Literal[
+            'last', 'sum', 'mean',
+            'max', 'concat'
+        ] = 'concat',
+        graph_pool_type: Literal[
+            None, 'sum', 'mean',
+            'max', 'global_node'
+        ] = 'max',
         gnn_kwargs: dict = {},
         share_weights: bool = False,
         device: str = 'cpu',
@@ -96,6 +102,7 @@ class BaseGNN(torch.nn.Module):
     def layer_pool(self, out: dict):
         hidden_states = out['hidden_states']
         node_embedding = out['node_embedding']
+
         if self.layer_pool_type == 'last':
             out = hidden_states[:, -1, :]
         elif self.layer_pool_type == 'sum':
@@ -120,6 +127,11 @@ class BaseGNN(torch.nn.Module):
             if node_embedding is not None:
                 node_embedding = node_embedding.view(node_embedding.size(0), -1)
                 out = torch.cat((out, node_embedding), dim=-1)
+        elif isinstance(self.layer_pool_type, int):
+            out = hidden_states[:, self.layer_pool_type, :]
+        elif isinstance(self.layer_pool_type, slice):
+            out = hidden_states[:, self.layer_pool_type, :]
+            out = out.view(out.size(0), -1)
         else:
             raise ValueError(
                 f'Invalid layer pooling method: {self.layer_pool_type}\n'\
@@ -139,7 +151,7 @@ class BaseGNN(torch.nn.Module):
         elif self.graph_pool_type == 'mean':
             return pyg.nn.pool.global_mean_pool(final_state, batch)
         elif self.graph_pool_type == 'max':
-            return pyg.nn.pool.global_max_pool(final_state, batch)
+            return pyg.nn.pool.global_max_pool(final_state, batch,)
         elif self.graph_pool_type == 'global_node':
             assert global_idx is not None, 'Global node index must be provided for global node pooling.'
             return final_state[global_idx]
@@ -154,6 +166,7 @@ class BaseGNN(torch.nn.Module):
         edge_weight = None, edge_attr = None, batch = None,
         global_idx = None
     ):
+        if x is None: return None
         out = {
             'input': x,
         }
@@ -194,6 +207,8 @@ class BaseGNN(torch.nn.Module):
         out['global_state'] = self.graph_pool(
             out['final_state'], batch, global_idx
         )
+        if out['node_embedding'] is None:
+            out['node_embedding'] = out['hidden_states'][:, :self.input_dim, :]
         return out
 
 
