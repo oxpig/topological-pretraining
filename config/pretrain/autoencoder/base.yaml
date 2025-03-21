@@ -1,0 +1,34 @@
+process: pretrain_autoencoder
+pretrain_data: QMugs
+experiment: autoencoder
+splits:
+  - butina_filter_0.5
+verbose: True
+tokenizer: ECFP
+tokenizer_kwargs:
+  transform_kwargs:
+    fpsize: 2048
+    radius: 2
+    chirality: True
+model: AutoEncoder
+AutoEncoder:
+  class_weight: True
+  hidden_dim: 512
+  latent_dim: 256
+  encoder_layers: 3
+  decoder_layers: 3
+  dropout: 0.2
+  activation: hardswish
+  batchnorm: False
+  decoder_type: binary
+targets:
+  ECFP:
+    transform_kwargs:
+      fpsize: 2048
+      radius: 2
+      chirality: True
+warmup_epochs: 2
+lr_decay_half_life: 5
+batch_size: 128
+epochs: 50
+neptune: True
