@@ -19,7 +19,7 @@ AutoEncoder:
     decoder_layers: 3
     dropout: 0.2
     act: hardswish
-    batchnorm: False
+    batch_norm: False
     decoder_type: binary
 targets:
   ECFP:
