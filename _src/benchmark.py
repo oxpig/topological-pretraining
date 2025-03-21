@@ -17,8 +17,9 @@ from sklearn.model_selection import train_test_split, GroupShuffleSplit
 from sklearn.metrics import mean_absolute_error, average_precision_score
 import torch
 from tqdm import tqdm
-from typing import Callable, Generator
+from typing import Callable, Generator, Literal
 import yaml
+
 
 import optuna
 
@@ -30,7 +31,7 @@ class HyperOpt:
         splits: list, scorer: Callable,
         direction: str = 'minimize', val_size: float = 0.2,
         verbose: bool = False, neptune_run = None, name: str = 'name',
-        seed: int = 42, data_clusters: np.ndarray = None
+        seed: int = 42, data_clusters: np.ndarray = None, average: Literal['mean', 'median'] = 'mean'
     ):
         self.seed = seed
         self.model = model
@@ -47,6 +48,7 @@ class HyperOpt:
         self.val_size = val_size
         self.verbose = verbose
         self.data_clusters = data_clusters
+        self.average = average
         if verbose == 2:
             optuna.logging.set_verbosity(optuna.logging.DEBUG)
         elif verbose == 1:
@@ -106,7 +108,12 @@ class HyperOpt:
         self.neptune_run[f'{self.name}/trial_{self.trial_count}'] = params
         
         self.trial_count += 1
-        return out.mean()
+        if self.average == 'mean':
+            return out.mean()
+        elif self.average == 'median':
+            return np.median(out)
+        else:
+            raise ValueError('Invalid average. Must be one of "mean" or "median".')
     
     def run(self, trials: int = 50):
         print(f'Running hyperparameter tuning with {trials} trials.') if self.verbose else None
@@ -308,7 +315,7 @@ def benchmark(config: dict):
                     hyperparameters=hyperparameters, dataset=dataset,
                     splits=hyperopt_splits, scorer=scorer, direction=direction,
                     verbose=verbose, neptune_run=neptune_run, name=benchmark,
-                    seed=seed, data_clusters=data_clusters
+                    seed=seed, data_clusters=data_clusters, average=df.hyperopt_average
                 )
                 best_params, best_trial_num = opt.run(trials=trials)
                 model_kwargs.update(best_params)
