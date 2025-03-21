@@ -11,15 +11,16 @@ tokenizer_kwargs:
   chirality: True
 model: AutoEncoder
 AutoEncoder:
-  class_weight: True
-  hidden_dim: 512
-  latent_dim: 256
-  encoder_layers: 3
-  decoder_layers: 3
-  dropout: 0.2
-  activation: hardswish
-  batchnorm: False
-  decoder_type: binary
+  model_kwargs:
+    class_weight: True
+    hidden_dim: 512
+    latent_dim: 256
+    encoder_layers: 3
+    decoder_layers: 3
+    dropout: 0.2
+    activation: hardswish
+    batchnorm: False
+    decoder_type: binary
 targets:
   ECFP:
     transform_kwargs:
