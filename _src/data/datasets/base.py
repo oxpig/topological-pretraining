@@ -175,3 +175,7 @@ class BaseDataFrame(pd.DataFrame):
             return pd.read_csv(smi_path, header=None).iloc[:,0].tolist()
         except:
             print('Could not load SMILES file')
+
+    @property
+    def hyperopt_average(self):
+        return 'mean'
