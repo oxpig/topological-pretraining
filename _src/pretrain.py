@@ -1,4 +1,5 @@
 from _src.nn import get_nn
+from _src.nn.autoencoder import AutoEncoder
 from _src.tokenizers import get_tokenizer
 from _src.models import get_model
 from _src.data.utils import load_dataset
@@ -62,7 +63,6 @@ def pretrain(config: dict):
         tokenizer_kwargs['global_token'] = True
     else:
         tokenizer_kwargs['global_token'] = False
-
 
     print(f'\n##################################################\n') if verbose else None
     print(f'Pretraining run {name}') if verbose else None
@@ -141,18 +141,15 @@ def pretrain(config: dict):
         })
         model['main'].reset_parameters()
         model['main'].to(device)
-        graph_0 = pretrain_dataset[0].to(device)
+        input_0 = pretrain_dataset[0].to(device)
         if model_kwargs.get('graph_pool_type', None) == 'global_node':
-            if 'global_idx' not in graph_0:
+            if 'global_idx' not in input_0:
                 raise ValueError('Global node pooling requires global node embeddings.')
-            if graph_0.global_idx is None:
+            if input_0.global_idx is None:
                 raise ValueError('Global node pooling requires global node embeddings.')
         
-        print(f'Graph 0: {graph_0}') if verbose else None
-        out = model['main'](
-            x=graph_0.x, edge_index=graph_0.edge_index,
-            edge_attr=graph_0.edge_attr, global_idx=graph_0.get('global_idx'),
-        )
+        print(f'Input 0: {input_0}') if verbose else None
+        out = model['main'](**input_0)
         head_input_dim = out['global_state'].size(-1)
         targets_key = pretrain_dataset.targets
         
@@ -163,7 +160,7 @@ def pretrain(config: dict):
             head_name = targets_key[target_name]['prediction_head']
             head_cls = pred_head_map[head_name]
             
-            output_dim = graph_0[target_name].size(1)
+            output_dim = input_0[target_name].size(1)
             class_weights = None
             print(f'Head: {head_name} | Output dim: {output_dim}') if verbose else None
             if head_name == 'multiclass' or head_name == 'binary':
@@ -249,7 +246,7 @@ def pretrain(config: dict):
                         losses[i] = head.loss(pred=pred, y=y,)
                         if batch_num % 100 == 0:
                             score_now = head.score(pred=pred, y=y,)
-                            last_score = deepcopy(score_now.item())
+                            last_score = deepcopy(score_now)
                         else:
                             score_now = None
                     elif targets_key[target_name]['level'] == 'node':
@@ -261,7 +258,7 @@ def pretrain(config: dict):
                         losses[i] = head.loss(pred=pred, y=y, mask=mask,)
                         if batch_num % 100 == 0:
                             score_now = head.score(pred=pred, y=y,)
-                            last_score = deepcopy(score_now.item())
+                            last_score = deepcopy(score_now)
                         else:
                             score_now = None
                     else:
@@ -279,13 +276,13 @@ def pretrain(config: dict):
                 if neptune_run is not None:
                     neptune_run[f'{split}/batch_loss'].append(loss.item())
                 
-                pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch Score: {last_score:.4f}')
+                pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch Score: {last_score.item():.4f}')
                 pbar.update(1)
                 scheduler.step()
 
             average_loss = epoch_loss / len(pretrain_loader)
             average_scores = epoch_scores / len(pretrain_loader)
-            pbar.set_description(f'Epoch {epoch+1}/{epochs} | Epoch Loss: {average_loss:.4f} | Last Batch Loss: {loss.item():.4f} | Last Batch Score: {last_score:.4f}')
+            pbar.set_description(f'Epoch {epoch+1}/{epochs} | Epoch Loss: {average_loss:.4f} | Last Batch Loss: {loss.item():.4f} | Last Batch Score: {last_score.item():.4f}')
             pbar.close()
             if neptune_run is not None:
                 neptune_run[f'{split}/epoch_average_loss'].append(average_loss)
@@ -345,4 +342,211 @@ def pretrain(config: dict):
         del model
         del model_dict
         del pretrain_loader
-       
+
+def pretrain_autoencoder(config: dict):
+    """
+    Run the pretraining process.
+    """
+    name: str = config['name']
+    experiment_name: str = config['experiment']
+    raw_name: str = config.get('raw_name', experiment_name)
+    data_path: str = config['data']
+    results_path: str = config['results']
+    verbose: bool = config['verbose']
+    pretrain_data: list[str]|str = config['pretrain_data']
+    tokenizer_class = config['tokenizer']
+    tokenizer_kwargs = config.get('tokenizer_kwargs', {})
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    batch_size: int = config['batch_size']
+    epochs: int = config['epochs']
+    # learning_rate: float = config['learning_rate']
+    warmup_epochs: int = config.get('warmup_epochs', 0)
+    lr_decay_half_life: int = config.get('lr_decay_half_life', 5)
+    weight_decay: float = config.get('weight_decay', 0.0)
+
+    splits: list[str] = config.get('splits', [])
+    neptune_run = config.get('neptune_run')
+    seed = config['seed']
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    
+    model_class = AutoEncoder
+    model_kwargs = config.get('model_kwargs', {})
+
+    print(f'\n##################################################\n') if verbose else None
+    print(f'Pretraining run {name}') if verbose else None
+    print(f'Tokenizer: {tokenizer_class}') if verbose else None
+    print(f'Model: {config['model']}') if verbose else None
+    print(f'Data: {pretrain_data}') if verbose else None
+    print(f'Splits: {splits}') if verbose else None
+    print(f'Batch size: {batch_size}') if verbose else None
+    print(f'Epochs: {epochs}') if verbose else None
+    print(f'Warmup epochs: {warmup_epochs}') if verbose else None
+    print(f'Learning rate decay half life: {lr_decay_half_life}') if verbose else None
+    print(f'Weight decay: {weight_decay}') if verbose else None
+    print(f'Device: {device}') if verbose else None
+    print(f'\n##################################################\n') if verbose else None
+
+    # Load the dataset as a dataframe
+    df: BaseDataFrame = load_dataset(name=pretrain_data, root=data_path, verbose=verbose)
+    
+    # Load the tokenizer
+    tokenizer = get_tokenizer(tokenizer_class)(transform_kwargs=tokenizer_kwargs)
+
+    root = Path(data_path) / pretrain_data / raw_name
+    root.mkdir(parents=True, exist_ok=True)
+
+    if len(splits) == 0:
+        print('No splits found, using all data for pretraining.') if verbose else None
+        df['butina_filter'] = 1
+        splits = ['butina_filter']
+
+    if not config.get('standardization', True):
+        print('Loading molecules without standardization...') if verbose else None
+        mols = df.SMILES.to_list()
+        mols = [Chem.MolFromSmiles(mol) for mol in mols]
+    
+    else:
+        mols = df.rdkit_mols
+
+    save_path = results_path / experiment_name
+    save_path.mkdir(parents=True, exist_ok=True)
+
+    print(f'Looping through splits: {splits}') if verbose else None
+    for split in splits:
+        assert split in df.columns, f'{split} not found in dataframe.'
+        if len(splits) > 1:
+            file_name = f'{name}_{split}.pt'
+        else:
+            file_name = f'{name}.pt'
+        if (save_path / file_name).exists():
+            print(f'Model {file_name} already exists, skipping.') if verbose else None
+            continue
+        idx = df[split]
+        split_mols = [mols[i] for i in idx]
+
+        dataset_path = root / f'{split}.pt'
+        if dataset_path.exists():
+            dataset = torch.load(dataset_path, map_location=device, weights_only=True)
+        else:
+            tokenizer.fit(split_mols)
+            dataset = tokenizer.transform(split_mols)
+            if isinstance(dataset, np.ndarray):
+                dataset = torch.tensor(dataset)
+            torch.save(dataset, dataset_path)
+
+        if model_kwargs.get('class_weight') is not None:
+            if model_kwargs['decoder_type'] == 'multiclass':
+                dataset_summed = dataset.sum(dim=0, dtype=torch.float64)
+                dataset_summed[dataset_summed == 0] = dataset_summed[dataset_summed == 0] + 1e-8
+                weights = torch.tensor(dataset.size(0) / (dataset.size(1) * dataset_summed))
+                weights.type(torch.float64)
+            elif model_kwargs['decoder_type'] == 'binary':
+                zero_class = torch.zeros_like(dataset, dtype=torch.float64)
+                zero_class[dataset == 0] = 1
+                zero_class_sum = zero_class.sum(dim=0, dtype=torch.float64)
+                zero_class_sum[zero_class_sum == 0] = zero_class_sum[zero_class_sum == 0] + 1e-8
+                data_sum = dataset.sum(dim=0, dtype=torch.float64)
+                data_sum[data_sum == 0] = data_sum[data_sum == 0] + 1e-8
+                weights = torch.stack([
+                    dataset.size(0) / (2 * zero_class_sum),
+                    dataset.size(0) / (2 * data_sum)
+                ])
+                weights.type(torch.float64), zero_class_sum, data_sum
+            else:
+                raise ValueError('Invalid decoder type for using class weights.')
+            model_kwargs['class_weight'] = weights
+            
+        dataset = torch.utils.data.TensorDataset(dataset)
+        loader = torch.utils.data.DataLoader(
+            dataset, batch_size=batch_size, shuffle=True
+        )
+        model_kwargs['input_dim'] = dataset[0][0].size(0)
+        model = model_class(**model_kwargs)
+
+        print(f'Model: {model}') if verbose else None
+        num_params = sum(p.numel() for p in model.parameters())
+        print(f'Number of parameters: {num_params}') if verbose else None
+        if neptune_run:
+            neptune_run['model/num_params'] = num_params
+            neptune_run['model/summary'] = str(model)
+        model = model.to(device)
+        model.train()
+        lr = num_params ** -0.5
+        if neptune_run:
+            neptune_run[f'{split}/lr'] = lr
+        optimizer = torch.optim.Adam(
+            model.parameters(), lr=lr, weight_decay=weight_decay
+        )
+        warmup_steps = int(len(loader) * warmup_epochs)
+        steps_in_5_epochs = int(len(loader) * lr_decay_half_life)
+        gamma_for_halflife_5_epochs = 0.5 ** (1 / steps_in_5_epochs)
+        scheduler = torch.optim.lr_scheduler.SequentialLR(
+            optimizer=optimizer,
+            milestones=[warmup_steps],
+            schedulers=[
+                torch.optim.lr_scheduler.LinearLR(
+                    optimizer, start_factor=0.5, end_factor=1.0,
+                    total_iters=warmup_steps
+                ),
+                torch.optim.lr_scheduler.ExponentialLR(
+                    optimizer, gamma=gamma_for_halflife_5_epochs
+                )
+            ]
+        )
+        for epoch in range(epochs):
+            epoch_loss = 0
+            epoch_scores = []
+            pbar = tqdm(total=len(loader), desc=f'Epoch {epoch+1}/{epochs} | Batch Loss: {torch.nan}', disable=not verbose,)
+            for batch_num, batch in enumerate(loader):
+                batch = batch.to(device)
+                optimizer.zero_grad()
+                if batch_num % 100 == 0:
+                    loss, score = model.loss(batch, score=True)
+                    last_score = deepcopy(score)
+                    epoch_scores.append(score.item())
+                    if neptune_run is not None:
+                        neptune_run[f'{split}/batch_score'].append(score.item())
+                loss = model.loss(batch)
+                loss.backward()
+                optimizer.step()
+                scheduler.step()
+                epoch_loss += loss.item()
+                if neptune_run is not None:
+                    neptune_run[f'{split}/batch_loss'].append(loss.item())
+                pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch Score: {last_score.item():.4f}')
+                pbar.update(1)
+            average_loss = epoch_loss / len(loader)
+            average_score = sum(epoch_scores) / len(epoch_scores)
+            pbar.set_description(f'Epoch {epoch+1}/{epochs} | Epoch Loss: {average_loss:.4f} | Epoch Score: {average_score:.4f}')
+            pbar.close()
+
+            if neptune_run is not None:
+                neptune_run[f'{split}/epoch_average_loss'].append(average_loss)
+                neptune_run[f'{split}/epoch_average_score'].append(average_score)
+            
+            if (epoch + 1) % 15 == 0:
+                model_dict = {
+                    'tokenizer': tokenizer.to_dict(),
+                    'state': model.state_dict(),
+                    'cls': model_class.__name__,
+                    'kwargs': model_kwargs
+                }
+                torch.save(model_dict, results_path / experiment_name / f'epoch_{epoch+1}_{file_name}')
+            
+        model_dict = {
+            'tokenizer': tokenizer.to_dict(),
+            'state': model.state_dict(),
+            'cls': model_class.__name__,
+            'kwargs': model_kwargs
+        }
+        torch.save(model_dict, results_path / experiment_name / file_name)
+        Path(dataset_path).unlink()
+        del dataset
+        del model
+        del model_dict
+        del loader
+        
+        
+            
