@@ -15,7 +15,7 @@ class PreTrainedModel(torch.nn.Module):
         path: str|None = None,
         params: dict|None = None,
         embed_state: Literal['node', 'global', 'all'] = 'global',
-        layer_pool_type: Literal['last', 'sum', 'mean', 'max', 'concat'] = None,
+        layer_pool_type: slice|int|Literal['last', 'sum', 'mean', 'max', 'concat'] = None,
         device: str = None,
         asarray: bool = True
     ):
