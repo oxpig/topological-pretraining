@@ -164,7 +164,7 @@ class BaseGNN(torch.nn.Module):
     def forward(
         self, x, edge_index,
         edge_weight = None, edge_attr = None, batch = None,
-        global_idx = None
+        global_idx = None, **kwargs
     ):
         if x is None: return None
         out = {
