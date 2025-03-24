@@ -509,6 +509,7 @@ def pretrain_autoencoder(config: dict):
                 pred_vals = np.where(pred_vals > 0.5, 1, 0)
                 sum_vals = pred_vals.sum()
                 sum_x = batch.sum()
+                overlap = np.logical_and(pred_vals, batch.cpu().numpy()).sum() / np.prod(batch.size())
                 if batch_num % 100 == 0:
                     score = model.decoder.score(y=batch, pred=pred)
                     if neptune_run is not None:
@@ -521,7 +522,7 @@ def pretrain_autoencoder(config: dict):
                 epoch_loss += loss.item()
                 if neptune_run is not None:
                     neptune_run[f'{split}/batch_loss'].append(loss.item())
-                pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch Score: {last_score:.4f} | Sum pred: {sum_vals} | Sum X: {sum_x}')
+                pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch Score: {last_score:.4f} | overlap: {overlap:.4f}')
                 pbar.update(1)
             average_loss = epoch_loss / len(loader)
             average_score = sum(epoch_scores) / len(epoch_scores)
