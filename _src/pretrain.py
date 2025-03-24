@@ -458,7 +458,6 @@ def pretrain_autoencoder(config: dict):
                 raise ValueError('Invalid decoder type for using class weights.')
             model_kwargs['class_weights'] = weights
             
-        print(model_kwargs['class_weights']) if verbose else None
         dataset = torch.utils.data.TensorDataset(dataset)
         loader = torch.utils.data.DataLoader(
             dataset, batch_size=batch_size, shuffle=True
@@ -506,7 +505,10 @@ def pretrain_autoencoder(config: dict):
                 batch = batch.to(dtype=torch.float32, device=device)
                 optimizer.zero_grad()
                 pred = model.pred(x=batch)
-
+                pred_vals = pred.detach().cpu().numpy()
+                pred_vals = np.where(pred_vals > 0.5, 1, 0)
+                sum_vals = pred_vals.sum()
+                sum_x = batch.sum()
                 if batch_num % 100 == 0:
                     score = model.decoder.score(y=batch, pred=pred)
                     if neptune_run is not None:
@@ -519,7 +521,7 @@ def pretrain_autoencoder(config: dict):
                 epoch_loss += loss.item()
                 if neptune_run is not None:
                     neptune_run[f'{split}/batch_loss'].append(loss.item())
-                pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch Score: {last_score:.4f}')
+                pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch Score: {last_score:.4f} | Sum pred: {sum_vals} | Sum X: {sum_x}')
                 pbar.update(1)
             average_loss = epoch_loss / len(loader)
             average_score = sum(epoch_scores) / len(epoch_scores)
