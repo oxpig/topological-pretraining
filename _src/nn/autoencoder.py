@@ -22,7 +22,7 @@ class AutoEncoder(torch.nn.Module):
         batch_norm: bool = False,
         act: str = 'relu',
         decoder_type: str = 'regression',
-        class_weight: None = None,
+        class_weights: None = None,
     ):
         super(AutoEncoder, self).__init__()
         self.encoder = MLP(
@@ -43,19 +43,15 @@ class AutoEncoder(torch.nn.Module):
             dropout=dropout,
             batch_norm=batch_norm,
             act=act,
-            class_weight=class_weight,
+            class_weights=class_weights,
         )
 
     def forward(self, x):
         return self.encoder(x)
 
-    def loss(self, x, score: bool = False):
-        enc = self.encoder(x)
+    def pred(self, x,):
+        enc = self(x)
         pred = self.decoder(enc)
-        loss = self.decoder.loss(x, pred)
-        if score:
-            score = self.decoder.score(x, pred)
-            return loss, score
-        return loss
+        return pred
 
 
