@@ -43,7 +43,7 @@ class PreTrainedModel(torch.nn.Module):
         self.model.eval()
         self.heads = torch.nn.ModuleDict()
         self.heads_kwargs = {}
-        for head in params['heads']:
+        for head in params.get('heads', {}):
             head_cls = params['heads'][head]['cls']
             head_cls = get_nn(head_cls)
             head_kwargs = params['heads'][head]['kwargs']
