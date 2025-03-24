@@ -456,7 +456,7 @@ def pretrain_autoencoder(config: dict):
                 weights.type(torch.float64), zero_class_sum, data_sum
             else:
                 raise ValueError('Invalid decoder type for using class weights.')
-            model_kwargs['class_weight'] = weights
+            model_kwargs['class_weights'] = weights
             
         dataset = torch.utils.data.TensorDataset(dataset)
         loader = torch.utils.data.DataLoader(
@@ -498,25 +498,27 @@ def pretrain_autoencoder(config: dict):
         for epoch in range(epochs):
             epoch_loss = 0
             epoch_scores = []
+            last_score = np.nan
             pbar = tqdm(total=len(loader), desc=f'Epoch {epoch+1}/{epochs} | Batch Loss: {torch.nan}', disable=not verbose,)
             for batch_num, batch in enumerate(loader):
                 batch = batch[0]
                 batch = batch.to(dtype=torch.float32, device=device)
                 optimizer.zero_grad()
+                pred = model.pred(x=batch)
+
                 if batch_num % 100 == 0:
-                    loss, score = model.loss(batch, score=True)
-                    last_score = deepcopy(score)
-                    epoch_scores.append(score.item())
+                    score = model.decoder.score(y=batch, pred=pred)
                     if neptune_run is not None:
                         neptune_run[f'{split}/batch_score'].append(score.item())
-                loss = model.loss(batch)
+                    last_score = score.item()
+                loss = model.decoder.loss(y=batch, pred=pred)
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
                 epoch_loss += loss.item()
                 if neptune_run is not None:
                     neptune_run[f'{split}/batch_loss'].append(loss.item())
-                pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch Score: {last_score.item():.4f}')
+                pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch Score: {last_score:.4f}')
                 pbar.update(1)
             average_loss = epoch_loss / len(loader)
             average_score = sum(epoch_scores) / len(epoch_scores)
