@@ -169,6 +169,8 @@ def benchmark(config: dict):
             'Human_CLint', 'MUV466',
             'DRD2', 'Lipo', 'NR_AR',
         ]
+    if isinstance(benchmark_data, str):
+        benchmark_data = [benchmark_data]
     model_class = get_model(config['model'])
     base_model_kwargs = config.get('model_kwargs', {})
 
