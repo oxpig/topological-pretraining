@@ -104,16 +104,17 @@ class HyperOpt:
             if self.neptune_run is not None:
                 self.neptune_run[f'{self.name}/tuning_scores'].append(out[idx])
                 self.neptune_run[f'{self.name}/trial_num_for_scores'].append(self.trial_count)
-        self.neptune_run[f'{self.name}/tuning_means'].append(out.mean())
-        self.neptune_run[f'{self.name}/trial_{self.trial_count}'] = params
-        
-        self.trial_count += 1
         if self.average == 'mean':
-            return out.mean()
+            out_score = out.mean()
         elif self.average == 'median':
-            return np.median(out)
+            out_score = np.median(out)
         else:
             raise ValueError('Invalid average. Must be one of "mean" or "median".')
+        if self.neptune_run is not None:
+            self.neptune_run[f'{self.name}/tuning_scores'].append(out_score)
+            self.neptune_run[f'{self.name}/trial_num_for_scores'].append(self.trial_count)
+        self.trial_count += 1
+        
     
     def run(self, trials: int = 50):
         print(f'Running hyperparameter tuning with {trials} trials.') if self.verbose else None
