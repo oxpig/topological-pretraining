@@ -3,6 +3,7 @@ from _src.tokenizers.load import read_from_dict
 from _src.nn.pred_head import PredHead
 from _src.nn import get_nn
 
+import numpy as np
 from rdkit import Chem
 import torch
 import torch_geometric as pyg
@@ -59,6 +60,9 @@ class PreTrainedModel(torch.nn.Module):
         return self.model(x)
 
     def forward(self, x: Chem.Mol):
+        x = self.tokenize(x)
+        if isinstance(x, np.ndarray):
+            x = torch.tensor(x, dtype=torch.float32)
         x = self.embed(x)
         if self.asarray:
             x = x.detach().cpu().numpy()
