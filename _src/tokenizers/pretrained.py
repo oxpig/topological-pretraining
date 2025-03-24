@@ -17,6 +17,8 @@ class PreTrainedModel(torch.nn.Module):
         device: str = None,
         asarray: bool = True
     ):
+        super(PreTrainedModel, self).__init__()
+        self.asarray = asarray
         if device is None:
             if torch.cuda.is_available():
                 device = 'cuda'
