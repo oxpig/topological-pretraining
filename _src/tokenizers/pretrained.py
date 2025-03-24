@@ -131,7 +131,6 @@ class PreTrainedGNN(PreTrainedModel):
         **kwargs,
     ):
         self.layer_pool_type = layer_pool_type
-        self.asarray = asarray
         self.embed_state = embed_state
         super(PreTrainedGNN, self).__init__(path=path, params=params, device=device, asarray=asarray)
         
