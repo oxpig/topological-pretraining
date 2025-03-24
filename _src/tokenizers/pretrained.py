@@ -40,8 +40,6 @@ class PreTrainedModel(torch.nn.Module):
         main_cls = get_nn(main_cls)
         self.model = main_cls(**main_model['kwargs'])
         self.model.load_state_dict(main_model['state'])
-        if self.layer_pool_type is not None:
-            self.model.layer_pool_type = self.layer_pool_type
         self.model.eval()
         self.heads = torch.nn.ModuleDict()
         self.heads_kwargs = {}
@@ -136,6 +134,11 @@ class PreTrainedGNN(PreTrainedModel):
         self.layer_pool_type = layer_pool_type
         self.asarray = asarray
         self.embed_state = embed_state
+
+    def from_dict(self, params: dict):
+        super().from_dict(params)
+        if self.layer_pool_type is not None:
+            self.model.layer_pool_type = self.layer_pool_type
     
     def embed(self, mol: Chem.Mol|list[Chem.Mol], embed_state: Literal['node', 'global', 'all'] = None):
         if embed_state is not None:
