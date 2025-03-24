@@ -543,9 +543,11 @@ def pretrain_autoencoder(config: dict):
             
         model_dict = {
             'tokenizer': tokenizer.to_dict(),
-            'state': model.state_dict(),
-            'cls': model_class.__name__,
-            'kwargs': model_kwargs
+            'main':{
+                'state': model.state_dict(),
+                'cls': model_class.__name__,
+                'kwargs': model_kwargs
+            }
         }
         torch.save(model_dict, results_path / experiment_name / file_name)
         Path(dataset_path).unlink()
