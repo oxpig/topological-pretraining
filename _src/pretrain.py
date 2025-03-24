@@ -443,21 +443,22 @@ def pretrain_autoencoder(config: dict):
                 weights = torch.tensor(dataset.size(0) / (dataset.size(1) * dataset_summed))
                 weights.type(torch.float64)
             elif model_kwargs['decoder_type'] == 'binary':
-                zero_class = torch.zeros_like(dataset, dtype=torch.int)
+                zero_class = torch.zeros_like(dataset, dtype=torch.float32)
                 zero_class[dataset == 0] = 1
-                zero_class_sum = zero_class.sum(dim=0, dtype=torch.int)
+                zero_class_sum = zero_class.sum(dim=0, dtype=torch.float32)
                 zero_class_sum[zero_class_sum == 0] = zero_class_sum[zero_class_sum == 0] + 1
-                data_sum = dataset.sum(dim=0, dtype=torch.int)
+                data_sum = dataset.sum(dim=0, dtype=torch.float32)
                 data_sum[data_sum == 0] = data_sum[data_sum == 0] + 1
                 weights = torch.stack([
                     dataset.size(0) / (2 * zero_class_sum),
                     dataset.size(0) / (2 * data_sum)
                 ])
-                weights.type(torch.float64), zero_class_sum, data_sum
+                weights.type(torch.float32)
             else:
                 raise ValueError('Invalid decoder type for using class weights.')
             model_kwargs['class_weights'] = weights
             
+        print(model_kwargs['class_weights']) if verbose else None
         dataset = torch.utils.data.TensorDataset(dataset)
         loader = torch.utils.data.DataLoader(
             dataset, batch_size=batch_size, shuffle=True
