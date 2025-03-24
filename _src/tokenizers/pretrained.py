@@ -130,11 +130,11 @@ class PreTrainedGNN(PreTrainedModel):
         asarray: bool = True,
         **kwargs,
     ):
-        super(PreTrainedGNN, self).__init__(path=path, params=params, device=device, asarray=asarray)
         self.layer_pool_type = layer_pool_type
         self.asarray = asarray
         self.embed_state = embed_state
-
+        super(PreTrainedGNN, self).__init__(path=path, params=params, device=device, asarray=asarray)
+        
     def from_dict(self, params: dict):
         super().from_dict(params)
         if self.layer_pool_type is not None:
