@@ -12,7 +12,7 @@ tokenizer_kwargs:
 model: AutoEncoder
 AutoEncoder:
   model_kwargs:
-    class_weight: True
+    class_weights: True
     hidden_dim: 512
     latent_dim: 256
     encoder_layers: 4

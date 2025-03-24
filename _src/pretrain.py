@@ -436,7 +436,7 @@ def pretrain_autoencoder(config: dict):
                 dataset = torch.tensor(dataset)
             torch.save(dataset, dataset_path)
 
-        if model_kwargs.get('class_weight') is not None:
+        if model_kwargs.get('class_weights') is not None:
             if model_kwargs['decoder_type'] == 'multiclass':
                 dataset_summed = dataset.sum(dim=0, dtype=torch.float64)
                 dataset_summed[dataset_summed == 0] = dataset_summed[dataset_summed == 0] + 1e-8
