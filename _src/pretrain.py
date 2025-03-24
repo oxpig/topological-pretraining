@@ -423,8 +423,9 @@ def pretrain_autoencoder(config: dict):
         if (save_path / file_name).exists():
             print(f'Model {file_name} already exists, skipping.') if verbose else None
             continue
-        idx = df[split]
+        idx = df[df[split] == 1].index
         split_mols = [mols[i] for i in idx]
+        print(len(split_mols)) if verbose else None
 
         dataset_path = root / f'{split}.pt'
         if dataset_path.exists():
