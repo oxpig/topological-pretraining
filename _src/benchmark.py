@@ -234,6 +234,8 @@ def benchmark(config: dict):
             neptune_run[f'{benchmark}/num_splits'] = num_splits
             neptune_run[f'{benchmark}/task'] = df.task
             neptune_run[f'{benchmark}/scorer'] = str(scorer)
+            neptune_run[f'{benchmark}/direction'] = direction
+            neptune_run[f'{benchmark}/hp_average'] = df.hyperopt_average
             
         out_path = Path(results_path) / name
         out_path.mkdir(parents=True, exist_ok=True)
