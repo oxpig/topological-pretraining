@@ -57,12 +57,12 @@ class PreTrainedModel(torch.nn.Module):
         self.to_device()
 
     def embed(self, x: Chem.Mol):
-        return self.model(x)
-
-    def forward(self, x: Chem.Mol):
         x = self.tokenize(x)
         if isinstance(x, np.ndarray):
             x = torch.tensor(x, dtype=torch.float32)
+        return self.model(x)
+
+    def forward(self, x: Chem.Mol):
         x = self.embed(x)
         if self.asarray:
             x = x.detach().cpu().numpy()
