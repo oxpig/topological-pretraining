@@ -9,20 +9,14 @@ import torch_geometric as pyg
 from typing import Literal
 
 class PreTrainedModel(torch.nn.Module):
-
+    
     def __init__(
         self,
         path: str|None = None,
         params: dict|None = None,
-        embed_state: Literal['node', 'global', 'all'] = 'global',
-        layer_pool_type: slice|int|Literal['last', 'sum', 'mean', 'max', 'concat'] = None,
         device: str = None,
         asarray: bool = True
     ):
-        super(PreTrainedModel, self).__init__()
-        self.layer_pool_type = layer_pool_type
-        self.asarray = asarray
-        self.embed_state = embed_state
         if device is None:
             if torch.cuda.is_available():
                 device = 'cuda'
@@ -35,7 +29,7 @@ class PreTrainedModel(torch.nn.Module):
             self.load(path=path)
         else:
             raise ValueError('Either path or params must be provided.')
-
+        
     def from_dict(self, params: dict):
         tokenizer = params.pop('tokenizer')
         self.tokenizer = read_from_dict(tokenizer)
@@ -60,44 +54,16 @@ class PreTrainedModel(torch.nn.Module):
             self.heads_kwargs[head] = head_kwargs
 
         self.to_device()
-        
-    def load(self, path: str):
-        self.path = path
-        params = torch.load(path, weights_only=True, map_location='cpu')
-        self.from_dict(params)
 
-    def tokenize(self, x: Chem.Mol|list[Chem.Mol]):
-        return self.tokenizer.transform(x)
-    
-    
-    def embed(self, mol: Chem.Mol|list[Chem.Mol], embed_state: Literal['node', 'global', 'all'] = None):
-        if embed_state is not None:
-            self.embed_state = embed_state
-        graph = self.tokenize(mol)
-        if isinstance(graph, list):
-            graph = pyg.data.Batch.from_data_list(graph)
-        graph = graph.to(self.device)
-        x = self.model(
-            x=graph.x, edge_index=graph.edge_index, edge_attr=graph.edge_attr,
-            batch=graph.batch, global_idx=graph.get('global_idx')
-        )
-        if self.embed_state == 'node':
-            return x['final_state']
-        elif self.embed_state == 'global':
-            return x['global_state']
-        elif self.embed_state == 'all':
-            return x
-        else:
-            raise ValueError(
-                f'Invalid embed_state {self.embed_state}. '\
-                f'Must be one of "node", "global", or "all".'
-            )
-    
+    def embed(self, x: Chem.Mol):
+        return self.model(x)
+
     def forward(self, x: Chem.Mol):
         x = self.embed(x)
         if self.asarray:
             x = x.detach().cpu().numpy()
         return x
+    
     def get_head_preds(
         self, x: Chem.Mol|list[Chem.Mol]
     ):
@@ -143,6 +109,55 @@ class PreTrainedModel(torch.nn.Module):
         else:
             self.device = device
         super().to(device)
+        
+    def load(self, path: str):
+        self.path = path
+        params = torch.load(path, weights_only=True, map_location='cpu')
+        self.from_dict(params)
+
+    def tokenize(self, x: Chem.Mol|list[Chem.Mol]):
+        return self.tokenizer.transform(x)
+
+class PreTrainedGNN(PreTrainedModel):
+
+    def __init__(
+        self,
+        path: str|None = None,
+        params: dict|None = None,
+        embed_state: Literal['node', 'global', 'all'] = 'global',
+        layer_pool_type: slice|int|Literal['last', 'sum', 'mean', 'max', 'concat'] = None,
+        device: str = None,
+        asarray: bool = True,
+        **kwargs,
+    ):
+        super(PreTrainedGNN, self).__init__(path=path, params=params, device=device, asarray=asarray)
+        self.layer_pool_type = layer_pool_type
+        self.asarray = asarray
+        self.embed_state = embed_state
+    
+    def embed(self, mol: Chem.Mol|list[Chem.Mol], embed_state: Literal['node', 'global', 'all'] = None):
+        if embed_state is not None:
+            self.embed_state = embed_state
+        graph = self.tokenize(mol)
+        if isinstance(graph, list):
+            graph = pyg.data.Batch.from_data_list(graph)
+        graph = graph.to(self.device)
+        x = self.model(
+            x=graph.x, edge_index=graph.edge_index, edge_attr=graph.edge_attr,
+            batch=graph.batch, global_idx=graph.get('global_idx')
+        )
+        if self.embed_state == 'node':
+            return x['final_state']
+        elif self.embed_state == 'global':
+            return x['global_state']
+        elif self.embed_state == 'all':
+            return x
+        else:
+            raise ValueError(
+                f'Invalid embed_state {self.embed_state}. '\
+                f'Must be one of "node", "global", or "all".'
+            )
+
 
 class PreTrainedTokenizer(BaseTokenizer):
 
@@ -150,7 +165,10 @@ class PreTrainedTokenizer(BaseTokenizer):
     precomputed = True
 
     def _transform_base(self, **kwargs):
-        return PreTrainedModel(**kwargs)
+        if kwargs.get('gnn', False):
+            return PreTrainedGNN(**kwargs)
+        else:
+            return PreTrainedModel(**kwargs)
     
     def to_dict(self):
         params = super().to_dict()
@@ -161,3 +179,4 @@ class PreTrainedTokenizer(BaseTokenizer):
         self, embed_state: Literal['node', 'global', 'all']
     ):
         self.transform.embed_state = embed_state
+
