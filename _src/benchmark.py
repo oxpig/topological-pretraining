@@ -80,6 +80,9 @@ class HyperOpt:
             params[key] = p
 
         params.update(self.model_kwargs)
+        if self.neptune_run is not None:
+            self.neptune_run[f'{self.name}/trial_{self.trial_count}'] = params
+
         filler = np.inf if self.direction == 'minimize' else -np.inf
         out = np.full((len(self.splits,)), filler)
         for idx, (train, test) in enumerate(self.splits):
@@ -112,7 +115,7 @@ class HyperOpt:
             raise ValueError('Invalid average. Must be one of "mean" or "median".')
         if self.neptune_run is not None:
             self.neptune_run[f'{self.name}/tuning_averages'].append(out_score)
-            self.neptune_run[f'{self.name}/trial_num_for_scores'].append(self.trial_count)
+            
         self.trial_count += 1
         return out_score
     
