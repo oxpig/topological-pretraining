@@ -117,10 +117,6 @@ class MUV_Subset(MUV, BaseDataFrame):
     def task(self):
         return 'classification'
     
-    @property
-    def hyperopt_average(self):
-        return 'median'
-   
 
 class MUV466(MUV_Subset):
     """
