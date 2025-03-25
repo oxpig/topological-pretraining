@@ -166,9 +166,14 @@ def benchmark(config: dict):
         ]
     if benchmark_data == 'subset':
         benchmark_data = [
-            'Human_PPB', 'Solu', 'Efflux',
-            'Human_CLint', 'MUV466',
-            'DRD2', 'Lipo', 'NR_AR',
+            'Human_PPB', 'Rat_PPB',
+            'Solu', 'Efflux', 
+            'Human_CLint', 'Rat_CLint',
+            'Lipo', 'ESOL', 'FreeSolv',
+            'DRD2', 'FactorXA',
+            'MUV466', 'MUV548', 'MUV600',
+            'NR_AR', 'NR_ER_LBD',
+            'SR_ARE', 'SR_p53',
         ]
     if isinstance(benchmark_data, str):
         benchmark_data = [benchmark_data]
