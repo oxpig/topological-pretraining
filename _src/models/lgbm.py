@@ -7,8 +7,8 @@ class LGBM:
         **kwargs
     ):
         self.task = task
-        self.neptune_run = neptune_run
-        self.neptune_location = neptune_location
+        self.neptune_run = neptune_run # for compatibility with other models
+        self.neptune_location = neptune_location # for compatibility with other models
         if task == 'classification':
             if 'is_unbalance' not in kwargs:
                 kwargs['is_unbalance'] = True
