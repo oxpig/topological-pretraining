@@ -101,6 +101,8 @@ class HyperOpt:
             self.dataset.reset(train_idx, val_idx)
             train_X, train_y = self.dataset.train
             val_X, val_y = self.dataset.test
+            if self.model.__class__.__name__ == 'SklearnGIN':
+                params['vocab_size'] = self.dataset.tokenizer.vocab_size
             model = self.model(seed=self.seed, task=self.task, **params)
             model.fit(train_X, train_y)
             test_pred = model.predict(val_X)
@@ -370,6 +372,7 @@ def benchmark(config: dict):
 
             if config['model'] == 'SklearnGIN':
                 model_kwargs['verbose'] = 0
+                model_kwargs['vocab_size'] = dataset.tokenizer.vocab_size
             
             model = model_class(
                 seed=seed, task=df.task,
