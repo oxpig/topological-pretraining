@@ -150,6 +150,7 @@ class MolDataset:
         """
         Get the featurized representation of a molecule.
         """
+        print(idx)
         X = self.X[idx] # Get the tokenized representation of the molecule
         if isinstance(X, np.ndarray):
             # If the representation is a 1D array, reshape it to a 2D array
