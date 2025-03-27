@@ -6,6 +6,8 @@ from _src.tokenizers.base import BaseTokenizer
 
 from copy import deepcopy
 
+from _src.models import LGBM
+
 import numpy as np
 from pathlib import Path
 from sklearn.decomposition import PCA
@@ -292,7 +294,7 @@ def benchmark(config: dict):
                     f'Error loading {benchmark.lower()} predictions '\
                     f'for {name}. Starting from scratch.'
                 ) if verbose else None
-
+                
         if out[-1, -1] == 1:
             print('All splits complete.') if verbose else None
             if neptune_run is not None:
@@ -308,8 +310,28 @@ def benchmark(config: dict):
                     neptune_run[f'{benchmark}/test_score'].append(test_score)
                 print('Scores calculated and logged to neptune.') if verbose else None
             print('Skipping to next benchmark.') if verbose else None
+            if config['model'] == 'SklearnGIN':
+                lgbm_out = np.zeros((num_splits, len(df) + 1))
+                if (out_path / f'{benchmark.lower()}_lgbm_preds.npz').exists():
+                    try:
+                        lgbm_out = np.load(out_path / f'{benchmark.lower()}_lgbm_preds.npz')['arr_0']
+                    except:
+                        pass
+                if lgbm_out[-1, -1] == 1:
+                    if neptune_run is not None:
+                        for idx, (train, test) in enumerate(splits):
+                            train_y = df.y[train]
+                            test_y = df.y[test]
+                            train_pred = lgbm_out[idx, train]
+                            test_pred = lgbm_out[idx, test]
+                            train_score = scorer(train_y, train_pred)
+                            test_score = scorer(test_y, test_pred)
+                            neptune_run[f'{benchmark}/lgbm_train_score'].append(train_score)
+                            neptune_run[f'{benchmark}/lgbm_test_score'].append(test_score)
+                
             pbar.update(1)
             continue
+        
         print(f'Task type: {df.task}') if verbose else None
         print(f'Number of splits: {num_splits}') if verbose else None
         print('Loading molecules') if verbose else None
@@ -328,6 +350,7 @@ def benchmark(config: dict):
             extra_transform_kwargs=extra_transform_kwargs,
             verbose=verbose, fit_transform=False,
         )
+        
     
         print('Dataset loaded.') if verbose else None
         print('Checking for saved hyperparameters.') if verbose else None
@@ -417,13 +440,31 @@ def benchmark(config: dict):
             test_pred = model.predict(test_X)
             out[idx, test] = test_pred
             out[idx, -1] = 1 # Mark as complete
+            if config['model'] == 'SklearnGIN':
+                train_embeddings = model.gnn(**train_X)['global_state']
+                lgbm_model = LGBM(task=df.task, seed=seed, verbose=-1)
+                lgbm_model.fit(train_embeddings, train_y)
+                lgbm_train_pred = lgbm_model.predict(train_embeddings)
+                lgbm_out[train] = lgbm_train_pred
+                test_embeddings = model.gnn(**test_X)['global_state']
+                lgbm_test_pred = lgbm_model.predict(test_embeddings)
+                lgbm_out[test] = lgbm_test_pred
 
             if neptune_run is not None:
                 test_score = scorer(df.y[test], test_pred)
                 train_score = scorer(df.y[train], train_pred)
                 neptune_run[f'{benchmark}/train_score'].append(train_score)
                 neptune_run[f'{benchmark}/test_score'].append(test_score)
+                if config['model'] == 'SklearnGIN':
+                    lgbm_test_score = scorer(df.y[test], lgbm_test_pred)
+                    lgbm_train_score = scorer(df.y[train], lgbm_train_pred)
+                    neptune_run[f'{benchmark}/lgbm_train_score'].append(lgbm_train_score)
+                    neptune_run[f'{benchmark}/lgbm_test_score'].append(lgbm_test_score)
+
             np.savez_compressed(out_path / f'{benchmark.lower()}_preds.npz', out)
+            if config['model'] == 'SklearnGIN':
+                np.savez_compressed(out_path / f'{benchmark.lower()}_lgbm_preds.npz', lgbm_out)
+
             kbar.update(1)
         kbar.close()
         
