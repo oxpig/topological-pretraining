@@ -121,6 +121,8 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
 
         if self.neptune_run:
             self.neptune_run[f'{neptune_location}/num_params'].append(sum([p.numel() for p in self.parameters()]))
+            self.neptune_run[f'{neptune_location}/lr'].append(self.lr)
+            self.neptune_run[f'{neptune_location}/vocab_size'].append(vocab_size)
 
     def forward(self, x):
         x = self.gnn(**x)['global_state']
