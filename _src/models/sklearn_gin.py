@@ -182,7 +182,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         for batch in loader:
             batch = batch.to(self.device)
             out = self(batch)
-            preds.append(out.detach().numpy())
+            preds.append(out.detach().cpu().numpy())
         return np.concatenate(preds)
 
     def cal_class_weights(self, y: np.ndarray):
