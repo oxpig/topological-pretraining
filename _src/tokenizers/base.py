@@ -301,7 +301,7 @@ class BaseGraph:
 
         return graph
 
-    def transform(self, mol: Chem.Mol):
+    def transform(self, mol: Chem.Mol|pyg.data.Data):
         """
         Make a graph from a molecule.
 
@@ -311,15 +311,21 @@ class BaseGraph:
             RDKit molecule object.
         
         """
-        graph = self.raw(mol)
-        return self.encode(graph)
+        if isinstance(mol, pyg.data.Data):
+            return self.encode(mol)
+        else:
+            graph = self.raw(mol)
+            return self.encode(graph)
     
-    def __call__(self, X: Chem.Mol|list[Chem.Mol]):
+    def __call__(
+            self,
+            X: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data]
+        ) -> pyg.data.Data|list[pyg.data.Data]:
 
-        if isinstance(X, Chem.Mol|None):
+        if isinstance(X, Chem.Mol|pyg.data.Data|None):
             return self.transform(X)
         
-        assert all(isinstance(m, Chem.Mol|None) for m in X)
+        assert all(isinstance(m, Chem.Mol|pyg.data.Data|None) for m in X)
 
         out = []
         pbar = tqdm(total=len(X), desc='Generating graphs', disable=not self.verbose)
