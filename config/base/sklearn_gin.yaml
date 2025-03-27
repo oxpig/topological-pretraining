@@ -25,6 +25,14 @@ SklearnGIN:
         - 16
         - 32
         - 64
+    head_hidden_dim:
+      target: categorical
+      choices:
+        - 4
+        - 8
+        - 16
+        - 32
+        - 64
     gnn_layers:
       target: int
       low: 1
