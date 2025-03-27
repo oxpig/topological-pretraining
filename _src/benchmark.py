@@ -102,6 +102,7 @@ class HyperOpt:
             if self.model.__name__ == 'SklearnGIN':
                 params['vocab_size'] = self.dataset.tokenizer.vocab_size
                 params['neptune_location'] = f'{self.name}/trials'
+                params['neptune_run'] = self.neptune_run
             model = self.model(seed=self.seed, task=self.task, **params)
             model.fit(train_X, train_y)
             test_pred = model.predict(val_X)
