@@ -190,15 +190,15 @@ class MolDataset:
             self.X = self.tokenizer.transform(self.mols) 
         else:
             print('Tokenizer is precomputed. Skipping fit.') if self.verbose else None
-        
-        if np.any(np.isnan(self.X)):
-            num_cols = len(np.where(np.isnan(self.X).sum(axis=0))[0])
-            num_rows = len(np.where(np.isnan(self.X).sum(axis=1))[0])
-            num_nans = np.isnan(self.X).sum()
-            print(f'NaN values found in X; number of cols = {num_cols}; number of rows = {num_rows}; total NaNs = {num_nans}.')
-            print('Fitting imputer on train data for replacing NaN values with mean...')
-            self.imputer = SimpleImputer(strategy='mean')
-            self.imputer.fit(self.X[train_idx])
+        if isinstance(self.X, np.ndarray):
+            if np.any(np.isnan(self.X)):
+                num_cols = len(np.where(np.isnan(self.X).sum(axis=0))[0])
+                num_rows = len(np.where(np.isnan(self.X).sum(axis=1))[0])
+                num_nans = np.isnan(self.X).sum()
+                print(f'NaN values found in X; number of cols = {num_cols}; number of rows = {num_rows}; total NaNs = {num_nans}.')
+                print('Fitting imputer on train data for replacing NaN values with mean...')
+                self.imputer = SimpleImputer(strategy='mean')
+                self.imputer.fit(self.X[train_idx])
         else:
             self.imputer = None
 
