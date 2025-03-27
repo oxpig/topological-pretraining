@@ -380,3 +380,6 @@ class GraphTokenizer(BaseTokenizer):
         params['transform_kwargs']['edge_types'] = self.edge_types
         params['transform_kwargs']['max_vocab_size'] = self.transform.max_vocab_size
         return params
+
+    def preprocess(self, mols):
+        return [self.transform.raw(m) for m in mols]
