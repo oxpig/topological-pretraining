@@ -122,7 +122,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         if self.task == 'classification':
             self.class_weights = self.cal_class_weights(y)
             self.head.set_class_weight(self.class_weights)
-        print(self.head.class_weights)
+    
         self.train()
         self.optimizer = torch.optim.Adam(
             self.parameters(), lr=self.lr, weight_decay=self.weight_decay
