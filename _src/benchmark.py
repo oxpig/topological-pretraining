@@ -280,6 +280,8 @@ def benchmark(config: dict):
         out_path = Path(results_path) / name
         out_path.mkdir(parents=True, exist_ok=True)
         out = np.zeros((num_splits, len(df) + 1))
+        if config['model'] == 'SklearnGIN':
+            lgbm_out = np.zeros((num_splits, len(df) + 1))
         complete = {}
         if (out_path / f'{benchmark.lower()}_preds.npz').exists():
             print(
@@ -311,7 +313,7 @@ def benchmark(config: dict):
                 print('Scores calculated and logged to neptune.') if verbose else None
             print('Skipping to next benchmark.') if verbose else None
             if config['model'] == 'SklearnGIN':
-                lgbm_out = np.zeros((num_splits, len(df) + 1))
+                
                 if (out_path / f'{benchmark.lower()}_lgbm_preds.npz').exists():
                     try:
                         lgbm_out = np.load(out_path / f'{benchmark.lower()}_lgbm_preds.npz')['arr_0']
