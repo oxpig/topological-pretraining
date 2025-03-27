@@ -46,6 +46,9 @@ class PredHead(MLP):
     
     def score(self, y, pred, mask=None):
         return -np.inf
+    
+    def set_class_weight(self, class_weights: torch.Tensor):
+        pass
 
 class RegressionHead(PredHead):
     """
@@ -94,16 +97,19 @@ class BinaryHead(PredHead):
             num_layers=num_layers, dropout=dropout, batch_norm=batch_norm,
             act=act, final_act=final_act
         )
+        self.set_class_weight(class_weights)
+
+    def set_class_weight(self, class_weights = None):
         if class_weights is None:
             self.class_weights = None
-        else:
-            if class_weights.dim() == 2:
-                class_weights = class_weights.unsqueeze(1)
-            assert class_weights.dim() == 3, 'Class weights must be a 3D tensor.'
-            assert class_weights.size(0) == 2, 'Class weights must have a value for each class at dim 0, 0 and 1.'
-            assert class_weights.size(1) == 1, 'Class weights must have a dimension at dim 1 of length 1 for repeats.'
-            assert class_weights.size(-1) == output_dim, 'Class weights must have a values for each task at dim 2.'
-            self.class_weights = class_weights
+            return
+        if class_weights.dim() == 2:
+            class_weights = class_weights.unsqueeze(1)
+        assert class_weights.dim() == 3, 'Class weights must be a 3D tensor.'
+        assert class_weights.size(0) == 2, 'Class weights must have a value for each class at dim 0, 0 and 1.'
+        assert class_weights.size(1) == 1, 'Class weights must have a dimension at dim 1 of length 1 for repeats.'
+        assert class_weights.size(-1) == self.output_dim, 'Class weights must have a values for each task at dim 2.'
+        self.class_weights = class_weights
 
     @property
     def loss_fn(self):
@@ -161,11 +167,14 @@ class MultiClassHead(PredHead):
             num_layers=num_layers, dropout=dropout, batch_norm=batch_norm,
             act=act, final_act=final_act
         )
+        self.set_class_weight(class_weights)
+
+    def set_class_weight(self, class_weights = None):
         if class_weights is not None:
-            assert len(class_weights) == output_dim, 'Class weights must have the same length as the output dimension.'
+            assert len(class_weights) == self.output_dim, 'Class weights must have the same length as the output dimension.'
             self.class_weights = torch.tensor(class_weights)
         else:
-            self.class_weights = torch.ones(size=(output_dim,))
+            self.class_weights = torch.ones(size=(self.output_dim,))
 
     @property
     def loss_fn(self):
