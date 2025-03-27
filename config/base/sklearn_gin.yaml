@@ -43,8 +43,8 @@ SklearnGIN:
       high: 0.5
     lr:
       target: float
-      low: 1e-5
-      high: 1e-1
+      low: 0.00001
+      high: 0.1
       log: True
     lr_half_life:
       target: float
