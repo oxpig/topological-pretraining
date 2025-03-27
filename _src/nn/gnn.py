@@ -190,7 +190,6 @@ class BaseGNN(torch.nn.Module):
             x = x.view(x.size(0), -1)
             
         for i in range(self.num_layers):
-            print(x.dtype)
             x = self.layers['dropout'](x)
             x = self.layers['batch_norm'](x)
             conv = self.layers[f'conv_{i}']
