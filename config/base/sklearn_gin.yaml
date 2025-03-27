@@ -41,11 +41,6 @@ SklearnGIN:
       target: float
       low: 0.0
       high: 0.5
-    weight_decay:
-      target: float
-      low: 0.0
-      high: 0.5
-      log: True
     lr:
       target: float
       low: 1e-5
