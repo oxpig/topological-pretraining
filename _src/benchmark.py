@@ -447,10 +447,10 @@ def benchmark(config: dict):
                 lgbm_model = LGBM(task=df.task, seed=seed, verbose=-1)
                 lgbm_model.fit(train_embeddings, train_y)
                 lgbm_train_pred = lgbm_model.predict(train_embeddings)
-                lgbm_out[train] = lgbm_train_pred
+                lgbm_out[idx, train] = lgbm_train_pred
                 test_embeddings = model.embed(test_X)
                 lgbm_test_pred = lgbm_model.predict(test_embeddings)
-                lgbm_out[test] = lgbm_test_pred
+                lgbm_out[idx, test] = lgbm_test_pred
 
             if neptune_run is not None:
                 test_score = scorer(df.y[test], test_pred)
