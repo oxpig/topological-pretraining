@@ -103,8 +103,6 @@ class HyperOpt:
             val_X, val_y = self.dataset.test
             if self.model.__name__ == 'SklearnGIN':
                 params['vocab_size'] = self.dataset.tokenizer.vocab_size
-            print(params.get('vocab_size', 0)) if self.verbose else None
-            exit()
             model = self.model(seed=self.seed, task=self.task, **params)
             model.fit(train_X, train_y)
             test_pred = model.predict(val_X)
