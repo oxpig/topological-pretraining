@@ -31,8 +31,11 @@ class BaseGNN(torch.nn.Module):
         gnn_kwargs: dict = {},
         share_weights: bool = False,
         device: str = 'cpu',
+        seed: int = 42,
     ):
         super(BaseGNN, self).__init__()
+        torch.manual_seed(seed)
+        self.seed = seed
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.dropout_value = dropout
@@ -95,6 +98,8 @@ class BaseGNN(torch.nn.Module):
                 self.layers[f'conv_{i}'] = self._init_layer(
                     input_dim=hidden_dim, hidden_dim=hidden_dim, **gnn_kwargs
                 )
+
+        
 
     def _init_layer(self, input_dim, output_dim, **kwargs):
         raise NotImplementedError
