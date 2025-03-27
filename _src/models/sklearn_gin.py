@@ -134,6 +134,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         preds = np.zeros((len(X), self.gnn.out_shape))
         for i, graph in enumerate(data):
             graph = graph.to(self.device)
+            graph = graph.to(self.device)
             out = self.gnn(**graph)['global_state']
             preds[i] = out.detach().cpu().numpy()
         return preds
