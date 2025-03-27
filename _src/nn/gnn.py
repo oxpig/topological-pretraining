@@ -225,5 +225,6 @@ class BaseGNN(torch.nn.Module):
             batch=torch.tensor([0], dtype=torch.long),
             global_idx=torch.tensor([0], dtype=torch.long),
         )
+        example_graph = example_graph.to(next(self.parameters()).device)
         out = self(**example_graph)['global_state']
         return out.size(1)
