@@ -221,6 +221,7 @@ def benchmark(config: dict):
 
     pbar = tqdm(total=len(benchmark_data), desc='Benchmarking', disable=not verbose)
     for benchmark in benchmark_data:
+        hyperparameters_running = deepcopy(hyperparameters)
         model_kwargs = {**base_model_kwargs}
         print(f'\n##################################################\n') if verbose else None
         print(f'Benchmarking on {benchmark}') if verbose else None
@@ -230,6 +231,24 @@ def benchmark(config: dict):
             name=benchmark, root=data_path, compression=True,
             verbose=verbose,
         )
+        if len(df) < 1000 and model_class.__name__ == 'SklearnGIN':
+            print(f'Fewer than 1000 data points. Limiting GIN HP search space') if verbose else None
+            hyperparameters_running['node_embedding_dim']['choices'] = [4, 8, 16,]
+            hyperparameters_running['hidden_dim']['choices'] = [4, 8, 16,]
+            hyperparameters_running['head_hidden_dim']['choices'] = [4, 8, 16,]
+        elif 1000 < len(df) < 5000 and model_class.__name__ == 'SklearnGIN':
+            print(f'Between 1000 and 5000 data points. Limiting GIN HP search space') if verbose else None
+            hyperparameters_running['node_embedding_dim']['choices'] = [8, 16, 32,]
+            hyperparameters_running['hidden_dim']['choices'] = [8, 16, 32,]
+            hyperparameters_running['head_hidden_dim']['choices'] = [8, 16, 32,]
+        elif len(df) > 5000 and model_class.__name__ == 'SklearnGIN':
+            print(f'More than 5000 data points. Limiting GIN HP search space') if verbose else None
+            hyperparameters_running['node_embedding_dim']['choices'] = [16, 32, 64,]
+            hyperparameters_running['hidden_dim']['choices'] = [16, 32, 64,]
+            hyperparameters_running['head_hidden_dim']['choices'] = [16, 32, 64,]
+        else:
+            print(f'Using default HP search space') if verbose else None
+        
         splits: list = list(df.splits)
         num_splits = df.num_splits
         if df.task == 'regression':
@@ -327,7 +346,7 @@ def benchmark(config: dict):
                         data_clusters = data_clusters.to_numpy().astype(int)
                 opt = HyperOpt(
                     model=model_class, model_kwargs=model_kwargs, task=df.task,
-                    hyperparameters=hyperparameters, dataset=dataset,
+                    hyperparameters=hyperparameters_running, dataset=dataset,
                     splits=hyperopt_splits, scorer=scorer, direction=direction,
                     verbose=verbose, neptune_run=neptune_run, name=benchmark,
                     seed=seed, data_clusters=data_clusters, average=df.hyperopt_average
