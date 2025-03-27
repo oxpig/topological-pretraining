@@ -39,10 +39,10 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
             None, 'sum', 'mean',
             'max', 'global_node'
         ] = 'max',
-        gnn_kwargs: dict = {},
+        gnn_kwargs: dict = {'train_eps': True},
         share_weights: bool = False,
         epochs=50, batch_size=32,
-        lr=0.001, lr_half_life=None,
+        lr_scale=1.0, lr_half_life=None,
         weight_decay=0.0,
         head_layers=1, head_hidden_dim=None,
         return_loss=False,
@@ -82,7 +82,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
 
         self.epochs = epochs
         self.batch_size = batch_size
-        self.lr = lr
+        self.lr_scale = lr_scale
         self.lr_half_life = lr_half_life
         self.weight_decay = weight_decay
         self.neptune_location = neptune_location
@@ -117,6 +117,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.to(self.device)
+        self.lr = self.lr_scale*sum([p.numel() for p in self.parameters()]) **-0.5
 
         if self.neptune_run:
             self.neptune_run[f'{neptune_location}/num_params'].append(sum([p.numel() for p in self.parameters()]))

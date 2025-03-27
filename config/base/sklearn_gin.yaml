@@ -50,11 +50,10 @@ SklearnGIN:
       target: float
       low: 0.0
       high: 0.5
-    lr:
+    lr_scale:
       target: float
-      low: 0.00001
-      high: 0.1
-      log: True
+      low: 0.1
+      high: 1.0
     lr_half_life:
       target: float
       low: 5
