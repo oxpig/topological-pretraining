@@ -180,6 +180,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         )
         preds = []
         for batch in loader:
+            batch = batch.to(self.device)
             out = self(batch)
             preds.append(out.detach().numpy())
         return np.concatenate(preds)
