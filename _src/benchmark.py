@@ -441,12 +441,12 @@ def benchmark(config: dict):
             out[idx, test] = test_pred
             out[idx, -1] = 1 # Mark as complete
             if config['model'] == 'SklearnGIN':
-                train_embeddings = model.gnn(**train_X)['global_state']
+                train_embeddings = model.embed(train_X)
                 lgbm_model = LGBM(task=df.task, seed=seed, verbose=-1)
                 lgbm_model.fit(train_embeddings, train_y)
                 lgbm_train_pred = lgbm_model.predict(train_embeddings)
                 lgbm_out[train] = lgbm_train_pred
-                test_embeddings = model.gnn(**test_X)['global_state']
+                test_embeddings = model.embed(test_X)
                 lgbm_test_pred = lgbm_model.predict(test_embeddings)
                 lgbm_out[test] = lgbm_test_pred
 

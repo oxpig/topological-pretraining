@@ -127,6 +127,16 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
     def forward(self, x):
         x = self.gnn(**x)['global_state']
         return self.head(x)
+    
+    def embed(self, X: list[pyg.data.Data]):
+        self.eval()
+        data = GraphDatasetFromList(X, np.zeros(len(X)))
+        preds = np.zeros((len(X), self.gnn.out_shape))
+        for i, graph in enumerate(data):
+            graph = graph.to(self.device)
+            out = self.gnn(**graph)['global_state']
+            preds[i] = out.detach().cpu().numpy()
+        return preds
 
     def fit(self, X: list[pyg.data.Data], y):
         if self.task == 'classification':
