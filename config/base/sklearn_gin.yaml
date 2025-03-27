@@ -38,20 +38,20 @@ SklearnGIN:
         - True
         - False
     dropout:
-      target: uniform
+      target: float
       low: 0.0
       high: 0.5
     weight_decay:
-      target: uniform
+      target: float
       low: 0.0
       high: 0.5
       log: True
     lr:
-      target: uniform
+      target: float
       low: 1e-5
       high: 1e-1
       log: True
     lr_half_life:
-      target: int
+      target: float
       low: 5
       high: 50
