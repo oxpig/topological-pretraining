@@ -211,5 +211,14 @@ class BaseGNN(torch.nn.Module):
             out['node_embedding'] = out['hidden_states'][:, :self.input_dim, :]
         return out
 
-
-        
+    @property
+    def out_shape(self):
+        example_graph = pyg.data.Data(
+            x=torch.zeros((1, self.input_dim), dtype=torch.long),
+            edge_index=torch.tensor([[0],[0]], dtype=torch.long),
+            edge_attr=torch.zeros((1, self.input_dim), dtype=torch.long),
+            batch=torch.tensor([0], dtype=torch.long),
+            global_idx=torch.tensor([0], dtype=torch.long),
+        )
+        out = self(**example_graph)['global_state']
+        return out.size(1)
