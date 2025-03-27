@@ -9,7 +9,7 @@ SklearnGIN:
     tuning: True
     trials: 50
     num_splits: 5
-    node_embedding_size:
+    node_embedding_dim:
       target: categorical
       choices:
         - 4
