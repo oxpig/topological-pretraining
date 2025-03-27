@@ -1,9 +1,14 @@
 from lightgbm import LGBMClassifier, LGBMRegressor
-from sklearn.base import BaseEstimator
 
 class LGBM:
-    def __init__(self, task, seed=42, **kwargs):
+    def __init__(
+        self, task, seed=42,
+        neptune_run=None, neptune_location=None,
+        **kwargs
+    ):
         self.task = task
+        self.neptune_run = neptune_run
+        self.neptune_location = neptune_location
         if task == 'classification':
             if 'is_unbalance' not in kwargs:
                 kwargs['is_unbalance'] = True
