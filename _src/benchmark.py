@@ -240,17 +240,17 @@ def benchmark(config: dict):
             hyperparameters_running['head_hidden_dim']['choices'] = [4, 8]
             hyperparameters_running['head_layers']['high'] = 3
 
-        elif len(df) < 1000 and model_class.__name__ == 'SklearnGIN':
+        elif 500 <= len(df) < 1000 and model_class.__name__ == 'SklearnGIN':
             print(f'Fewer than 1000 data points. Limiting GIN HP search space') if verbose else None
             hyperparameters_running['node_embedding_dim']['choices'] = [4, 8, 16,]
             hyperparameters_running['hidden_dim']['choices'] = [4, 8, 16,]
             hyperparameters_running['head_hidden_dim']['choices'] = [4, 8, 16,]
-        elif 1000 < len(df) < 5000 and model_class.__name__ == 'SklearnGIN':
+        elif 1000 <= len(df) < 5000 and model_class.__name__ == 'SklearnGIN':
             print(f'Between 1000 and 5000 data points. Limiting GIN HP search space') if verbose else None
             hyperparameters_running['node_embedding_dim']['choices'] = [8, 16, 32,]
             hyperparameters_running['hidden_dim']['choices'] = [8, 16, 32,]
             hyperparameters_running['head_hidden_dim']['choices'] = [8, 16, 32,]
-        elif len(df) > 5000 and model_class.__name__ == 'SklearnGIN':
+        elif len(df) >= 5000 and model_class.__name__ == 'SklearnGIN':
             print(f'More than 5000 data points. Limiting GIN HP search space') if verbose else None
             hyperparameters_running['node_embedding_dim']['choices'] = [16, 32, 64,]
             hyperparameters_running['hidden_dim']['choices'] = [16, 32, 64,]
