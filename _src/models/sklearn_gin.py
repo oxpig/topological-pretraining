@@ -118,6 +118,9 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.to(self.device)
 
+        if self.neptune_run:
+            self.neptune_run[f'{neptune_location}/num_params'] = sum([p.numel() for p in self.parameters()])
+
     def forward(self, x):
         x = self.gnn(**x)['global_state']
         return self.head(x)
