@@ -1,0 +1,57 @@
+SklearnGIN:
+  model_kwargs:
+    verbose: False
+    epochs: 50
+    activation: hardswish
+    batch_size: 32
+  model_hyperparameters:
+    tuning: True
+    trials: 50
+    num_splits: 5
+    node_embedding_size:
+      target: categorical
+      choices:
+        - 4
+        - 8
+        - 16
+        - 32
+        - 64
+    hidden_dim:
+      target: categorical
+      choices:
+        - 4
+        - 8
+        - 16
+        - 32
+        - 64
+    gnn_layers:
+      target: int
+      low: 1
+      high: 5
+    head_layers:
+      target: int
+      low: 1
+      high: 5
+    share_weights:
+      target: categorical
+      choices:
+        - True
+        - False
+    dropout:
+      target: uniform
+      low: 0.0
+      high: 0.5
+    weight_decay:
+      target: uniform
+      low: 0.0
+      high: 0.5
+      log: True
+    lr:
+      target: uniform
+      low: 1e-5
+      high: 1e-1
+      log: True
+    lr_half_life:
+      target: int
+      low: 5
+      high: 50
