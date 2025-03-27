@@ -233,7 +233,14 @@ def benchmark(config: dict):
             name=benchmark, root=data_path, compression=True,
             verbose=verbose,
         )
-        if len(df) < 1000 and model_class.__name__ == 'SklearnGIN':
+        if len(df) < 500 and model_class.__name__ == 'SklearnGIN':
+            print(f'Fewer than 500 data points. Limiting GIN HP search space') if verbose else None
+            hyperparameters_running['node_embedding_dim']['choices'] = [2, 4, 8,]
+            hyperparameters_running['hidden_dim']['choices'] = [4, 8,]
+            hyperparameters_running['head_hidden_dim']['choices'] = [4, 8]
+            hyperparameters_running['head_layers']['high'] = 3
+
+        elif len(df) < 1000 and model_class.__name__ == 'SklearnGIN':
             print(f'Fewer than 1000 data points. Limiting GIN HP search space') if verbose else None
             hyperparameters_running['node_embedding_dim']['choices'] = [4, 8, 16,]
             hyperparameters_running['hidden_dim']['choices'] = [4, 8, 16,]
