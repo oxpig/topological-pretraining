@@ -1,6 +1,7 @@
 import numpy as np
 from _src.nn import GIN, RegressionHead, BinaryHead
 from sklearn.base import BaseEstimator
+from sklearn.utils.class_weight import compute_class_weight
 
 import torch
 import torch_geometric as pyg
@@ -88,6 +89,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         self.neptune_run = neptune_run
         self.return_loss = return_loss
         self.verbose = verbose
+        self.class_weights = None
 
         if task == 'classification':
             self.loss_fn = torch.nn.BCELoss()
@@ -117,6 +119,10 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         self.to(self.device)
 
     def fit(self, X: list[pyg.data.Data], y):
+        if self.task == 'classification':
+            self.class_weights = self.cal_class_weights(y)
+            self.head.set_class_weight(self.class_weights)
+        print(self.head.class_weights)
         self.train()
         self.optimizer = torch.optim.Adam(
             self.parameters(), lr=self.lr, weight_decay=self.weight_decay
@@ -147,6 +153,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
                 loss = self.head.loss(y=y, pred=out)
                 if self.neptune_run is not None:
                     self.neptune_run[f'{self.neptune_location}/batch_loss'].append(loss.item())
+                self.optimizer.step()
                 losses[i, j] = loss.item()
                 if lr_scheduler:
                     lr_scheduler.step()
@@ -154,8 +161,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
                 pbar.update()
             pbar.reset()
             loss.backward()
-            self.optimizer.step()
-        
+            
             if self.neptune_run:
                 epoch_mean_loss = losses[i].mean()
                 self.neptune_run[f'{self.neptune_location}/epoch_loss'].append(epoch_mean_loss)
@@ -175,7 +181,11 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
             preds.append(out.detach().numpy())
         return np.concatenate(preds)
 
-    def cal_class_weights(self, y):
-        pass
+    def cal_class_weights(self, y: np.ndarray):
+        weights = compute_class_weight(y=y, classes=np.unique(y), class_weight='balanced')
+        weights = torch.tensor(weights, dtype=torch.float32).to(self.device)
+        weights = weights.unsqueeze(-1).unsqueeze(-1)
+        return weights
+
 
 
