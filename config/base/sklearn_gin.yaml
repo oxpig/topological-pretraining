@@ -4,6 +4,7 @@ SklearnGIN:
     epochs: 50
     activation: hardswish
     batch_size: 32
+    input_dim: 1
   model_hyperparameters:
     tuning: True
     trials: 50
