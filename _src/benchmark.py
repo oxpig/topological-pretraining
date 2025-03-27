@@ -19,8 +19,6 @@ import torch
 from tqdm import tqdm
 from typing import Callable, Generator, Literal
 import yaml
-
-
 import optuna
 
 class HyperOpt:
@@ -106,7 +104,8 @@ class HyperOpt:
             model = self.model(seed=self.seed, task=self.task, **params)
             model.fit(train_X, train_y)
             test_pred = model.predict(val_X)
-            out[idx] = self.scorer(y=val_y, pred=test_pred)
+
+            out[idx] = self.scorer(val_y, test_pred)
             if self.neptune_run is not None:
                 self.neptune_run[f'{self.name}/tuning_scores'].append(out[idx])
                 self.neptune_run[f'{self.name}/trial_num_for_scores'].append(self.trial_count)
