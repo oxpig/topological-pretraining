@@ -101,7 +101,7 @@ class HyperOpt:
             self.dataset.reset(train_idx, val_idx)
             train_X, train_y = self.dataset.train
             val_X, val_y = self.dataset.test
-            if self.model.__class__.__name__ == 'SklearnGIN':
+            if self.model.__name__ == 'SklearnGIN':
                 params['vocab_size'] = self.dataset.tokenizer.vocab_size
             print(params.get('vocab_size', 0)) if self.verbose else None
             exit()
