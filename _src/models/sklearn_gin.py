@@ -118,6 +118,10 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.to(self.device)
 
+    def forward(self, x):
+        x = self.gnn(**x)['global_state']
+        return self.head(x)
+
     def fit(self, X: list[pyg.data.Data], y):
         if self.task == 'classification':
             self.class_weights = self.cal_class_weights(y)
@@ -147,8 +151,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
             self.optimizer.zero_grad()
             for j, batch in enumerate(loader):
                 batch = batch.to(self.device)
-                out = self.gnn(**batch)['global_state']
-                out = self.head(out)
+                out = self(batch)
                 y = batch.y.unsqueeze(1)
                 loss = self.head.loss(y=y, pred=out)
                 if self.neptune_run is not None:
@@ -177,7 +180,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         )
         preds = []
         for batch in loader:
-            out = self(**batch)
+            out = self(batch)
             preds.append(out.detach().numpy())
         return np.concatenate(preds)
 
