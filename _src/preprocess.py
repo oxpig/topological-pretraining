@@ -288,7 +288,16 @@ def preprocess(config: dict):
         mols = df.rdkit_mols[rdkit_passes.index]
         
         fps = morgan_generator(mols)
-        if 'split' not in df.columns[-1]:
+        split_cols = [
+            col for col in df.columns if 'split' in col
+        ]
+        num_splits = splitter_params.get('kfolds', 0) * splitter_params.get('repeats', 0)
+        if num_splits == 0:
+            raise ValueError(
+                'Number of splits is 0. Please check the config file.'
+            )
+        if len(split_cols) < num_splits:
+            df = df.drop(columns=split_cols)
             print(f'Generating splits for {benchmark}') if verbose else None
             splits, groups = splitter(
                 fps, y=rdkit_passes.y.values, verbose=verbose, **splitter_params
