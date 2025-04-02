@@ -297,6 +297,7 @@ def preprocess(config: dict):
                 'Number of splits is 0. Please check the config file.'
             )
         if len(split_cols) < num_splits:
+            csv_path = df.csv
             df = df.drop(columns=split_cols)
             print(f'Generating splits for {benchmark}') if verbose else None
             splits, groups = splitter(
@@ -311,7 +312,6 @@ def preprocess(config: dict):
                 columns=[f'split_{i}' for i in range(splits.shape[1])],
                 index=rdkit_passes.index
             )
-            csv_path = df.csv
             df = df.join(splits)
             df.to_csv(csv_path, compression='infer', index=False)
         else:
