@@ -1,4 +1,3 @@
 extra_transform_kwargs: {}
 neptune: True
-clusters: butina_cluster
 benchmark: subset

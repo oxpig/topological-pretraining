@@ -2,5 +2,4 @@ extra_transform_kwargs:
   variance_threshold: 
     threshold: 0.0
 neptune: True
-clusters: butina_cluster
 benchmark: subset
