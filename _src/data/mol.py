@@ -65,15 +65,16 @@ class MorganGenerator:
             mol = [mol]
         verbosity = self.verbose if len(mol) > 1 else False
         out = []
-        pbar = tqdm(
+        self.pbar = tqdm(
             total=len(mol), disable=not verbosity,
             desc='Generating fingerprints'
         )
         for idx, m in enumerate(mol):
             m = self.dense(m, array=self.asarray) if m is not None else np.full(self.fpsize, np.nan)
             out.append(m)
-            pbar.update()
-        pbar.close()
+            self.pbar.update()
+        self.pbar.close()
+        self.pbar = None
         if self.asarray:
             out = np.array(out)
         return out
@@ -310,11 +311,12 @@ class SortAndSlice:
         ------
             identifiers (dict[str, int]): Dictionary of identifiers and their counts.
         """
-        pbar = tqdm(total=len(molecules), desc='Collecting identifiers', disable=not self.verbose)
+        self.pbar = tqdm(total=len(molecules), desc='Collecting identifiers', disable=not self.verbose)
         for mol in molecules:
             self.append(mol)
-            pbar.update(1)
-        pbar.close()
+            self.pbar.update(1)
+        self.pbar.close()
+        self.pbar = None
 
     def sort(self, key_order = ('num_mols', 'count')):
         """
@@ -407,7 +409,7 @@ class SortAndSlice:
             self.slice()
         if isinstance(molecules, Chem.Mol):
             molecules = [molecules]
-        pbar = tqdm(
+        self.pbar = tqdm(
             total=len(molecules),
             desc='Encoding molecules',
             disable=not self.verbose
@@ -415,8 +417,9 @@ class SortAndSlice:
         out = np.zeros((len(molecules), len(self.encoder)))
         for i, mol in enumerate(molecules):
             out[i] = self.encode(mol)
-            pbar.update(1)
-        pbar.close()
+            self.pbar.update(1)
+        self.pbar.close()
+        self.pbar = None
         return out
     
     def __repr__(self) -> str:
@@ -462,15 +465,15 @@ class MolDesc:
             X = [X]
         out = np.full((len(X), len(self)), np.nan)
 
-        pbar = tqdm(
+        self.pbar = tqdm(
             total=len(X), desc='Calculating Descriptors', disable=not self.verbose
         )
         for idx, mol in enumerate(X):
             if isinstance(mol, Chem.Mol):
                 out[idx] = self.generator.CalcDescriptors(mol)
-            pbar.update()
-        pbar.close()
-
+            self.pbar.update()
+        self.pbar.close()
+        self.pbar = None
         return out
 
 class Standardizer:
@@ -581,7 +584,7 @@ class Standardizer:
             verb = self.verbose
             self.verbose = False
             out = []
-            pbar = tqdm(mol, disable=not verb, desc='Standardizing molecules')
+            self.pbar = tqdm(mol, disable=not verb, desc='Standardizing molecules')
             for idx, m in enumerate(mol):
                 if m is None:
                     print(f'None provide at: {idx}') if verb else None
@@ -590,11 +593,12 @@ class Standardizer:
                 assert isinstance(m, Chem.Mol), 'Input must be an RDKit molecule.'
                 m = self.standardize(m)
                 out.append(m)
-                pbar.update()
+                self.pbar.update()
                 if self.break_at_none and m is None:
                     print(f'Failed at: {idx}') if verb else None
                     break
-            pbar.close()
+            self.pbar.close()
+            self.pbar = None
             self.verbose = verb
             return out
         else:
