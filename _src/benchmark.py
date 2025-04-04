@@ -16,7 +16,7 @@ from sklearn.feature_selection import (
     mutual_info_regression, mutual_info_classif
 )
 from sklearn.model_selection import train_test_split, GroupShuffleSplit
-from sklearn.metrics import mean_absolute_error, average_precision_score
+from sklearn.metrics import mean_absolute_error, roc_auc_score
 import torch
 from tqdm import tqdm
 from typing import Callable, Generator, Literal
@@ -86,18 +86,7 @@ class HyperOpt:
 
         filler = np.inf if self.direction == 'minimize' else -np.inf
         out = np.full((len(self.splits,)), filler)
-        for idx, (train, test) in enumerate(self.splits):
-            if self.data_clusters is not None:
-                train_clusters = self.data_clusters[train]
-                splitter = GroupShuffleSplit(
-                    n_splits=1, random_state=self.seed,
-                    test_size=self.val_size
-                )
-                train_idx, val_idx = next(splitter.split(train, groups=train_clusters))
-            else:
-                train_idx, val_idx = train_test_split(
-                    train, test_size=self.val_size, random_state=self.seed, shuffle=True
-                )
+        for idx, (train_idx, val_idx) in enumerate(self.splits):
             self.dataset.reset(train_idx, val_idx)
             train_X, train_y = self.dataset.train
             val_X, val_y = self.dataset.test
@@ -229,7 +218,6 @@ def benchmark(config: dict):
         model_kwargs = {**base_model_kwargs}
         print(f'\n##################################################\n') if verbose else None
         print(f'Benchmarking on {benchmark}') if verbose else None
-        
         print(f'Loading benchmark {benchmark}') if verbose else None
         df: BaseDataFrame = load_dataset(
             name=benchmark, root=data_path, compression=True,
@@ -266,7 +254,7 @@ def benchmark(config: dict):
             scorer = mean_absolute_error
             direction = 'minimize'
         else:
-            scorer = average_precision_score
+            scorer = roc_auc_score
             direction = 'maximize'
 
 
@@ -383,7 +371,7 @@ def benchmark(config: dict):
                     hyperparameters=hyperparameters_running, dataset=dataset,
                     splits=hyperopt_splits, scorer=scorer, direction=direction,
                     verbose=verbose, neptune_run=neptune_run, name=benchmark,
-                    seed=seed, data_clusters=data_clusters, average=df.hyperopt_average
+                    seed=seed, average=df.hyperopt_average
                 )
                 best_params, best_trial_num = opt.run(trials=trials)
                 model_kwargs.update(best_params)
