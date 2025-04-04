@@ -130,11 +130,13 @@ class PreTrainedGNN(PreTrainedModel):
         params: dict|None = None,
         embed_state: Literal['node', 'global', 'all'] = 'global',
         layer_pool_type: slice|int|Literal['last', 'sum', 'mean', 'max', 'concat'] = None,
+        graph_pool_type: Literal['sum', 'mean', 'max', 'concat']|None = None,
         device: str = None,
         asarray: bool = True,
         **kwargs,
     ):
         self.layer_pool_type = layer_pool_type
+        self.graph_pool_type = graph_pool_type
         self.embed_state = embed_state
         super(PreTrainedGNN, self).__init__(path=path, params=params, device=device, asarray=asarray)
         
@@ -142,6 +144,8 @@ class PreTrainedGNN(PreTrainedModel):
         super().from_dict(params)
         if self.layer_pool_type is not None:
             self.model.layer_pool_type = self.layer_pool_type
+        if self.graph_pool_type is not None:
+            self.model.graph_pool_type = self.graph_pool_type
     
     def embed(self, mol: Chem.Mol|list[Chem.Mol], embed_state: Literal['node', 'global', 'all'] = None):
         if embed_state is not None:
