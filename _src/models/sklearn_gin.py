@@ -49,6 +49,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         neptune_run=None,
         neptune_location='model_loss',
         verbose=False,
+        device='cpu', # for compatibility with other models
         **kwargs
     ):
         super(SklearnGIN, self).__init__()

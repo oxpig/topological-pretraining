@@ -4,11 +4,16 @@ class LGBM:
     def __init__(
         self, task, seed=42,
         neptune_run=None, neptune_location=None,
+        device='cpu',
         **kwargs
     ):
         self.task = task
         self.neptune_run = neptune_run # for compatibility with other models
         self.neptune_location = neptune_location # for compatibility with other models
+        if device == 'cuda':
+            device = 'gpu'
+        self.kwargs = kwargs
+        self.kwargs['device'] = device
         if task == 'classification':
             if 'is_unbalance' not in kwargs:
                 kwargs['is_unbalance'] = True

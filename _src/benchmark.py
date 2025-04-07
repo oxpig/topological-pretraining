@@ -23,6 +23,8 @@ from typing import Callable, Generator, Literal
 import yaml
 import optuna
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 class HyperOpt:
     trial_count = 0
     def __init__(
@@ -177,7 +179,7 @@ def benchmark(config: dict):
         benchmark_data = [benchmark_data]
     model_class = get_model(config['model'])
     base_model_kwargs = config.get('model_kwargs', {})
-
+    base_model_kwargs['device'] = device
     tokenizer_class = config['tokenizer']
     tokenizer_kwargs = config.get('tokenizer_kwargs', {})
     extra_transform_kwargs = config.get('extra_transform_kwargs', {})
