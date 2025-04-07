@@ -16,7 +16,8 @@ class PreTrainedModel(torch.nn.Module):
         path: str|None = None,
         params: dict|None = None,
         device: str = None,
-        asarray: bool = True
+        asarray: bool = True,
+        rest_on_cpu: bool = True,
     ):
         super(PreTrainedModel, self).__init__()
         self.asarray = asarray
@@ -26,6 +27,7 @@ class PreTrainedModel(torch.nn.Module):
             else:
                 device = 'cpu'
         self.device = device
+        self.rest_on_cpu = rest_on_cpu
         if params is not None:
             self.from_dict(params)
         elif path is not None:
@@ -63,9 +65,12 @@ class PreTrainedModel(torch.nn.Module):
         return self.model(x)
 
     def forward(self, x: Chem.Mol):
+        self.to_device()
         x = self.embed(x)
         if self.asarray:
             x = x.detach().cpu().numpy()
+        if self.rest_on_cpu:
+            super().to('cpu')
         return x
     
     def get_head_preds(
