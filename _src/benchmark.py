@@ -430,8 +430,6 @@ def benchmark(config: dict):
             model.fit(train_X, train_y)
             end = datetime.now()
             print(f'Time taken to fit: {end - start}') if verbose else None
-            if idx == 10:
-                exit()
             print(f'Getting predictions...') if verbose else None
             train_pred = model.predict(train_X)
             out[idx, train] = train_pred
