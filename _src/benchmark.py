@@ -416,6 +416,7 @@ def benchmark(config: dict):
                 model_kwargs['verbose'] = 0
                 model_kwargs['vocab_size'] = dataset.tokenizer.vocab_size
             
+            print(f'Fitting model...') if verbose else None
             model = model_class(
                 seed=seed, task=df.task,
                 neptune_run=neptune_run,
@@ -423,7 +424,12 @@ def benchmark(config: dict):
                 **model_kwargs
             )
             train_X, train_y = dataset.train
+            from datetime import datetime
+            start = datetime.now()
             model.fit(train_X, train_y)
+            end = datetime.now()
+            print(f'Time taken to fit: {end - start}') if verbose else None
+            print(f'Getting predictions...') if verbose else None
             train_pred = model.predict(train_X)
             out[idx, train] = train_pred
 
