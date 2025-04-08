@@ -138,7 +138,7 @@ class MorganGenerator:
         self.generator.GetSparseFingerprint(mol, additionalOutput=ao)
         return ao.GetBitInfoMap()
     
-    def environments(self, mol: Chem.Mol, tally: bool = False) -> dict:
+    def environments(self, mol: Chem.Mol, ) -> dict:
         """
         Get array of hashed substructure identifiers mapped to atom indices and radii.
 
