@@ -146,8 +146,6 @@ class MorganGenerator:
         ----------
         mol : rdkit.Chem.rdchem.Mol
             The molecule.
-        tally : bool, optional
-            Whether to return the tally of substructures. Defaults to False.
         
         Returns
         -------
