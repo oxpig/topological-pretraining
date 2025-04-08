@@ -389,7 +389,7 @@ def benchmark(config: dict):
         if neptune_run is not None:
             neptune_run[f'{benchmark}/model_kwargs'] = model_kwargs
             neptune_run[f'{benchmark}/best_trial'] = best_trial_num
-        kbar = tqdm(total=num_splits, desc='Splits', disable=not verbose)
+        kbar = tqdm(total=num_splits, desc=f'Benchmark: {benchmark} | Splits', disable=not verbose)
         for idx, (train, test) in enumerate(splits):
             if idx in complete:
                 if neptune_run is not None:
