@@ -152,10 +152,15 @@ class PreTrainedGNN(PreTrainedModel):
         if self.graph_pool_type is not None:
             self.model.graph_pool_type = self.graph_pool_type
     
-    def embed(self, mol: Chem.Mol|list[Chem.Mol], embed_state: Literal['node', 'global', 'all'] = None):
+    def embed(
+            self,
+            mol: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data],
+            embed_state: Literal['node', 'global', 'all'] = None
+        ):
         if embed_state is not None:
             self.embed_state = embed_state
-        graph = self.tokenize(mol)
+        if all(isinstance(m, Chem.Mol) for m in mol):
+            graph = self.tokenize(mol)
         if isinstance(graph, list):
             graph = pyg.data.Batch.from_data_list(graph)
         graph = graph.to(self.device)
