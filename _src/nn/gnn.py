@@ -99,8 +99,6 @@ class BaseGNN(torch.nn.Module):
                     input_dim=hidden_dim, hidden_dim=hidden_dim, **gnn_kwargs
                 )
 
-        
-
     def _init_layer(self, input_dim, output_dim, **kwargs):
         raise NotImplementedError
     
@@ -165,30 +163,33 @@ class BaseGNN(torch.nn.Module):
                 f'Invalid graph pooling method: {self.graph_pool_type}\n'\
                 'Valid options are: sum, mean, max.'
             )
-    
-    def forward(
-        self, x, edge_index,
-        edge_weight = None, edge_attr = None, batch = None,
-        global_idx = None, **kwargs
-    ):
-        if x is None: return None
-        out = {
-            'input': x,
-        }
-        state = 0
-        num_hidden_states = self.num_hidden_states
-        out['hidden_states'] = torch.zeros((x.size(0), num_hidden_states, self.hidden_dim)).to(x.device)
         
+    def prepare_out(self, x: torch.Tensor):
+        out = {'input': x}
+        num_hidden_states = self.num_hidden_states
+        out['hidden_states'] = torch.zeros(
+            (x.size(0), num_hidden_states, self.hidden_dim)
+        ).to(x.device)
+        out['state'] = 0
+        return out
+        
+    def embed_nodes(
+        self, out: dict, x: torch.Tensor, 
+    ):
         if self.node_vocab_size is not None:
             x = self.layers['node_embedding'](x)
             if self.node_embedding_dim == self.hidden_dim:
                 out['hidden_states'][:, :x.size(1), :] = x
                 out['node_embedding'] = None
-                state += x.size(1)
+                out['state'] += x.size(1)
             else:
                 out['node_embedding'] = x
             x = x.view(x.size(0), -1)
-            
+        return out, x
+        
+    def convolutions(
+        self, out, x, edge_index, edge_weight=None, edge_attr=None
+    ):
         for i in range(self.num_layers):
             x = self.layers['dropout'](x)
             x = self.layers['batch_norm'](x)
@@ -205,15 +206,37 @@ class BaseGNN(torch.nn.Module):
             else:
                 x = conv(x, edge_index)
             x = self.layers['act'](x)
-            out['hidden_states'][:, state, :] = x
-            state += 1
-
+            out['hidden_states'][:, out['state'], :] = x
+            out['state'] += 1
+        return out
+    
+    def pooling(self, out: dict, batch: torch.Tensor, global_idx):
         out['final_state'] = self.layer_pool(out)
         out['global_state'] = self.graph_pool(
             out['final_state'], batch, global_idx
         )
+        return out
+    
+    def record_node_embedding(self, out: dict):
         if out['node_embedding'] is None:
             out['node_embedding'] = out['hidden_states'][:, :self.input_dim, :]
+        return out
+    
+    def forward(
+        self, x, edge_index,
+        edge_weight = None, edge_attr = None, batch = None,
+        global_idx = None, **kwargs
+    ):
+        if x is None: return None
+        out = self.prepare_out(x)
+        out, x = self.embed_nodes(out, x)
+        out = self.convolutions(
+            out=out, x=x, edge_index=edge_index,
+            edge_weight=edge_weight, edge_attr=edge_attr
+        )
+        out = self.pooling(out=out, batch=batch, global_idx=global_idx)
+        out = self.record_node_embedding(out)
+        
         return out
 
     @property
