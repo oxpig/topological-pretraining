@@ -186,6 +186,7 @@ class MolDataset:
         # Fit the tokenizer if it is not precomputed or if the tokenized data is not available
         # Precomputed tokenizers do not need to be refit (e.g. Morgan fingerprints)
         if not self.tokenizer.precomputed or self.X is None:
+            del self.X
             print('Fitting tokenizer...') if self.verbose else None
             train_mols = [self.mols[i] for i in train_idx]
             y = self.y[train_idx] if self.y is not None else None
