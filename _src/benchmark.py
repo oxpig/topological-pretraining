@@ -463,7 +463,7 @@ def benchmark(config: dict):
             np.savez_compressed(out_path / f'{benchmark.lower()}_preds.npz', out)
             if config['model'] == 'SklearnGIN':
                 np.savez_compressed(out_path / f'{benchmark.lower()}_lgbm_preds.npz', lgbm_out)
-
+            del model
             kbar.update(1)
         kbar.close()
         
