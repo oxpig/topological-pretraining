@@ -254,13 +254,17 @@ class SortAndSlice:
         generator: MorganGenerator,
         molecules: list[Chem.Mol] = None,
         fpsize: int = None,
+        save_img: bool = False,
         verbose: bool = False,
     ):
         self.generator = generator
         self.verbose = verbose
         self.identifiers = {}
         self.encoder = None
+        self.decoder = None
         self.fpsize = fpsize
+        self.save_img = save_img
+
         if molecules is not None:
             self.update(molecules)
             self.slice(fpsize)
@@ -280,6 +284,11 @@ class SortAndSlice:
         else:
             raise ValueError('Input must be a RDKit molecule or an envs array.')
 
+        if self.save_img: 
+            bit_info = self.generator.bitinfo(mol)
+        else: 
+            bit_info = None
+
         starter = {r: 0 for r in range(radius + 1)}
         starter['num_mols'] = 0
         starter['count'] = 0
@@ -294,6 +303,12 @@ class SortAndSlice:
                 value[r] += count
                 if id not in done:
                     value['num_mols'] += 1
+                    if self.save_img:
+                        value['img'] = Chem.Draw.DrawMorganBit(
+                            mol, bitId=id, bitInfo=bit_info,
+                            extraColor=(0.6, 0.6, 0.6)
+                        )
+                        
                     done[id] = True
                 self.identifiers[id] = value
 
@@ -344,14 +359,17 @@ class SortAndSlice:
         if self.verbose:
             print(f'Attempting to set bit length of encoder to a max of {fpsize}.')
         encoder = {}
+        decoder = {}
         count = 0
         for k in self.identifiers.keys():
             if count >= fpsize:
                 break
             encoder[k] = count
+            decoder[count] = k
             count += 1
 
         self.encoder = encoder
+        self.decoder = decoder
         if len(encoder) < fpsize:
             if self.verbose:
                 print(
