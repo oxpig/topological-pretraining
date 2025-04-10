@@ -154,33 +154,36 @@ class PreTrainedGNN(PreTrainedModel):
     
     def embed(
             self,
-            mol: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data],
+            X: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data],
             embed_state: Literal['node', 'global', 'all'] = None
         ):
         if embed_state is not None:
             self.embed_state = embed_state
-        if all(isinstance(m, Chem.Mol) for m in mol):
-            graph = self.tokenize(mol)
-        if isinstance(graph, list):
-            graph = pyg.data.Batch.from_data_list(graph)
-        graph = graph.to(self.device)
-        x = self.model(
-            x=graph.x, edge_index=graph.edge_index, edge_attr=graph.edge_attr,
-            batch=graph.batch, global_idx=graph.get('global_idx')
-        )
-        if self.embed_state == 'node':
-            return x['final_state']
-        elif self.embed_state == 'global':
-            return x['global_state']
-        elif self.embed_state == 'all':
-            return x
-        else:
-            raise ValueError(
-                f'Invalid embed_state {self.embed_state}. '\
-                f'Must be one of "node", "global", or "all".'
-            )
-
-
+        if isinstance(X, Chem.Mol|pyg.data.Data):
+            X = [X]
+        if all(isinstance(x, Chem.Mol) for x in X):
+            X = self.tokenize(X)
+        out = []
+        for x in X:
+            x = x.to(self.device)
+            x = self.model(**x)
+            if self.embed_state == 'node':
+                x = x['final_state']
+            elif self.embed_state == 'global':
+                x = x['global_state']
+            elif self.embed_state == 'all':
+                pass
+            else:
+                raise ValueError(
+                    f'Invalid embed_state {self.embed_state}. '\
+                    f'Must be one of "node", "global", or "all".'
+                )
+            out.append(x)
+        if self.embed_state != 'all':
+            out = torch.vstack(out)
+        return out
+        
+        
 class PreTrainedTokenizer(BaseTokenizer):
 
     is_fitted_ = True
@@ -201,4 +204,5 @@ class PreTrainedTokenizer(BaseTokenizer):
         self, embed_state: Literal['node', 'global', 'all']
     ):
         self.transform.embed_state = embed_state
+        self.transform.asarray = False
 
