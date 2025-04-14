@@ -1,5 +1,6 @@
 import numpy as np
 from rdkit import Chem
+from rdkit.Chem import Draw
 from rdkit.Chem.rdFingerprintGenerator import (
     AdditionalOutput, AtomInvariantsGenerator, BondInvariantsGenerator,
     GetMorganGenerator
@@ -304,7 +305,7 @@ class SortAndSlice:
                 if id not in done:
                     value['num_mols'] += 1
                     if self.save_img:
-                        value['img'] = Chem.Draw.DrawMorganBit(
+                        value['img'] = Draw.DrawMorganBit(
                             mol, bitId=id, bitInfo=bit_info,
                             extraColor=(0.6, 0.6, 0.6)
                         )
