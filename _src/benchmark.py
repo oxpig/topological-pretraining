@@ -177,8 +177,8 @@ def benchmark(config: dict):
         ]
     if isinstance(benchmark_data, str):
         benchmark_data = [benchmark_data]
-    if 'MUV733' in benchmark_data:
-        benchmark_data.remove('MUV733')
+    # if 'MUV733' in benchmark_data:
+    #     benchmark_data.remove('MUV733')
     model_class = get_model(config['model'])
     base_model_kwargs = config.get('model_kwargs', {})
     base_model_kwargs['device'] = device
