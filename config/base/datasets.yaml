@@ -20,7 +20,7 @@ benchmark:
   - MUV692
   - MUV712
   - MUV713
-  - MUV733 skip due to issue with no true vals in one of hp folds
+  - MUV733
   - MUV737
   - MUV810
   - MUV832
