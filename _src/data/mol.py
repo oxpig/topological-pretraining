@@ -309,6 +309,11 @@ class SortAndSlice:
                             mol, bitId=id, bitInfo=bit_info,
                             extraColor=(0.6, 0.6, 0.6)
                         )
+                        atom = mol.GetAtomWithIdx(
+                            bit_info[id][0][0]
+                        )
+                        value['central_atom'] = atom.GetSymbol()
+                        value["aromatic"] = atom.GetIsAromatic()
                         
                     done[id] = True
                 self.identifiers[id] = value
