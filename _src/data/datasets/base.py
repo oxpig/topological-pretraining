@@ -145,7 +145,7 @@ class BaseDataFrame(pd.DataFrame):
 
     @property
     def splits(self):
-        columns = self.columns
+        columns = [col for col in self.columns if 'split' in col]
         columns = list(sorted(columns, key=lambda x: int(x.split('_')[1])))
         for col in columns:
             if 'split' in col:
