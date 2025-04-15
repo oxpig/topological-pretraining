@@ -30,3 +30,10 @@ class LGBM:
         
         else:
             return self.model.predict(X)
+        
+    def get_feature_importance(self):
+        return self.model.feature_importances_
+
+    @property
+    def feature_importances(self):
+        return self.get_feature_importance()
