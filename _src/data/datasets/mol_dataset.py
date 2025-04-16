@@ -85,7 +85,8 @@ class MolDataset:
         train_idx: Optional[np.ndarray] = None, test_idx: Optional[np.ndarray] = None,
         tokenizer: Literal[
             'ECFP', 'FCFP', 'PDV', 'SNS',
-            'AtomGraphTokenizer', 'MorganGraphTokenizer'
+            'AtomGraphTokenizer', 'MorganGraphTokenizer',
+            'PreTrainedTokenizer'
         ] = None,
         tokenizer_kwargs: dict = {}, extra_transform_kwargs: dict = {},
         verbose: bool = False, fit_transform: bool = False,
