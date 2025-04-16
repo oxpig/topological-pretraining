@@ -161,29 +161,35 @@ class PreTrainedGNN(PreTrainedModel):
             self.embed_state = embed_state
         if isinstance(X, Chem.Mol|pyg.data.Data):
             X = [X]
-        if all(isinstance(x, Chem.Mol) for x in X):
+        if all(isinstance(x, Chem.Mol|None) for x in X):
             X = self.tokenize(X)
+        out_shape = (1, self.model.out_shape)
         out = []
         for x in X:
-            x = x.to(self.device)
-            x = self.model(**x)
-            if self.embed_state == 'node':
-                x = x['final_state']
-            elif self.embed_state == 'global':
-                x = x['global_state']
-            elif self.embed_state == 'all':
-                pass
+            if x is not None:
+                x = x.to(self.device)
+                x = self.model(**x)
+                if self.embed_state == 'node':
+                    x = x['final_state']
+                elif self.embed_state == 'global':
+                    x = x['global_state']
+                elif self.embed_state == 'all':
+                    pass
+                else:
+                    raise ValueError(
+                        f'Invalid embed_state {self.embed_state}. '\
+                        f'Must be one of "node", "global", or "all".'
+                    )
             else:
-                raise ValueError(
-                    f'Invalid embed_state {self.embed_state}. '\
-                    f'Must be one of "node", "global", or "all".'
+                x = torch.full(
+                    size=out_shape, fill_value=torch.nan, device=self.device
                 )
             out.append(x)
         if self.embed_state != 'all':
             out = torch.vstack(out)
         return out
         
-        
+ 
 class PreTrainedTokenizer(BaseTokenizer):
 
     is_fitted_ = True
