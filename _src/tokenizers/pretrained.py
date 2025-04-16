@@ -212,3 +212,11 @@ class PreTrainedTokenizer(BaseTokenizer):
         self.transform.embed_state = embed_state
         self.transform.asarray = False
 
+    def preprocess(self, X: Chem.Mol|list[Chem.Mol]):
+        """
+        Transform the input data into the raw format.
+        """
+        if isinstance(X, Chem.Mol):
+            X = [X]
+        X = self.transform.tokenize(X)
+        return X
