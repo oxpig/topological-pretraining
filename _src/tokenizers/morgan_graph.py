@@ -50,12 +50,13 @@ class MorganGraph(BaseGraph):
         )
 
     @property
-    def x_size(self):
-        return self.sort_and_slice.generator.radius + 1
-    
-    @property
-    def edge_attr_size(self):
-        return 1
+    def empty_graph(self):
+        return pyg.data.Data(
+                raw=True,
+                x=torch.empty((0, 3), dtype=torch.long),
+                edge_index=torch.empty((2, 0), dtype=torch.long),
+                edge_attr=torch.empty((0, 1), dtype=torch.long),
+            )
     
     def get_nodes(self, mol):
         envs = self.sort_and_slice.generator.environments(mol)

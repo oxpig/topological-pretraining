@@ -251,6 +251,12 @@ class BaseGraph:
     @property
     def edge_attr_size(self):
         raise NotImplementedError("edge_attr_size must be implemented in subclasses.")
+    
+    @property
+    def empty_graph(self):
+        raise NotImplementedError(
+            "empty_graph must be implemented in subclasses. \
+            Method for handling None inputs.")
         
     def raw(self, mol: Chem.Mol):
         """
@@ -267,10 +273,8 @@ class BaseGraph:
             The raw graph data.
         """
         if mol is None:
-            return pyg.data.Data(
-                raw=True, x=torch.empty((0, self.x_size)), edge_index=torch.empty((2, 0), dtype=torch.long),
-                edge_attr=torch.empty((0, self.edge_attr_size), dtype=torch.long)
-            )
+            return self.empty_graph
+        
         x = self.get_nodes(mol)
         # initialize edge index and edge attributes
         edge_index, edge_attr = self.get_edges(mol)
