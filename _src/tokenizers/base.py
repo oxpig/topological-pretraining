@@ -245,14 +245,6 @@ class BaseGraph:
         return graph
     
     @property
-    def x_size(self):
-        raise NotImplementedError("x_size must be implemented in subclasses.")
-    
-    @property
-    def edge_attr_size(self):
-        raise NotImplementedError("edge_attr_size must be implemented in subclasses.")
-    
-    @property
     def empty_graph(self):
         raise NotImplementedError(
             "empty_graph must be implemented in subclasses. \

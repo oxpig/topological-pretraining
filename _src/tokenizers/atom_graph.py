@@ -65,20 +65,14 @@ class AtomGraph(BaseGraph):
         return x
     
     @property
-    def x_size(self):
-        """
-        Get the size of the node descriptor. 
-        (i.e. the number of tokens / features per node in the raw graph)
-        """
-        return 1
-    
-    @property
-    def edge_attr_size(self):
-        """
-        Get the size of the edge descriptor. 
-        (i.e. the number of tokens / features per edge in the raw graph)
-        """
-        return 1
+    def empty_graph(self):
+        return pyg.data.Data(
+                raw=True,
+                empty=True,
+                x=torch.full((1, 1), fill_value=self.node_types["UNK"], dtype=torch.long),
+                edge_index=torch.empty((2, 0), dtype=torch.long),
+                edge_attr=torch.empty((0, 1), dtype=torch.long),
+            )
 
 class AtomGraphTokenizer(GraphTokenizer):
 

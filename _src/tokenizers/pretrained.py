@@ -166,7 +166,7 @@ class PreTrainedGNN(PreTrainedModel):
         out_shape = (1, self.model.out_shape)
         out = []
         for x in X:
-            if x is not None:
+            if not x.get("empty", False):
                 x = x.to(self.device)
                 x = self.model(**x)
                 if self.embed_state == 'node':
