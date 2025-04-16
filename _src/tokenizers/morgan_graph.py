@@ -48,6 +48,14 @@ class MorganGraph(BaseGraph):
         self.sort_and_slice = SortAndSlice(
             generator=morgan, verbose=verbose  
         )
+
+    @property
+    def x_size(self):
+        return self.sort_and_slice.generator.radius + 1
+    
+    @property
+    def edge_attr_size(self):
+        return 1
     
     def get_nodes(self, mol):
         envs = self.sort_and_slice.generator.environments(mol)

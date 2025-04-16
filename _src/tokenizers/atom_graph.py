@@ -63,6 +63,22 @@ class AtomGraph(BaseGraph):
         for atom in mol.GetAtoms():
             x[atom.GetIdx()] = atom.GetAtomicNum()
         return x
+    
+    @property
+    def x_size(self):
+        """
+        Get the size of the node descriptor. 
+        (i.e. the number of tokens / features per node in the raw graph)
+        """
+        return 1
+    
+    @property
+    def edge_attr_size(self):
+        """
+        Get the size of the edge descriptor. 
+        (i.e. the number of tokens / features per edge in the raw graph)
+        """
+        return 1
 
 class AtomGraphTokenizer(GraphTokenizer):
 
