@@ -196,7 +196,7 @@ class MolDataset:
         else:
             print('Tokenizer is precomputed. Skipping fit.') if self.verbose else None
         if isinstance(self.X, np.ndarray):
-            if np.any(np.isnan(self.X)):
+            if np.any(np.isnan(self.X[train_idx])) or np.any(np.isnan(self.X[test_idx])):
                 num_cols = len(np.where(np.isnan(self.X).sum(axis=0))[0])
                 num_rows = len(np.where(np.isnan(self.X).sum(axis=1))[0])
                 num_nans = np.isnan(self.X).sum()
