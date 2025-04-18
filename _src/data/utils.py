@@ -1,11 +1,15 @@
-from . import datasets
-from .mol import Standardizer
+from __future__ import annotations
+from _src.data.datasets import __dict__ as dataset_classes
+from _src.data.mol import Standardizer
 
 import numpy as np
 import pandas as pd
 from rdkit import Chem, DataStructs
 from tqdm import tqdm
-from typing import Literal
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from _src.data.datasets import BaseDataFrame
 
 def load_dataset(
     name: str,
@@ -13,7 +17,7 @@ def load_dataset(
     compression: bool = True,
     verbose: bool = False,
     standardizer: Standardizer = Standardizer(),
-) -> datasets.BaseDataFrame:
+) -> BaseDataFrame:
     """
     Load a dataset from dataset module.
 
@@ -26,7 +30,7 @@ def load_dataset(
     
     Returns
     -------
-    out: datasets.BaseDataFrame
+    out: BaseDataFrame
         The dataset.
     """
     available_datasets = [
@@ -48,14 +52,14 @@ def load_dataset(
     # assert name in available_datasets, f'Invalid dataset name. \
     #     Must be one of {available_datasets}.'
     print(f'Loading {name}...') if verbose else None
-    return datasets.__dict__[name](
+    return dataset_classes[name](
         root=root, compression=compression, verbose=verbose,
         standardizer=standardizer
     )
 
 
 def load_molecules(
-    dataset: datasets.BaseDataFrame|pd.DataFrame,
+    dataset: BaseDataFrame|pd.DataFrame,
     verbose: bool = False
 ):
     """
