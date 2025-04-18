@@ -247,14 +247,14 @@ def benchmark(config: dict):
             hyperparameters_running['node_embedding_dim']['choices'] = [8, 16, 32,]
             hyperparameters_running['hidden_dim']['choices'] = [8, 16, 32,]
             hyperparameters_running['head_hidden_dim']['choices'] = [8, 16, 32,]
-            base_model_kwargs['batch_size'] = 32
+            base_model_kwargs['batch_size'] = 64
 
         elif len(df) >= 5000 and model_class.__name__ == 'SklearnGIN':
             print(f'More than 5000 data points. Limiting GIN HP search space') if verbose else None
             hyperparameters_running['node_embedding_dim']['choices'] = [16, 32, 64,]
             hyperparameters_running['hidden_dim']['choices'] = [16, 32, 64,]
             hyperparameters_running['head_hidden_dim']['choices'] = [16, 32, 64,]
-            base_model_kwargs['batch_size'] = 64
+            base_model_kwargs['batch_size'] = 128
 
         else:
             print(f'Using default HP search space') if verbose else None
