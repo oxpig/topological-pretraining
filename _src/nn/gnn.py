@@ -185,6 +185,8 @@ class BaseGNN(torch.nn.Module):
             else:
                 out['node_embedding'] = x
             x = x.view(x.size(0), -1)
+        else:
+            out['node_embedding'] = None
         return out, x
         
     def convolutions(
@@ -192,7 +194,8 @@ class BaseGNN(torch.nn.Module):
     ):
         for i in range(self.num_layers):
             x = self.layers['dropout'](x)
-            x = self.layers['batch_norm'](x)
+            if i != 0 and self.use_batch_norm:
+                x = self.layers['batch_norm'](x)
             conv = self.layers[f'conv_{i}']
             if self.use_edge_weight and self.use_edge_attr:
                 x = conv(
@@ -241,13 +244,19 @@ class BaseGNN(torch.nn.Module):
 
     @property
     def out_shape(self):
+        if self.node_embedding_dim is not None:
+            x_dtype = torch.long
+        else:
+            x_dtype = torch.float
         example_graph = pyg.data.Data(
-            x=torch.zeros((1, self.input_dim), dtype=torch.long),
+            x=torch.zeros((1, self.input_dim), dtype=x_dtype),
             edge_index=torch.tensor([[0],[0]], dtype=torch.long),
             edge_attr=torch.zeros((1, self.input_dim), dtype=torch.long),
             batch=torch.tensor([0], dtype=torch.long),
             global_idx=torch.tensor([0], dtype=torch.long),
         )
         example_graph = example_graph.to(next(self.parameters()).device)
-        out = self(**example_graph)['global_state']
+        with torch.no_grad():
+            self.eval()
+            out = self(**example_graph)['global_state']
         return out.size(1)
