@@ -1,4 +1,5 @@
 import torch
+from typing import Callable
 
 act_fn = {
     'relu': torch.nn.ReLU(),
@@ -12,6 +13,15 @@ act_fn = {
     None: torch.nn.Identity()
 }
 
+initializers = {
+    'standard': 'standard',
+    'xavier_uniform': torch.nn.init.xavier_uniform_,
+    'xavier_normal': torch.nn.init.xavier_normal_,
+    'normal': torch.nn.init.normal_,
+    'zeros': torch.nn.init.zeros_,
+    'ones': torch.nn.init.ones_,
+}
+
 class MLP(torch.nn.Module):
     def __init__(
         self,
@@ -23,8 +33,25 @@ class MLP(torch.nn.Module):
         batch_norm: bool = False,
         act: str = 'relu',
         final_act: str = None,
+        weight_init: str|Callable = 'standard',
+        bias_init: str|Callable = 'standard',
     ):
         super(MLP, self).__init__()
+        if isinstance(weight_init, str):
+            if weight_init not in initializers:
+                raise ValueError(
+                    f"Invalid weights initializer: {weight_init}. Must be callable or one of {list(initializers.keys())}."
+                )
+            weight_init = initializers[weight_init]
+        if isinstance(bias_init, str):
+            if bias_init not in initializers:
+                raise ValueError(
+                    f"Invalid bias initializer: {bias_init}. Must be callable or one of {list(initializers.keys())}."
+                )
+            bias_init = initializers[bias_init]
+        
+        self.weight_init = weight_init
+        self.bias_init = bias_init
         if output_dim is None:
             output_dim = hidden_dim
         if num_layers == 1:
@@ -72,5 +99,13 @@ class MLP(torch.nn.Module):
         Reset the parameters of the MLP.
         """
         for layer in self.layers:
-            torch.nn.init.xavier_normal_(layer.weight)
-            torch.nn.init.zeros_(layer.bias)
+
+            if not isinstance(layer, torch.nn.Linear):
+                continue
+            if self.weight_init == 'standard':
+                layer.reset_parameters()
+            else:
+                self.weight_init(layer.weight)
+            if layer.bias is not None and self.bias_init != 'standard':
+                self.bias_init(layer.bias)
+            
