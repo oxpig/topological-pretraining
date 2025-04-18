@@ -18,13 +18,15 @@ class GINLayer(pyg.nn.conv.GINConv):
         act: str = 'relu',
         eps: float = 0.0,
         train_eps: bool = False,
+        weight_init: str = 'standard',
+        bias_init: str = 'standard',
         **kwargs,
     ):
         if mlp is None:
             mlp = MLP(
                 input_dim=input_dim, output_dim=output_dim, hidden_dim=hidden_dim,
                 num_layers=num_layers, dropout=dropout, batch_norm=batch_norm,
-                act=act,
+                act=act, weight_init=weight_init, bias_init=bias_init,
             )
         else:
             mlp = mlp
