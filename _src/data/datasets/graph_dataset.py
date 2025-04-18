@@ -1,5 +1,6 @@
-from ...tokenizers import GraphTokenizer, load_tokenizer
-from ...tokenizers.targets import Targets
+from __future__ import annotations
+from _src.tokenizers import load_tokenizer
+from _src.tokenizers.targets import Targets
 
 import numpy as np
 from pathlib import Path
@@ -10,9 +11,13 @@ import copy
 from tqdm import tqdm
 from rdkit import Chem
 
-from typing import Optional, Callable
+
+from typing import Optional, Callable, TYPE_CHECKING
 import warnings
 
+if TYPE_CHECKING:
+    from _src.tokenizers import GraphTokenizer
+    
 
 class PreFilter:
 
