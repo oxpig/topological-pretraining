@@ -43,6 +43,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         share_weights: bool = False,
         epochs=50, batch_size=32,
         lr_scale=1.0, lr_half_life=None,
+        lr=None,
         weight_decay=0.0,
         head_layers=1, head_hidden_dim=None,
         return_loss=False,
@@ -118,7 +119,10 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.to(self.device)
-        self.lr = self.lr_scale*sum([p.numel() for p in self.parameters()]) **-0.5
+        if lr is None:
+            self.lr = self.lr_scale*sum([p.numel() for p in self.parameters()]) **-0.5
+        else:
+            self.lr = lr
 
         if self.neptune_run:
             self.neptune_run[f'{neptune_location}/num_params'].append(sum([p.numel() for p in self.parameters()]))
@@ -146,7 +150,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
             self.head.set_class_weight(self.class_weights)
     
         self.train()
-        self.optimizer = torch.optim.Adam(
+        optimizer = torch.optim.Adam(
             self.parameters(), lr=self.lr, weight_decay=self.weight_decay
         )
         data = GraphDatasetFromList(X, y)
@@ -166,22 +170,22 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
             desc=f'Epoch 1/{self.epochs} | Batch loss: {np.nan}',
         )
         for i in range(self.epochs):
-            self.optimizer.zero_grad()
             for j, batch in enumerate(loader):
+                optimizer.zero_grad()
                 batch = batch.to(self.device)
                 out = self(batch)
                 y = batch.y.unsqueeze(1)
                 loss = self.head.loss(y=y, pred=out)
                 if self.neptune_run is not None:
                     self.neptune_run[f'{self.neptune_location}/batch_loss'].append(loss.item())
-                self.optimizer.step()
+                loss.backward()
+                optimizer.step()
                 losses[i, j] = loss.item()
                 if lr_scheduler:
                     lr_scheduler.step()
                 pbar.set_description(f'Epoch {i+1}/{self.epochs} | Batch loss: {loss.item()}')
                 pbar.update()
             pbar.reset()
-            loss.backward()
             
             if self.neptune_run:
                 epoch_mean_loss = losses[i].mean()
