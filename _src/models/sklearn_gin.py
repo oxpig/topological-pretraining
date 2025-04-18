@@ -164,35 +164,36 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
             lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
                 self.optimizer, gamma=gamma,
             )
-        pbar = tqdm(
+
+        with tqdm(
             total=len(loader),
             disable=not self.verbose,
             desc=f'Epoch 1/{self.epochs} | Batch loss: {np.nan}',
-        )
-        for i in range(self.epochs):
-            for j, batch in enumerate(loader):
-                optimizer.zero_grad()
-                batch = batch.to(self.device)
-                out = self(batch)
-                y = batch.y.unsqueeze(1)
-                loss = self.head.loss(y=y, pred=out)
-                if self.neptune_run is not None:
-                    self.neptune_run[f'{self.neptune_location}/batch_loss'].append(loss.item())
-                loss.backward()
-                optimizer.step()
-                losses[i, j] = loss.item()
-                if lr_scheduler:
-                    lr_scheduler.step()
-                pbar.set_description(f'Epoch {i+1}/{self.epochs} | Batch loss: {loss.item()}')
-                pbar.update()
-            pbar.reset()
+        ) as pbar:
+            for i in range(self.epochs):
+                for j, batch in enumerate(loader):
+                    optimizer.zero_grad()
+                    batch = batch.to(self.device)
+                    out = self(batch)
+                    y = batch.y.unsqueeze(1)
+                    loss = self.head.loss(y=y, pred=out)
+                    if self.neptune_run is not None:
+                        self.neptune_run[f'{self.neptune_location}/batch_loss'].append(loss.item())
+                    loss.backward()
+                    optimizer.step()
+                    losses[i, j] = loss.item()
+                    if lr_scheduler:
+                        lr_scheduler.step()
+                    pbar.set_description(f'Epoch {i+1}/{self.epochs} | Batch loss: {loss.item()}')
+                    pbar.update()
+                pbar.reset()
+                
+                if self.neptune_run:
+                    epoch_mean_loss = losses[i].mean()
+                    self.neptune_run[f'{self.neptune_location}/epoch_loss'].append(epoch_mean_loss)
             
-            if self.neptune_run:
-                epoch_mean_loss = losses[i].mean()
-                self.neptune_run[f'{self.neptune_location}/epoch_loss'].append(epoch_mean_loss)
-        
-        if self.return_loss:
-            return losses
+            if self.return_loss:
+                return losses
 
     def predict(self, X: list[pyg.data.Data]):
         self.eval()
