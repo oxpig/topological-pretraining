@@ -2,6 +2,7 @@ from _src.tokenizers import (
     BaseTokenizer,
     ECFP, FCFP, PDV, SNS,
     AtomGraphTokenizer, MorganGraphTokenizer,
+    AtomFeatureTokenizer,
     PreTrainedTokenizer
 )
 from _src.data.feature_selection import CoCorr, SelectAll
@@ -31,6 +32,7 @@ tokenizers_dict = {
     'AtomGraphTokenizer': AtomGraphTokenizer,
     'MorganGraphTokenizer': MorganGraphTokenizer,
     'PreTrainedTokenizer': PreTrainedTokenizer,
+    'AtomFeatureTokenizer': AtomFeatureTokenizer,
 }
 
 extra_transform_classes = {

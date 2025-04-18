@@ -1,4 +1,4 @@
-from .atom_graph import AtomGraphTokenizer
+from .atom_graph import AtomGraphTokenizer, AtomFeatureTokenizer
 from .base import BaseTokenizer, GraphTokenizer
 from .baseline import ECFP, FCFP, PDV, SNS
 from .morgan_graph import MorganGraphTokenizer
