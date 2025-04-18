@@ -154,9 +154,12 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
             self.parameters(), lr=self.lr, weight_decay=self.weight_decay
         )
         data = GraphDatasetFromList(X, y)
+        # use drop_last=True if the last batch contains only one sample
+        if len(data) % self.batch_size == 1: drop_last = True
+        else: drop_last = False
         loader = pyg.loader.DataLoader(
             data, batch_size=self.batch_size, shuffle=True,
-            drop_last=True,
+            drop_last=drop_last,
         )
         losses = np.zeros((self.epochs, len(loader)))
         lr_scheduler = None
