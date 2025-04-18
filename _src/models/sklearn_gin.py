@@ -156,6 +156,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         data = GraphDatasetFromList(X, y)
         loader = pyg.loader.DataLoader(
             data, batch_size=self.batch_size, shuffle=True,
+            drop_last=True,
         )
         losses = np.zeros((self.epochs, len(loader)))
         lr_scheduler = None
