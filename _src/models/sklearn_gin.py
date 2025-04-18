@@ -162,7 +162,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         if self.lr_half_life is not None:
             gamma = 0.5 ** (1 / (self.lr_half_life * len(loader)))
             lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-                self.optimizer, gamma=gamma,
+                optimizer, gamma=gamma,
             )
 
         with tqdm(
