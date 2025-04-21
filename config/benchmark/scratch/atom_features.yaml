@@ -6,3 +6,62 @@ tokenizer: AtomFeatureTokenizer
 tokenizer_kwargs:
   transform_kwargs: {}
 verbose: true
+SklearnGIN:
+  model_kwargs:
+    verbose: False
+    epochs: 50
+    act: hardswish
+  model_hyperparameters:
+    tuning: True
+    trials: 50
+    num_splits: 5
+    hidden_dim:
+      target: categorical
+      choices:
+        - 4
+        - 8
+        - 16
+        - 32
+        - 64
+    head_hidden_dim:
+      target: categorical
+      choices:
+        - 4
+        - 8
+        - 16
+        - 32
+        - 64
+    gnn_layers:
+      target: int
+      low: 1
+      high: 5
+    head_layers:
+      target: int
+      low: 1
+      high: 5
+    share_weights:
+      target: categorical
+      choices:
+        - True
+        - False
+    dropout:
+      target: float
+      low: 0.0
+      high: 0.5
+    lr_scale:
+      target: float
+      low: 0.1
+      high: 1.0
+    lr_half_life:
+      target: float
+      low: 5
+      high: 50
+    train_eps:
+      target: categorical
+      choices:
+        - True
+        - False
+    mlp_layers:
+      target: int
+      low: 1
+      high: 5
