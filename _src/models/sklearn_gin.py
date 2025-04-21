@@ -7,7 +7,7 @@ import torch
 import torch_geometric as pyg
 
 from tqdm import tqdm
-from typing import Literal
+from typing import Callable, Literal
 
 class GraphDatasetFromList(torch.utils.data.Dataset):
     def __init__(self, data: list[pyg.data.Data], y: np.ndarray):
@@ -40,6 +40,17 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
             'max', 'global_node'
         ] = 'max',
         gnn_kwargs: dict = {'train_eps': True},
+        train_eps: bool = True,
+        eps: float = 0.0,
+        mlp_layers: int = 1,
+        weight_init: Callable|Literal[
+            'standard', 'xavier_uniform', 'xavier_normal',
+            'normal', 'zeros', 'ones',
+        ] = 'standard',
+        bias_init: Callable|Literal[
+            'standard', 'xavier_uniform', 'xavier_normal',
+            'normal', 'zeros', 'ones',
+        ] = 'standard',
         share_weights: bool = False,
         epochs=50, batch_size=32,
         lr_scale=1.0, lr_half_life=None,
@@ -50,10 +61,17 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         neptune_run=None,
         neptune_location='model_loss',
         verbose=False,
-        device='cpu', # for compatibility with other models
+        device='cpu', # for compatibility with other models, uses cuda if available
         **kwargs
     ):
         super(SklearnGIN, self).__init__()
+        gnn_kwargs = {
+            'train_eps': train_eps,
+            'eps': eps,
+            'num_layers': mlp_layers,
+            'weight_init': weight_init,
+            'bias_init': bias_init,
+        }
         self.gnn = GIN(
             input_dim=input_dim, hidden_dim=hidden_dim,
             node_embedding=(vocab_size, node_embedding_dim),

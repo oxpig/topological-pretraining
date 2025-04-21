@@ -3,8 +3,6 @@ SklearnGIN:
     verbose: False
     epochs: 50
     act: hardswish
-    # batch_size is set in benchmark.py based on the dataset size
-    # batch_size: 32
     input_dim: 1
   model_hyperparameters:
     tuning: True
@@ -59,3 +57,12 @@ SklearnGIN:
       target: float
       low: 5
       high: 50
+    train_eps:
+      target: categorical
+      choices:
+        - True
+        - False
+    mlp_layers:
+      target: int
+      low: 1
+      high: 5
