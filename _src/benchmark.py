@@ -94,6 +94,7 @@ class HyperOpt:
             val_X, val_y = self.dataset.test
             if self.model.__name__ == 'SklearnGIN':
                 params['vocab_size'] = self.dataset.tokenizer.vocab_size
+                params['input_dim'] = train_X[0].x.size(1)
                 params['neptune_location'] = f'{self.name}/trials'
                 params['neptune_run'] = self.neptune_run
             model = self.model(seed=self.seed, task=self.task, **params)
@@ -229,7 +230,8 @@ def benchmark(config: dict):
         )
         if len(df) < 500 and model_class.__name__ == 'SklearnGIN':
             print(f'Fewer than 500 data points. Limiting GIN HP search space') if verbose else None
-            hyperparameters_running['node_embedding_dim']['choices'] = [2, 4, 8,]
+            if 'node_embedding_dim' in hyperparameters_running:
+                hyperparameters_running['node_embedding_dim']['choices'] = [2, 4, 8,]
             hyperparameters_running['hidden_dim']['choices'] = [4, 8,]
             hyperparameters_running['head_hidden_dim']['choices'] = [4, 8]
             hyperparameters_running['head_layers']['high'] = 3
@@ -237,21 +239,24 @@ def benchmark(config: dict):
 
         elif 500 <= len(df) < 1000 and model_class.__name__ == 'SklearnGIN':
             print(f'Fewer than 1000 data points. Limiting GIN HP search space') if verbose else None
-            hyperparameters_running['node_embedding_dim']['choices'] = [4, 8, 16,]
+            if 'node_embedding_dim' in hyperparameters_running:
+                hyperparameters_running['node_embedding_dim']['choices'] = [4, 8, 16,]
             hyperparameters_running['hidden_dim']['choices'] = [4, 8, 16,]
             hyperparameters_running['head_hidden_dim']['choices'] = [4, 8, 16,]
             base_model_kwargs['batch_size'] = 32
 
         elif 1000 <= len(df) < 5000 and model_class.__name__ == 'SklearnGIN':
             print(f'Between 1000 and 5000 data points. Limiting GIN HP search space') if verbose else None
-            hyperparameters_running['node_embedding_dim']['choices'] = [8, 16, 32,]
+            if 'node_embedding_dim' in hyperparameters_running:
+                hyperparameters_running['node_embedding_dim']['choices'] = [8, 16, 32,]
             hyperparameters_running['hidden_dim']['choices'] = [8, 16, 32,]
             hyperparameters_running['head_hidden_dim']['choices'] = [8, 16, 32,]
             base_model_kwargs['batch_size'] = 64
 
         elif len(df) >= 5000 and model_class.__name__ == 'SklearnGIN':
             print(f'More than 5000 data points. Limiting GIN HP search space') if verbose else None
-            hyperparameters_running['node_embedding_dim']['choices'] = [16, 32, 64,]
+            if 'node_embedding_dim' in hyperparameters_running:
+                hyperparameters_running['node_embedding_dim']['choices'] = [16, 32, 64,]
             hyperparameters_running['hidden_dim']['choices'] = [16, 32, 64,]
             hyperparameters_running['head_hidden_dim']['choices'] = [16, 32, 64,]
             base_model_kwargs['batch_size'] = 128
@@ -415,8 +420,10 @@ def benchmark(config: dict):
             print('\n') if verbose == 2 else None
             print(f'Processing split {idx}.') if verbose == 2 else None
             dataset.reset(train, test)
-            print(f'Train shape: {dataset.train_X.shape}.') if verbose == 2 else None
-
+            train_X, train_y = dataset.train
+            if isinstance(train_X, np.ndarray):
+                print(f'Train shape: {dataset.train_X.shape}.') if verbose == 2 else None
+            
             if verbose == 2:
                 model_kwargs['verbose'] = 1
             else:
@@ -424,6 +431,7 @@ def benchmark(config: dict):
 
             if config['model'] == 'SklearnGIN':
                 model_kwargs['verbose'] = 0
+                model_kwargs['input_dim'] = train_X[0].x.size(1)
                 model_kwargs['vocab_size'] = dataset.tokenizer.vocab_size
             
             print(f'Fitting model...') if verbose else None
@@ -433,7 +441,7 @@ def benchmark(config: dict):
                 neptune_location=f'{benchmark}',
                 **model_kwargs
             )
-            train_X, train_y = dataset.train
+            
             from datetime import datetime
             start = datetime.now()
             model.fit(train_X, train_y)
