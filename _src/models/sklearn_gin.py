@@ -208,7 +208,8 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
                         lr_scheduler.step()
                     pbar.set_description(f'Epoch {i+1}/{self.epochs} | Batch loss: {loss.item()}')
                     pbar.update()
-                pbar.reset()
+                if i != self.epochs - 1:
+                    pbar.reset()
                 
                 if self.neptune_run:
                     epoch_mean_loss = losses[i].mean()
