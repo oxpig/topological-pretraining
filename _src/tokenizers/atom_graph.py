@@ -88,14 +88,10 @@ class AtomFeatureGraph(BaseGraph):
     (https://jcheminf.biomedcentral.com/articles/10.1186/s13321-023-00708-w/figures/4)
     """
     def __init__(
-        self, node_types: dict = None, edge_types: dict = None,
-        max_vocab_size: int = None, verbose: bool = False, global_token: bool = False
+        self, verbose: bool = False, global_token: bool = False
     ):
-        super(AtomFeatureGraph, self).__init__(
-            node_types=node_types, edge_types=edge_types,
-            max_vocab_size=max_vocab_size, verbose=verbose,
-            global_token=global_token
-        )
+        self.global_token = global_token
+        self.verbose = verbose
         self.atom_encoder = OneHotEncoder(
             categories=self.permitted_atoms
         )
@@ -173,7 +169,6 @@ class AtomFeatureGraph(BaseGraph):
 
         return graph
         
-       
     @property
     def permitted_atoms(self):
         return [
@@ -191,5 +186,9 @@ class AtomFeatureTokenizer(GraphTokenizer):
     """
     def _transform_base(self, **kwargs):
         return AtomFeatureGraph(verbose=self.verbose, **kwargs)
+    
+    @property
+    def vocab_size(self):
+        return None
     
     
