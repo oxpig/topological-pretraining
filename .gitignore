@@ -1,3 +1,4 @@
+# ignore
 .env
 .servers.yaml
 run.py
@@ -7,3 +8,6 @@ bin/cache/
 *__pycache__/
 results/
 data_files
+
+# except
+!visualization.ipynb
