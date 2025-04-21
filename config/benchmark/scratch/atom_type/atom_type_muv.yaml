@@ -1,0 +1,26 @@
+experiment: scratch_atom_type
+model: SklearnGIN
+neptune: true
+process: benchmark
+tokenizer: AtomGraphTokenizer
+tokenizer_kwargs:
+  transform_kwargs: {}
+verbose: true
+benchmark:
+  - MUV466
+  - MUV548
+  - MUV600
+  - MUV644
+  - MUV652
+  - MUV689
+  - MUV692
+  - MUV712
+  - MUV713
+  - MUV733
+  - MUV737
+  - MUV810
+  - MUV832
+  - MUV846
+  - MUV852
+  - MUV858
+  - MUV859

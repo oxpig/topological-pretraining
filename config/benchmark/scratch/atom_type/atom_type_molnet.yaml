@@ -6,3 +6,7 @@ tokenizer: AtomGraphTokenizer
 tokenizer_kwargs:
   transform_kwargs: {}
 verbose: true
+benchmark:
+  - Lipo
+  - FreeSolv
+  - ESOL

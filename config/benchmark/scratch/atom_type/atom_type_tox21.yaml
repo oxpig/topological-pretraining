@@ -1,0 +1,21 @@
+experiment: scratch_atom_type
+model: SklearnGIN
+neptune: true
+process: benchmark
+tokenizer: AtomGraphTokenizer
+tokenizer_kwargs:
+  transform_kwargs: {}
+verbose: true
+benchmark:
+  - NR_AR
+  - NR_AR_LBD
+  - NR_AhR
+  - NR_Aromatase
+  - NR_ER
+  - NR_ER_LBD
+  - NR_PPAR_gamma
+  - SR_ARE
+  - SR_ATAD5
+  - SR_HSE
+  - SR_MMP
+  - SR_p53
