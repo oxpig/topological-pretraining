@@ -261,8 +261,8 @@ class SortAndSlice:
         self.generator = generator
         self.verbose = verbose
         self.identifiers = {}
-        self.encoder = None
-        self.decoder = None
+        self.encoder = {}
+        self.decoder = {}
         self.fpsize = fpsize
         self.save_img = save_img
 
