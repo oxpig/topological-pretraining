@@ -26,10 +26,26 @@ class LGBM:
 
     def predict(self, X):
         if self.task == 'classification':
+            # to make sure outputs are the same format as regression
+            # want to store pr
             return self.model.predict_proba(X)[:, 1]
         
         else:
             return self.model.predict(X)
+        
+    def predict_proba(self, X):
+        if self.task == 'classification':
+            return self.model.predict_proba(X)
+        
+        else:
+            raise ValueError("predict_proba is only available for classification tasks.")
+
+    def predict_class(self, X):
+        if self.task == 'classification':
+            return self.model.predict(X)
+        
+        else:
+            raise ValueError("class_predict is only available for classification tasks.")
         
     def get_feature_importance(self):
         return self.model.feature_importances_
