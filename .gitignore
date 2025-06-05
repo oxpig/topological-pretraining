@@ -11,6 +11,7 @@ data_files
 figures
 config
 pt_models
+.neptune
 
 # except
 !visualization.ipynb
