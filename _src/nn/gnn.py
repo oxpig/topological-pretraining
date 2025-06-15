@@ -2,7 +2,6 @@ from .mlp import act_fn
 
 import torch
 import torch_geometric as pyg
-import torch_geometric
 from typing import Literal
 
 class BaseGNN(torch.nn.Module):
@@ -99,6 +98,8 @@ class BaseGNN(torch.nn.Module):
                     input_dim=hidden_dim, hidden_dim=hidden_dim, **gnn_kwargs
                 )
 
+        self.out_shape = self.cal_out_shape()
+
     def _init_layer(self, input_dim, output_dim, **kwargs):
         raise NotImplementedError
     
@@ -141,7 +142,6 @@ class BaseGNN(torch.nn.Module):
                 'Valid options are: last, sum, mean, max, concat.'
             )
         return out
-
     
     def graph_pool(
         self, final_state: torch.Tensor, batch: torch.Tensor,
@@ -165,19 +165,50 @@ class BaseGNN(torch.nn.Module):
             )
         
     def prepare_out(self, x: torch.Tensor):
-        out = {'input': x}
+
+        out = {}
         num_hidden_states = self.num_hidden_states
         out['hidden_states'] = torch.zeros(
             (x.size(0), num_hidden_states, self.hidden_dim)
         ).to(x.device)
         out['state'] = 0
         return out
-        
+    
     def embed_nodes(
-        self, out: dict, x: torch.Tensor, 
+        self, x: torch.Tensor, embedded: torch.Tensor = torch.tensor([False]), batch: torch.Tensor = None
+    ):
+        if embedded.all():
+            return x, embedded
+        elif embedded.any():
+            raise ValueError('Some graphs in batch are already embedded.')
+        else:
+            if batch is None:
+                embedded = torch.tensor([True], dtype=torch.bool).to(x.device)
+            else:
+                embedded = torch.full((batch.max()+1, 1), True).to(x.device)
+            return self.layers['node_embedding'](x), embedded
+        
+    def embed_graph_nodes(self, graph: pyg.data.Data):
+        if self.node_vocab_size is None:
+            Warning(
+                'Node embedding is not defined. Returning original graph.'
+            )
+            return graph
+        x, embedded = graph.get("x", False), graph.get("embedded", torch.tensor([False])).to(graph.x.device)
+        if x is False:
+            Warning(
+                'Graph does not have node features. Returning original graph.'
+            )
+            return graph
+        graph.x, graph.embedded = self.embed_nodes(x, embedded)
+        return graph
+        
+    def prepare_embedding(
+        self, out: dict, x: torch.Tensor, embedded: torch.Tensor,
+        batch: torch.Tensor = None
     ):
         if self.node_vocab_size is not None:
-            x = self.layers['node_embedding'](x)
+            x, _ = self.embed_nodes(x, embedded, batch)
             if self.node_embedding_dim == self.hidden_dim:
                 out['hidden_states'][:, :x.size(1), :] = x
                 out['node_embedding'] = None
@@ -228,11 +259,12 @@ class BaseGNN(torch.nn.Module):
     def forward(
         self, x, edge_index,
         edge_weight = None, edge_attr = None, batch = None,
-        global_idx = None, **kwargs
+        global_idx = None, embedded = torch.tensor([False]), **kwargs
     ):
         if x is None: return None
+        embedded = embedded.to(x.device)
         out = self.prepare_out(x)
-        out, x = self.embed_nodes(out, x)
+        out, x = self.prepare_embedding(out, x, embedded, batch)
         out = self.convolutions(
             out=out, x=x, edge_index=edge_index,
             edge_weight=edge_weight, edge_attr=edge_attr
@@ -241,13 +273,13 @@ class BaseGNN(torch.nn.Module):
         out = self.record_node_embedding(out)
         
         return out
-
-    @property
-    def out_shape(self):
+    
+    def parse_example_graph(self,):
         if self.node_embedding_dim is not None:
             x_dtype = torch.long
         else:
             x_dtype = torch.float
+        
         example_graph = pyg.data.Data(
             x=torch.zeros((1, self.input_dim), dtype=x_dtype),
             edge_index=torch.tensor([[0],[0]], dtype=torch.long),
@@ -258,5 +290,10 @@ class BaseGNN(torch.nn.Module):
         example_graph = example_graph.to(next(self.parameters()).device)
         with torch.no_grad():
             self.eval()
-            out = self(**example_graph)['global_state']
-        return out.size(1)
+            out = self(**example_graph)
+        return out
+
+    def cal_out_shape(self):
+        out = self.parse_example_graph()
+        return out['global_state'].size(1)
+

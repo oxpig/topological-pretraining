@@ -165,21 +165,24 @@ class GraphDataset(pyg.data.InMemoryDataset):
         if not raw_graph_path.exists() and molecules_path.exists():
             molecules = torch.load(molecules_path, weights_only=False)
             data_list = []
-            for idx, mol in enumerate(molecules):
-                raw_graph = self.tokenizer.raw(mol)
-                raw_graph.idx = idx
-                data_list.append(raw_graph.to_dict())
+            with tqdm(total=len(molecules), desc='Processing graphs', disable=not self.verbose) as pbar:
+                for idx, mol in enumerate(molecules):
+                    raw_graph = self.tokenizer.raw(mol)
+                    raw_graph.idx = idx
+                    data_list.append(raw_graph.to_dict())
+                    pbar.update(1)
             torch.save(data_list, raw_graph_path)
             print(f'Saved {len(data_list)} raw graphs to {raw_graph_path}.') if self.verbose else None
         
         processed_graph_path = Path(self.processed_paths[0])
-
+        print(f'Processed graphs path: {processed_graph_path}.') if self.verbose else None
         if raw_graph_path.exists() and self.fit_tokenizer:
             data_list = torch.load(raw_graph_path, weights_only=False)
             data_list = [pyg.data.Data(**data_dict) for data_dict in data_list]
             print(f'Loaded {len(data_list)} raw graphs from {raw_graph_path}.') if self.verbose else None
             data_list = [graph for graph in data_list if self.pre_filter(graph)]
-            if not self.tokenizer.is_fitted_:
+            if not self.tokenizer.is_fitted_ or self.fit_tokenizer:
+                print("Fitting tokenizer...")
                 self.tokenizer.fit(data_list)
                 self.tokenizer.save(self.tokenizer_path, params_only=True)
 
@@ -189,9 +192,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
                 if not self.targets.is_fitted_:
                     print('Fitting targets...') if self.verbose else None
                     self.fit_targets(data_list)
-        
-        else:
-            return
+            del data_list
         
     @property
     def raw_file_names(self):
@@ -204,12 +205,12 @@ class GraphDataset(pyg.data.InMemoryDataset):
         graph = super(GraphDataset, self).__getitem__(idx)
         if isinstance(graph, GraphDataset):
             for G in graph:
-                assert isinstance(G, pyg.data.Data), 'Graph must be a PyG Data object.'
+                if not isinstance(G, pyg.data.Data):
+                    raise TypeError('Graph must be a PyG Data object.')
                 if 'x' not in G:
                     raise Warning(f'Graph {int(G.idx)} does not contain node features.')
             return graph
         elif isinstance(graph, pyg.data.Data):
-            assert isinstance(graph, pyg.data.Data), 'Graph must be a PyG Data object.'
             if 'x' not in graph:
                 raise Warning(f'Graph {int(graph.idx)} does not contain node features.')
             return graph

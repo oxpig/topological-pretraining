@@ -181,3 +181,13 @@ class BaseDataFrame(pd.DataFrame):
     @property
     def hyperopt_average(self):
         return 'mean'
+    
+    @property
+    def splits_to_exclude_for_metrics(self):
+        split_cols = [col for col in self.columns if 'split' in col]
+        exclude = []
+        for col in split_cols:
+            if self.y[self[col] == "Test"].nunique() == 1:
+                exclude.append(int(col.split('_')[1]))
+
+        return np.array(exclude)

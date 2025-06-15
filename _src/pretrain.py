@@ -20,7 +20,6 @@ from tqdm import tqdm
 
 
 
-
 pred_head_map = {
     'binary': BinaryHead,
     'regression': RegressionHead,
@@ -101,13 +100,15 @@ def pretrain(config: dict):
         mols = df.rdkit_mols
 
     # prepare raw graphs
-    GraphDataset(
+    raw_dataset = GraphDataset(
         root=root,
         tokenizer=tokenizer,
         molecules=mols,
         fit_tokenizer=False,
         verbose=verbose,
     )
+    del raw_dataset
+    torch.cuda.empty_cache()
     save_path = results_path / experiment_name
     save_path.mkdir(parents=True, exist_ok=True)
     print(f'Looping through splits: {splits}') if verbose else None
@@ -238,11 +239,14 @@ def pretrain(config: dict):
                 last_score = torch.tensor(0.0, device=device)
                 for i, target_name in enumerate(targets_key):
                     head = model[target_name]
+                    y = batch[target_name]
+                    # if y.layout != torch.strided:
+                    #     y = y.to_dense()
                     if targets_key[target_name]['level'] == 'global':
                         embed = out['global_state']
                         embed.to(device)
                         pred = head(embed)
-                        y = batch[target_name].type(embed.dtype)
+                        y = y.type(embed.dtype)
                         losses[i] = head.loss(pred=pred, y=y,)
                         if batch_num % 100 == 0:
                             score_now = head.score(pred=pred, y=y,)
@@ -253,7 +257,7 @@ def pretrain(config: dict):
                         embed = out['final_state']
                         embed.to(device)
                         pred = head(embed)
-                        y = batch[target_name].type(embed.dtype)
+                        y = y.type(embed.dtype)
                         mask = batch[f'{target_name}_mask'].type(embed.dtype)
                         losses[i] = head.loss(pred=pred, y=y, mask=mask,)
                         if batch_num % 100 == 0:

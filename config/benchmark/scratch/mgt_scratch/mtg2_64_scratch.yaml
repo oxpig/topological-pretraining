@@ -1,12 +1,19 @@
-experiment: scratch_mtg0
+experiment: scratch_mtg2
 model: SklearnGIN
 neptune: true
 process: benchmark
 tokenizer: MorganGraphTokenizer
 tokenizer_kwargs:
   transform_kwargs: {
-    max_vocab_size: 128,
+    max_vocab_size: 64,
     radius: 1,
     chirality: True
   }
 verbose: true
+benchmark:
+  - Human_CLint
+  - Rat_CLint
+  - Human_PPB
+  - Rat_PPB
+  - Efflux
+  - Solu

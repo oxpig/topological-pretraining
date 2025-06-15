@@ -357,7 +357,6 @@ def benchmark(config: dict):
             verbose=verbose, fit_transform=False,
         )
         
-    
         print('Dataset loaded.') if verbose else None
         print('Checking for saved hyperparameters.') if verbose else None
         benchmark_hp_path = hyperparam_path / f'{benchmark}.pt'
@@ -485,6 +484,7 @@ def benchmark(config: dict):
         kbar.close()
         
         pbar.update(1)
+        del dataset
 
     pbar.close()
 

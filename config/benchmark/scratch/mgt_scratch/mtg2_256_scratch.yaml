@@ -1,4 +1,4 @@
-experiment: scratch_mtg0
+experiment: scratch_mtg2
 model: SklearnGIN
 neptune: true
 process: benchmark
@@ -10,3 +10,10 @@ tokenizer_kwargs:
     chirality: True
   }
 verbose: true
+benchmark:
+  - Human_CLint
+  - Rat_CLint
+  - Human_PPB
+  - Rat_PPB
+  - Efflux
+  - Solu

@@ -54,7 +54,7 @@ SklearnGIN:
       low: 0.1
       high: 1.0
     lr_half_life:
-      target: float
+      target: int
       low: 5
       high: 50
     train_eps:

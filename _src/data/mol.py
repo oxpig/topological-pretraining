@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import colors as mpl_colors
 from rdkit import Chem
 from rdkit.Chem import Draw
 from rdkit.Chem.rdFingerprintGenerator import (
@@ -18,8 +19,14 @@ TODO: change print statements to logging
 """
 
 RDLogger.DisableLog('rdApp.*')
-
-
+atom_colors = {
+    'C': '#BFBFBF', 'N': '#0000FF', 'O': '#FF0000',
+    'F': '#00FF00', 'Cl': '#00FFFF', 'Br': '#FF00FF',
+    'I': '#FFFF00', 'S': '#FFA500', 'P': '#800080',
+}
+for atom, color in atom_colors.items():
+    atom_colors[atom] = mpl_colors.to_rgb(color)
+atom_colors['H'] = (1,1,1)
 class MorganGenerator:
     """
     Python wrapper for Morgan fingerprint generator.
@@ -305,14 +312,17 @@ class SortAndSlice:
                 if id not in done:
                     value['num_mols'] += 1
                     if self.save_img:
-                        value['img'] = Draw.DrawMorganBit(
-                            mol, bitId=id, bitInfo=bit_info,
-                            extraColor=(0.6, 0.6, 0.6)
-                        )
                         atom = mol.GetAtomWithIdx(
                             bit_info[id][0][0]
                         )
                         value['central_atom'] = atom.GetSymbol()
+                        value['img'] = Draw.DrawMorganBit(
+                            mol, bitId=id, bitInfo=bit_info,
+                            extraColor=(0.6, 0.6, 0.6),
+                            centerColor=atom_colors.get(value['central_atom'], (1,1,1)),
+                            aromaticColor=(1,1,1), ringColor=(1,1,1),
+                        )
+                        
                         value["aromatic"] = atom.GetIsAromatic()
                         
                     done[id] = True
@@ -860,9 +870,9 @@ def get_incidence(mol: Chem.Mol, radius: int = 2) -> np.ndarray:
         At each radius, the indexes of circular substructures around each atom are stored.
         E.g.,
             radius = 0: Identity matrix.
-            radius = 1: Adjacency matrix.
-            radius = 2: Adjacency matrix + 2nd degree neighbors.
-            radius = 3: Adjacency matrix + 2nd and 3rd degree neighbors.
+            radius = 1: Identity matrix, Adjacency matrix.
+            radius = 2: Identity matrix, Adjacency matrix, Adjacency matrix + 2nd degree neighbors.
+            radius = -1: Continues until out[-1, :, :] is all ones.
     """
     adjacency = Chem.GetAdjacencyMatrix(mol)
     inc = np.eye(adjacency.shape[0], dtype=int)

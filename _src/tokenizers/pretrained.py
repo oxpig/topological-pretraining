@@ -62,11 +62,14 @@ class PreTrainedModel(torch.nn.Module):
         x = self.tokenize(x)
         if isinstance(x, np.ndarray):
             x = torch.tensor(x, dtype=torch.float32)
-        return self.model(x)
+        x = x.to(self.device)
+        x = self.model(x)
+        return x
 
     def forward(self, x: Chem.Mol):
         self.to_device()
-        x = self.embed(x)
+        with torch.no_grad():
+            x = self.embed(x)
         if self.asarray:
             x = x.detach().cpu().numpy()
         if self.rest_on_cpu:
@@ -79,10 +82,11 @@ class PreTrainedModel(torch.nn.Module):
         x = self.tokenize(x)
         x = self.model(x)
         preds = {}
-        for target in self.heads:
-            preds[target] = self.heads[target](x)
-        return preds
-    
+        with torch.no_grad():
+            for target in self.heads:
+                preds[target] = self.heads[target](x)
+            return preds
+        
     @property
     def model_cls(self):
         return self.model.__class__.__name__
@@ -149,6 +153,7 @@ class PreTrainedGNN(PreTrainedModel):
         super().from_dict(params)
         if self.layer_pool_type is not None:
             self.model.layer_pool_type = self.layer_pool_type
+            self.model.out_shape = self.model.cal_out_shape()
         if self.graph_pool_type is not None:
             self.model.graph_pool_type = self.graph_pool_type
     
@@ -188,7 +193,7 @@ class PreTrainedGNN(PreTrainedModel):
         if self.embed_state != 'all':
             out = torch.vstack(out)
         return out
-        
+
  
 class PreTrainedTokenizer(BaseTokenizer):
 
