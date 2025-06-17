@@ -19,14 +19,15 @@ TODO: change print statements to logging
 """
 
 RDLogger.DisableLog('rdApp.*')
-atom_colors = {
+default_atom_colors = {
     'C': '#BFBFBF', 'N': '#0000FF', 'O': '#FF0000',
     'F': '#00FF00', 'Cl': '#00FFFF', 'Br': '#FF00FF',
     'I': '#FFFF00', 'S': '#FFA500', 'P': '#800080',
 }
-for atom, color in atom_colors.items():
-    atom_colors[atom] = mpl_colors.to_rgb(color)
-atom_colors['H'] = (1,1,1)
+for atom, color in default_atom_colors.items():
+    default_atom_colors[atom] = mpl_colors.to_rgb(color)
+default_atom_colors['H'] = (1,1,1)
+
 class MorganGenerator:
     """
     Python wrapper for Morgan fingerprint generator.
@@ -263,6 +264,10 @@ class SortAndSlice:
         molecules: list[Chem.Mol] = None,
         fpsize: int = None,
         save_img: bool = False,
+        central_atom_colors: dict = default_atom_colors,
+        ring_color: tuple[float] = (1,1,1),
+        aromatic_color: tuple[float] = (1,1,1),
+        extra_color: tuple[float] = (0.6, 0.6, 0.6),
         verbose: bool = False,
     ):
         self.generator = generator
@@ -272,6 +277,10 @@ class SortAndSlice:
         self.decoder = {}
         self.fpsize = fpsize
         self.save_img = save_img
+        self.atom_colors = central_atom_colors
+        self.ring_color = ring_color
+        self.aromatic_color = aromatic_color
+        self.extra_color = extra_color
 
         if molecules is not None:
             self.update(molecules)
@@ -318,9 +327,10 @@ class SortAndSlice:
                         value['central_atom'] = atom.GetSymbol()
                         value['img'] = Draw.DrawMorganBit(
                             mol, bitId=id, bitInfo=bit_info,
-                            extraColor=(0.6, 0.6, 0.6),
-                            centerColor=atom_colors.get(value['central_atom'], (1,1,1)),
-                            aromaticColor=(1,1,1), ringColor=(1,1,1),
+                            extraColor=self.extra_color,
+                            centerColor=self.atom_colors.get(value['central_atom'], (1,1,1)),
+                            aromaticColor=self.aromatic_color, 
+                            ringColor=self.ring_color,
                         )
                         
                         value["aromatic"] = atom.GetIsAromatic()
