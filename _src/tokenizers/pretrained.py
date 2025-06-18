@@ -128,8 +128,13 @@ class PreTrainedModel(torch.nn.Module):
         params = torch.load(path, weights_only=True, map_location='cpu')
         self.from_dict(params)
 
-    def tokenize(self, x: Chem.Mol|list[Chem.Mol]):
-        return self.tokenizer.transform(x)
+    def tokenize(self, X: Chem.Mol|list[Chem.Mol]):
+        X = self.tokenizer.transform(X)
+        if isinstance(X, list):
+            X = [x.to(self.device) for x in X]
+        else:
+            X = X.to(self.device)
+        return X
 
 class PreTrainedGNN(PreTrainedModel):
 
