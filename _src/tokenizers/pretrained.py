@@ -243,3 +243,7 @@ class PreTrainedTokenizer(BaseTokenizer):
         # initial input embedding 
         # (i.e., tokens mapping to vectors of learned parameters)
         return self.transform.initial_embed(X)
+    
+    @property
+    def device(self):
+        return self.transform.device
