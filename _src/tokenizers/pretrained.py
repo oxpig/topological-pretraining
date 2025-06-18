@@ -194,11 +194,16 @@ class PreTrainedGNN(PreTrainedModel):
             out = torch.vstack(out)
         return out
 
-    def embed_initial_grpah(
+    def initial_embed(
         self,
         X: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data],
     ):
-        pass
+        # embedding prior to convolution
+        if isinstance(X, Chem.Mol|pyg.data.Data):
+            X = [X]
+        if all(isinstance(x, Chem.Mol|None) for x in X):
+            X = self.tokenize(X)
+        return [self.model.embed_graph_nodes(x) for x in X]
         
  
 class PreTrainedTokenizer(BaseTokenizer):
@@ -231,3 +236,10 @@ class PreTrainedTokenizer(BaseTokenizer):
             X = [X]
         X = self.transform.tokenize(X)
         return X
+    
+    def initial_embed(
+        self, X: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data]
+    ):
+        # initial input embedding 
+        # (i.e., tokens mapping to vectors of learned parameters)
+        return self.transform.initial_embed(X)
