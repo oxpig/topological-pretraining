@@ -71,7 +71,7 @@ class AtomGraph(BaseGraph):
     def empty_graph(self):
         return pyg.data.Data(
                 raw=True,
-                empty=True,
+                empty=torch.tensor([True]),
                 x=torch.full((1, 1), fill_value=self.node_types["UNK"], dtype=torch.long),
                 edge_index=torch.empty((2, 0), dtype=torch.long),
                 edge_attr=torch.empty((0, 1), dtype=torch.long),

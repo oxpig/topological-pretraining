@@ -53,7 +53,7 @@ class MorganGraph(BaseGraph):
     def empty_graph(self):
         return pyg.data.Data(
                 raw=True,
-                empty=True,
+                empty=torch.tensor([True]),
                 x=torch.full(
                     (1, self.sort_and_slice.generator.radius + 1),
                     fill_value=self.node_types["UNK"],

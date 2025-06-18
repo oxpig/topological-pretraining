@@ -171,7 +171,7 @@ class PreTrainedGNN(PreTrainedModel):
         out_shape = (1, self.model.out_shape)
         out = []
         for x in X:
-            if not x.get("empty", False):
+            if not torch.all(x.get("empty", False)):
                 x = x.to(self.device)
                 x = self.model(**x)
                 if self.embed_state == 'node':
@@ -194,6 +194,12 @@ class PreTrainedGNN(PreTrainedModel):
             out = torch.vstack(out)
         return out
 
+    def embed_initial_grpah(
+        self,
+        X: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data],
+    ):
+        pass
+        
  
 class PreTrainedTokenizer(BaseTokenizer):
 
@@ -219,7 +225,7 @@ class PreTrainedTokenizer(BaseTokenizer):
 
     def preprocess(self, X: Chem.Mol|list[Chem.Mol]):
         """
-        Transform the input data into the raw format.
+        Transform the input data into the tokenized format.
         """
         if isinstance(X, Chem.Mol):
             X = [X]

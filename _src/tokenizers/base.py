@@ -273,7 +273,7 @@ class BaseGraph:
 
         return pyg.data.Data(
             x=x, edge_index=edge_index, edge_attr=edge_attr,
-            raw=True, empty=False,
+            raw=True, empty=torch.tensor([False]),
         )
     
     def encode(self, graph: pyg.data.Data):
