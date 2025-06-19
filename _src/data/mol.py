@@ -334,6 +334,7 @@ class SortAndSlice:
                         )
                         
                         value["aromatic"] = atom.GetIsAromatic()
+                        value["ring"] = atom.IsInRing()
                         
                     done[id] = True
                 self.identifiers[id] = value
