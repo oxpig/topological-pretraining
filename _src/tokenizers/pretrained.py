@@ -17,7 +17,6 @@ class PreTrainedModel(torch.nn.Module):
         params: dict|None = None,
         device: str = None,
         asarray: bool = True,
-        rest_on_cpu: bool = True,
     ):
         super(PreTrainedModel, self).__init__()
         self.asarray = asarray
@@ -27,13 +26,13 @@ class PreTrainedModel(torch.nn.Module):
             else:
                 device = 'cpu'
         self.device = device
-        self.rest_on_cpu = rest_on_cpu
         if params is not None:
             self.from_dict(params)
         elif path is not None:
             self.load(path=path)
         else:
             raise ValueError('Either path or params must be provided.')
+        self.to_device(self.device)
         
     def from_dict(self, params: dict):
         tokenizer = params.pop('tokenizer')
@@ -67,13 +66,10 @@ class PreTrainedModel(torch.nn.Module):
         return x
 
     def forward(self, x: Chem.Mol):
-        self.to_device()
         with torch.no_grad():
             x = self.embed(x)
         if self.asarray:
             x = x.detach().cpu().numpy()
-        if self.rest_on_cpu:
-            super().to('cpu')
         return x
     
     def get_head_preds(
@@ -153,6 +149,7 @@ class PreTrainedGNN(PreTrainedModel):
         self.graph_pool_type = graph_pool_type
         self.embed_state = embed_state
         super(PreTrainedGNN, self).__init__(path=path, params=params, device=device, asarray=asarray)
+        self.to_device()
         
     def from_dict(self, params: dict):
         super().from_dict(params)
@@ -202,13 +199,14 @@ class PreTrainedGNN(PreTrainedModel):
     def initial_embed(
         self,
         X: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data],
+        keep_tokens=False,
     ):
         # embedding prior to convolution
         if isinstance(X, Chem.Mol|pyg.data.Data):
             X = [X]
         if all(isinstance(x, Chem.Mol|None) for x in X):
             X = self.tokenize(X)
-        return [self.model.embed_graph_nodes(x) for x in X]
+        return [self.model.embed_graph_nodes(x, keep_tokens=keep_tokens) for x in X]
         
  
 class PreTrainedTokenizer(BaseTokenizer):
@@ -243,11 +241,12 @@ class PreTrainedTokenizer(BaseTokenizer):
         return X
     
     def initial_embed(
-        self, X: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data]
+        self, X: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data],
+        **kwargs
     ):
         # initial input embedding 
         # (i.e., tokens mapping to vectors of learned parameters)
-        return self.transform.initial_embed(X)
+        return self.transform.initial_embed(X, **kwargs)
     
     @property
     def device(self):
