@@ -188,7 +188,7 @@ class BaseGNN(torch.nn.Module):
                 embedded = torch.full((batch.max()+1, 1), True).to(x.device)
             return self.layers['node_embedding'](x), embedded
         
-    def embed_graph_nodes(self, graph: pyg.data.Data):
+    def embed_graph_nodes(self, graph: pyg.data.Data, keep_tokens=False):
         if self.node_vocab_size is None:
             Warning(
                 'Node embedding is not defined. Returning original graph.'
@@ -200,6 +200,8 @@ class BaseGNN(torch.nn.Module):
                 'Graph does not have node features. Returning original graph.'
             )
             return graph
+        if keep_tokens:
+            graph.tokens = graph.x.clone()
         graph.x, graph.embedded = self.embed_nodes(x, embedded)
         return graph
         
