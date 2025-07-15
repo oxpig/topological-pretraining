@@ -76,7 +76,8 @@ class PreFilter:
 
 class GraphDataset(pyg.data.InMemoryDataset):
     """
-    Graph dataset for pretraining.
+    Graph dataset for pretraining. 
+    Works for datasets upto ~1,000,000 samples with 32Gb of memory.
 
     Parameters:
     ----------
@@ -204,10 +205,15 @@ class GraphDataset(pyg.data.InMemoryDataset):
         """
         Compute the target labels for molecule and add to graph object.
 
-        Parameters
-        ---------
+        Parameters:
+        ----------
         graph : torch_geometric.data.Data
             A molecule as a PyTorch graph object.
+        
+        Returns:
+        -------
+        torch_geometric.data.Data
+            The input graph with target labels as attributes.
         """
         idx = graph.idx.item()
         # Retrieve RDKit molecule for graph
@@ -217,17 +223,56 @@ class GraphDataset(pyg.data.InMemoryDataset):
     
     @property
     def tokenizer_path(self):
+        """
+        Path to save and retrieve graph tokenizer.
+
+        Returns:
+        -------
+        pathlib.Path
+            Path to saved GraphTokenizer.
+        """
         return Path(self.processed_dir) / f'tokenizer{self.run_id}{self.split_name}.pt'
     
     @property
     def targets_path(self):
+        """
+        Path to save and retrieve graph target generator.
+
+        Returns:
+        pathlib.Path
+            Path to saved Target.
+        """
         return Path(self.processed_dir) / f'targets{self.run_id}{self.split_name}.pt'
 
     @property
     def processed_file_names(self):
+        """
+        Path for processed files.
+        Only one file for saving all graphs.
+
+        Returns:
+        -------
+        list[str]
+            Path to processed graphs in a List.
+        """
         return [f'processed{self.run_id}{self.split_name}.pt']
     
     def fit_targets(self, data_list: list[pyg.data.Data]):
+        """
+        Fit the target object to a list of molecular graphs.
+        Target object gets save to self.targets_path
+        This is for instances where the target depends on a set of
+        data, e.g., Sort and Slice fingerprints.
+
+        Parameters:
+        ----------
+        data_list : list[pyg.data.Data]
+            List of molecules as PyTorch graph objects.
+
+        Returns:
+        -------
+        None
+        """
         print('Fitting targets...') if self.verbose else None
         molecules = [self.molecules[data.idx] for data in data_list]
         self.targets.fit((molecules, data_list))
@@ -236,6 +281,9 @@ class GraphDataset(pyg.data.InMemoryDataset):
         self.targets.save(self.targets_path)
 
     def process(self):
+        """
+        Process raw molecular data.
+        """
         raw_dir = Path(self.raw_dir)
         raw_dir.mkdir(parents=True, exist_ok=True)
         molecules_path = raw_dir / 'molecules.pt'
