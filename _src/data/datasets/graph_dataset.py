@@ -163,7 +163,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
             
     def get(self, idx: int):
         """
-        Retrieve graph object at index `idx`.
+        Retrieve molecular graph object at index `idx`.
         Altered version of the native method in PyTorch Geometric that
         computes target values on the fly. Preserves memory efficiency 
         for large target labels like ECFP fingerprints.
@@ -176,7 +176,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         Returns:
         -------
         torch_geometric.data.Data
-            A PyTorch graph object.
+            A molecule as a PyTorch graph object.
         """
         if self.len() == 1:
             return copy.copy(self._data)
@@ -201,8 +201,17 @@ class GraphDataset(pyg.data.InMemoryDataset):
         return data
     
     def compute_graph_targets(self, graph: pyg.data.Data):
+        """
+        Compute the target labels for molecule and add to graph object.
+
+        Parameters
+        ---------
+        graph : torch_geometric.data.Data
+            A molecule as a PyTorch graph object.
+        """
         idx = graph.idx.item()
-        mol = self.molecules[idx]
+        # Retrieve RDKit molecule for graph
+        mol = self.molecules[idx] 
         graph = self.targets.transform(mol, graph)
         return graph
     
