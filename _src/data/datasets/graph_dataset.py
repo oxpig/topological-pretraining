@@ -326,10 +326,6 @@ class GraphDataset(pyg.data.InMemoryDataset):
     def make_raw_dir(self):
         """
         Make raw directory.
-
-        Returns:
-        -------
-        None
         """
         raw_dir = Path(self.raw_dir)
         raw_dir.mkdir(parents=True, exist_ok=True)
