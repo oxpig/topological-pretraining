@@ -288,20 +288,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         molecules_path = self.molecules_path
         raw_graph_path = self.raw_graph_path
         self.save_molecules(self._molecules)
-
-        if not raw_graph_path.exists() and not molecules_path.exists():
-            raise FileNotFoundError('No molecules or graphs found in the raw directory.')
-        if not raw_graph_path.exists() and molecules_path.exists():
-            molecules = torch.load(molecules_path, weights_only=False)
-            data_list = []
-            with tqdm(total=len(molecules), desc='Processing graphs', disable=not self.verbose) as pbar:
-                for idx, mol in enumerate(molecules):
-                    raw_graph = self.tokenizer.raw(mol)
-                    raw_graph.idx = idx
-                    data_list.append(raw_graph.to_dict())
-                    pbar.update(1)
-            torch.save(data_list, raw_graph_path)
-            print(f'Saved {len(data_list)} raw graphs to {raw_graph_path}.') if self.verbose else None
+        self.make_raw_graphs()
         
         processed_graph_path = Path(self.processed_paths[0])
         print(f'Processed graphs path: {processed_graph_path}.') if self.verbose else None
