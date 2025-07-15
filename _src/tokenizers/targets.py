@@ -1,13 +1,8 @@
 from . import PDV, SNS, ECFP, FCFP
-from ..nn import pred_head
 from .. import tokenizers 
 
 from copy import deepcopy
 from rdkit import Chem
-from sklearn.pipeline import Pipeline
-from sklearn.feature_selection import VarianceThreshold
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.base import BaseEstimator, TransformerMixin
 import torch_geometric as pyg
 import torch
 
