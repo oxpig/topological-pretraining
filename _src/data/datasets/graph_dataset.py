@@ -378,7 +378,21 @@ class GraphDataset(pyg.data.InMemoryDataset):
             return True
         
     def make_raw_graphs(self):
-        pass
+        """
+        Method for making raw graphs and saving to disk.
+        E.g., with an AtomGraphTokenizer raw node features are atomic numbers.
+        """
+        if self.check_raw_graphs(): return
+        molecules = self.molecules
+        data_list = []
+        with tqdm(total=len(molecules), desc='Processing graphs', disable=not self.verbose) as pbar:
+            for idx, mol in enumerate(molecules):
+                raw_graph = self.tokenizer.raw(mol)
+                raw_graph.idx = idx
+                data_list.append(raw_graph.to_dict())
+                pbar.update(1)
+        torch.save(data_list, self.raw_graph_path)
+        print(f'Saved {len(data_list)} raw graphs to {self.raw_graph_path}.') if self.verbose else None
 
     def get_raw(self, idx: int):
         """
@@ -395,7 +409,8 @@ class GraphDataset(pyg.data.InMemoryDataset):
         torch_geometric.data.Data
             A molecule as a graph data object.
         """
-        return torch.load(self.raw_graphs_path, weights_only=False)[idx]
+        graph = torch.load(self.raw_graphs_path, weights_only=False)[idx]
+        return pyg.data.Data(**graph)
     
     def __getitem__(self, idx: int):
         """
