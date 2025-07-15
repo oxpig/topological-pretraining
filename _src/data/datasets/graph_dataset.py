@@ -49,7 +49,7 @@ class PreFilter:
         bool
             True if `data.idx` is in the split, or if no split is provided.
             Otherwise False.
-            
+
         Raises:
         ------
         AttributeError
@@ -77,6 +77,27 @@ class PreFilter:
 class GraphDataset(pyg.data.InMemoryDataset):
     """
     Graph dataset for pretraining.
+
+    Parameters:
+    ----------
+    root : str
+        Path to store or retrieve molecular dataset.
+    tokenizer : GraphTokenizer
+        Tokenizer that converts molecules into PyTorch Geometric Data objects.
+        See `_src/tokenizers.py` for definition
+    molecules : Optional[List[rdkit.Chem.Mol]]
+        A list of RDKit molecules.
+    split : Optional[tuple[str, torch.Tensor]]
+        A tuple containing a name for the split for saving, and a tensor of indices.
+    fit_tokenizer : bool
+        Boolean for whether to fit the GraphTokenizer.
+        Defaults to True unless the input tokenizer has already been fitted.
+    run_id : Optional[str]
+        Optional id name for save paths.
+    targers : dict[str, dict[str, str]] | None
+        Nested dictionary of self-supervised target labels to generate.
+        Keys are target names; can be `ECFP`, `SNS`, `PDV`, or `FCFP`
+        Values are dictionaries of target variables, such as `radius` and `fpsize`.
     """
     _indexes = None
     def __init__(
@@ -85,7 +106,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         split: Optional[tuple[str, torch.Tensor]] = None,
         fit_tokenizer: bool = True,
         run_id: Optional[str] = None,
-        targets: dict[str, dict[str, str]] = None,
+        targets: dict[str, dict[str, str]] | None = None,
         verbose: bool = False,
     ):
         Path(root).mkdir(parents=True, exist_ok=True)
