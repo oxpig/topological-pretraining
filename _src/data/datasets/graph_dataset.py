@@ -329,12 +329,49 @@ class GraphDataset(pyg.data.InMemoryDataset):
         
     @property
     def raw_file_names(self):
-        return [f'{i}.pt' for i in range(len(self))]
+        """
+        File names for raw graphs and RDKit molecules.
 
-    def get_raw(self, idx):
-        return torch.load(self.raw_paths[idx], weights_only=False)
+        Returns:
+        -------
+        List[str]
+            List of file names. 0th elements is the file name for raw graphs.
+            1st element is the file name for RDKit molecules.
+        """
+        return ['graphs.pt', 'molecules.pt']
+
+
+    def get_raw(self, idx: int):
+        """
+        Retrieve the raw graph of a molecule.
+        Raw graphs are stored on disk.
+
+        Parameters:
+        ----------
+        idx : int
+            The index of a graph in the dataset.
+
+        Returns:
+        -------
+        torch_geometric.data.Data
+            A molecule as a graph data object.
+        """
+        return torch.load(self.raw_paths[0], weights_only=False)[idx]
     
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int):
+        """
+        Retrieve a processed molecular graph.
+
+        Parameters:
+        ----------
+        idx : int
+            The index of a graph in the dataset.
+
+        Returns:
+        -------
+        torch_geometric.data.Data
+            A molecule as a graph data object.
+        """
         graph = super(GraphDataset, self).__getitem__(idx)
         if isinstance(graph, GraphDataset):
             for G in graph:
@@ -352,7 +389,18 @@ class GraphDataset(pyg.data.InMemoryDataset):
     
     @property
     def molecules(self):
-        molecules_path = Path(self.raw_dir) / 'molecules.pt'
+        """
+        Load the original RDKit molecules.
+
+        Returns:
+        -------
+        List[rdkit.Chem.Mol | None]
+
+        Raises:
+        ------
+        ValueError: If no molecules are found in memory or on disk.
+        """
+        molecules_path = Path(self.raw_dir)
         if self._molecules is not None:
             return self._molecules
         elif molecules_path.exists():
