@@ -173,7 +173,7 @@ class MorganGenerator:
 
         # Fill in missing environments for atoms with duplicate environments.
         # This needs to be performed regardless, as includeRedundantEnvironments
-        # assigns duplicate environments different identifiers.
+        # assigns duplicate environments with different central atoms with different identifiers.
         missing_envs = np.vstack(np.where(out == 0)).T
         if len(missing_envs) > 0:
             for (atom, radius) in missing_envs:
