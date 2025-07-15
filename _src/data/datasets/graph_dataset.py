@@ -195,13 +195,12 @@ class GraphDataset(pyg.data.InMemoryDataset):
         )
         if self.targets is not None:
             if self.targets.is_fitted_:
-                data = self.load_graph_targets(data)
+                data = self.compute_graph_targets(data)
                 self._data_list[idx] = copy.copy(data)
 
         return data
     
-
-    def load_graph_targets(self, graph: pyg.data.Data):
+    def compute_graph_targets(self, graph: pyg.data.Data):
         idx = graph.idx.item()
         mol = self.molecules[idx]
         graph = self.targets.transform(mol, graph)
