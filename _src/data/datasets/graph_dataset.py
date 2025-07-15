@@ -20,18 +20,55 @@ if TYPE_CHECKING:
     
 
 class PreFilter:
+    """
+    Class for filtering dataset based on split indicies
 
-    def __init__(self, split: tuple[str, torch.Tensor]):
+    Parameters:
+    ----------
+    split : tuple[str, torch.Tensor])
+        Tuple with a split name at 0 and split indices at 1.
+    """
+    def __init__(self, split: tuple[str, torch.Tensor] = None):
         if split:
             self.split_name, self.indices = split
         else:
             self.split_name, self.indices = None, None
 
     def _pre_filter(self, data: pyg.data.Data):
-        
+        """
+        Check if graph is in split.
+
+        Parameters:
+        ----------
+        data : torch_geometric.data.Data
+            A PyTorch Geometric Data object. Must have an `idx` attribute 
+            (int) that indicates the object's position in the dataset.
+
+        Returns:
+        -------
+        bool
+            True if `data.idx` is in the split, or if no split is provided.
+            Otherwise False.
+            
+        Raises:
+        ------
+        AttributeError
+            If `data` does not have an `idx` attribute.
+        TypeError
+            If `data.idx` is not an integer.
+        """
         if self.indices is None:
             return True
         else:
+            if "idx" not in data:
+                raise AttributeError(
+                    "`data`, requires an integer `idx` attribute " \
+                    "indicating the objects position in the dataset."
+                )
+            if not isinstance(data.idx, int):
+                raise TypeError(
+                    "`data` attribute `idx` must be an integer."
+                )
             return self.indices[data.idx]
         
     def __call__(self, data: pyg.data.Data):
