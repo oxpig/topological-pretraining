@@ -351,6 +351,34 @@ class GraphDataset(pyg.data.InMemoryDataset):
     def raw_graph_path(self):
         return Path(self.raw_paths[0])
     
+    def check_raw_graphs(self):
+        """
+        Method to check raw graphs have been made.
+
+        Returns:
+        -------
+        bool
+            `False` if saved raw graphs do not exist
+            `True` if saved raw graphs do exist
+
+        Raises:
+        ------
+        FileNotFoundError
+            If no paths for raw graphs or molecules exist.
+            If path for raw graphs does not exist, molecules are needed to create graphs.
+        """
+        if not self.raw_graph_path.exists() and not self.molecules_path.exists():
+            # if no files raise an Error
+            raise FileNotFoundError('No molecules or graphs found in the raw directory.')
+        elif not self.raw_graph_path.exists() and self.molecules_path.exists():
+            # If raw graphs do not exist return False
+            return False
+        else:
+            # If raw graphs exist
+            return True
+        
+    def make_raw_graphs(self):
+        pass
 
     def get_raw(self, idx: int):
         """
