@@ -280,6 +280,37 @@ class GraphDataset(pyg.data.InMemoryDataset):
             warnings.warn('Overwriting existing targets.')
         self.targets.save(self.targets_path)
 
+    def save_molecules(self, molecules: list[Chem.Mol | None] = None):
+        """
+        Save a list of molecules to disk.
+        Skips saving if path to molecules already exists.
+
+        Parameters:
+        ----------
+        molecules : list[rdkit.Chem.Mol | None]
+            A list of rdkit molecules to save.
+            Accepts `None` in list to preserve index positions of molecules that fail RDKit 
+            parsing.
+
+        Raises:
+        ------
+        TypeError
+            If `molecules` is not a list and a saved version of molecules does not exist.
+        TypeError
+            If any type other than rdkit molecules or None appears in the input list.
+        """
+        if self.molecules_path.exists():
+            warnings.warn(
+                'Path to molecules already exists. Skipping save.',
+                UserWarning
+            )
+        if not isinstance(molecules, list): 
+            raise TypeError(f'Expect `list`. Got: {type(molecules)}')
+        if not all(isinstance(m, Chem.Mol|None) for m in molecules):
+            raise TypeError('Found type other than `rdkit.Chem.Mol` and `None` in molecules')
+        torch.save(molecules, self.molecules_path)
+        print(f'Saved {len(molecules)} molecules to {self.molecules_path}.') if self.verbose else None
+
     def process(self):
         """
         Process raw molecular data.
@@ -287,12 +318,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         self.make_raw_dir()
         molecules_path = self.molecules_path
         raw_graph_path = self.raw_graph_path
-        if self._molecules is not None and not molecules_path.exists():
-            assert all(isinstance(m, Chem.Mol|None) for m in self._molecules)
-            torch.save(self._molecules, molecules_path)
-            print(f'Saved {len(self._molecules)} molecules to {molecules_path}.') if self.verbose else None
-
-        
+        self.save_molecules(self._molecules)   
 
         if not raw_graph_path.exists() and not molecules_path.exists():
             raise FileNotFoundError('No molecules or graphs found in the raw directory.')
