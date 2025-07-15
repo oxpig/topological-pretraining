@@ -286,8 +286,8 @@ class GraphDataset(pyg.data.InMemoryDataset):
         """
         raw_dir = Path(self.raw_dir)
         raw_dir.mkdir(parents=True, exist_ok=True)
-        molecules_path = raw_dir / 'molecules.pt'
-        raw_graph_path = raw_dir / 'graphs.pt'
+        molecules_path = self.molecules_path
+        raw_graph_path = self.raw_graph_path
         if self._molecules is not None and not molecules_path.exists():
             assert all(isinstance(m, Chem.Mol|None) for m in self._molecules)
             torch.save(self._molecules, molecules_path)
@@ -340,6 +340,14 @@ class GraphDataset(pyg.data.InMemoryDataset):
         """
         return ['graphs.pt', 'molecules.pt']
 
+    @property
+    def molecules_path(self):
+        return Path(self.raw_paths[1])
+
+    @property
+    def raw_graph_path(self):
+        return Path(self.raw_paths[0])
+    
 
     def get_raw(self, idx: int):
         """
@@ -356,7 +364,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         torch_geometric.data.Data
             A molecule as a graph data object.
         """
-        return torch.load(self.raw_paths[0], weights_only=False)[idx]
+        return torch.load(self.raw_graphs_path, weights_only=False)[idx]
     
     def __getitem__(self, idx: int):
         """
@@ -400,11 +408,10 @@ class GraphDataset(pyg.data.InMemoryDataset):
         ------
         ValueError: If no molecules are found in memory or on disk.
         """
-        molecules_path = Path(self.raw_dir)
         if self._molecules is not None:
             return self._molecules
-        elif molecules_path.exists():
-            self._molecules = torch.load(molecules_path, weights_only=False)
+        elif self.molecules_path.exists():
+            self._molecules = torch.load(self.molecules_path, weights_only=False)
             return self._molecules
         else:
             raise ValueError('Molecules not found.')
