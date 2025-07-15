@@ -94,10 +94,13 @@ class GraphDataset(pyg.data.InMemoryDataset):
         Defaults to True unless the input tokenizer has already been fitted.
     run_id : Optional[str]
         Optional id name for save paths.
-    targers : dict[str, dict[str, str]] | None
+    targets : dict[str, dict[str, str]] | None
         Nested dictionary of self-supervised target labels to generate.
         Keys are target names; can be `ECFP`, `SNS`, `PDV`, or `FCFP`
         Values are dictionaries of target variables, such as `radius` and `fpsize`.
+        REVISIT
+    verbose : bool
+        Verbosity. Default is `False`.
     """
     _indexes = None
     def __init__(
@@ -159,6 +162,22 @@ class GraphDataset(pyg.data.InMemoryDataset):
                     self.fit_targets(data_list)
             
     def get(self, idx: int):
+        """
+        Retrieve graph object at index `idx`.
+        Altered version of the native method in PyTorch Geometric that
+        computes target values on the fly. Preserves memory efficiency 
+        for large target labels like ECFP fingerprints.
+
+        Parameters:
+        ----------
+        idx : int
+            Index of the graph object.
+        
+        Returns:
+        -------
+        torch_geometric.data.Data
+            A PyTorch graph object.
+        """
         if self.len() == 1:
             return copy.copy(self._data)
 
