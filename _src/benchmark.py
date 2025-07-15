@@ -1,8 +1,6 @@
 from _src.models import get_model
-from _src.tokenizers import get_tokenizer
 from _src.data.utils import load_dataset
 from _src.data.datasets import BaseDataFrame, MolDataset
-from _src.tokenizers.base import BaseTokenizer
 
 from copy import deepcopy
 
@@ -10,17 +8,13 @@ from _src.models import LGBM
 
 import numpy as np
 from pathlib import Path
-from sklearn.decomposition import PCA
 from sklearn.feature_selection import (
-    SelectKBest, RFE, RFECV, VarianceThreshold,
     mutual_info_regression, mutual_info_classif
 )
-from sklearn.model_selection import train_test_split, GroupShuffleSplit
 from sklearn.metrics import mean_absolute_error, roc_auc_score
 import torch
 from tqdm import tqdm
-from typing import Callable, Generator, Literal
-import yaml
+from typing import Callable, Literal
 import optuna
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -178,8 +172,7 @@ def benchmark(config: dict):
         ]
     if isinstance(benchmark_data, str):
         benchmark_data = [benchmark_data]
-    # if 'MUV733' in benchmark_data:
-    #     benchmark_data.remove('MUV733')
+
     model_class = get_model(config['model'])
     base_model_kwargs = config.get('model_kwargs', {})
     base_model_kwargs['device'] = device
