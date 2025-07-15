@@ -284,14 +284,15 @@ class GraphDataset(pyg.data.InMemoryDataset):
         """
         Process raw molecular data.
         """
-        raw_dir = Path(self.raw_dir)
-        raw_dir.mkdir(parents=True, exist_ok=True)
+        self.make_raw_dir()
         molecules_path = self.molecules_path
         raw_graph_path = self.raw_graph_path
         if self._molecules is not None and not molecules_path.exists():
             assert all(isinstance(m, Chem.Mol|None) for m in self._molecules)
             torch.save(self._molecules, molecules_path)
             print(f'Saved {len(self._molecules)} molecules to {molecules_path}.') if self.verbose else None
+
+        
 
         if not raw_graph_path.exists() and not molecules_path.exists():
             raise FileNotFoundError('No molecules or graphs found in the raw directory.')
@@ -326,7 +327,18 @@ class GraphDataset(pyg.data.InMemoryDataset):
                     print('Fitting targets...') if self.verbose else None
                     self.fit_targets(data_list)
             del data_list
-        
+
+    def make_raw_dir(self):
+        """
+        Make raw directory.
+
+        Returns:
+        -------
+        None
+        """
+        raw_dir = Path(self.raw_dir)
+        raw_dir.mkdir(parents=True, exist_ok=True)
+
     @property
     def raw_file_names(self):
         """
@@ -415,6 +427,11 @@ class GraphDataset(pyg.data.InMemoryDataset):
             return self._molecules
         else:
             raise ValueError('Molecules not found.')
+        
+    def save_molecules(self):
+        if self._molecules != None and not self.molecules_path.exists():
+            pass
+            
     
     @property
     def priors(self):
