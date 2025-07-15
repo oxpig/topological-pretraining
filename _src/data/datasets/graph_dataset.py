@@ -283,18 +283,23 @@ class GraphDataset(pyg.data.InMemoryDataset):
     def process(self):
         """
         Process raw molecular data.
+        Makes raw graphs if they do not exist.
+        Filters graphs using split indices.
+        Fits GraphTokenizer to filtered raw graphs.
+        Saves GraphTokenizer as a dictionary.
+        Tokenizes filtered raw graphs and saves to processed path.
+        Fits Targets to tokenized graphs
         """
         self.make_raw_dir()
-        molecules_path = self.molecules_path
         raw_graph_path = self.raw_graph_path
         self.save_molecules(self._molecules)
         self.make_raw_graphs()
+        data_list = self.load_raw_graphs()
         
         processed_graph_path = Path(self.processed_paths[0])
         print(f'Processed graphs path: {processed_graph_path}.') if self.verbose else None
         if raw_graph_path.exists() and self.fit_tokenizer:
-            data_list = torch.load(raw_graph_path, weights_only=False)
-            data_list = [pyg.data.Data(**data_dict) for data_dict in data_list]
+            
             print(f'Loaded {len(data_list)} raw graphs from {raw_graph_path}.') if self.verbose else None
             data_list = [graph for graph in data_list if self.pre_filter(graph)]
             if not self.tokenizer.is_fitted_ or self.fit_tokenizer:
@@ -381,6 +386,19 @@ class GraphDataset(pyg.data.InMemoryDataset):
                 pbar.update(1)
         torch.save(data_list, self.raw_graph_path)
         print(f'Saved {len(data_list)} raw graphs to {self.raw_graph_path}.') if self.verbose else None
+
+    def load_raw_graphs(self):
+        """
+        Load all raw graphs from file.
+
+        Returns:
+        -------
+        list[torch_geometric.data.Data] 
+            List of molecules as raw graphs.
+        """
+        graphs = torch.load(self.raw_graph_path, weights_only=False)
+        graphs = [pyg.data.Data(**data_dict) for data_dict in graphs]
+        return graphs
 
     def get_raw(self, idx: int):
         """
