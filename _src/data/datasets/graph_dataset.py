@@ -396,8 +396,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
 
     def get_raw(self, idx: int):
         """
-        Retrieve the raw graph of a molecule.
-        Raw graphs are stored on disk.
+        Compute the raw graph of a molecule on the fly.
 
         Parameters:
         ----------
@@ -409,8 +408,9 @@ class GraphDataset(pyg.data.InMemoryDataset):
         torch_geometric.data.Data
             A molecule as a graph data object.
         """
-        graph = torch.load(self.raw_graphs_path, weights_only=False)[idx]
-        return pyg.data.Data(**graph)
+        molecule = self.molecules[idx]
+        graph = self.tokenizer.raw(molecule)
+        return graph
     
     def __getitem__(self, idx: int):
         """
