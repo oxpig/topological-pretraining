@@ -92,7 +92,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         A tuple containing a name for the split for saving, and a tensor of indices.
     fit_tokenizer : bool
         Boolean for whether to fit the GraphTokenizer.
-        Defaults to True unless the input tokenizer has already been fitted.
+        Defaults to True unless the input tokenizer or saved tokenizer has already been fitted.
     run_id : Optional[str]
         Optional id name for save paths.
     targets : dict[str, dict[str, str]] | None
@@ -130,8 +130,9 @@ class GraphDataset(pyg.data.InMemoryDataset):
         
         tokenizer_path = Path(root) / 'processed' / f'tokenizer{run_id}{self.split_name}.pt'
         if tokenizer_path.exists():
+            warnings.warn("Saved tokenizer found. Using saved tokenizer.", UserWarning)
             tokenizer = load_tokenizer(tokenizer_path)
-            self.fit_tokenizer = False
+            self.fit_tokenizer = not tokenizer.is_fitted_
 
         if tokenizer is None:
             raise ValueError('Tokenizer not found.')
@@ -156,7 +157,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         if Path(self.processed_paths[0]).exists():
             print('Loading processed graphs into memory...') if self.verbose else None
             self.load(self.processed_paths[0])
-            if self.targets is not None:          
+            if self.targets is not None:
                 if not self.targets.is_fitted_:
                     print('Targets not fitted. Fitting...') if self.verbose else None
                     data_list = [graph for graph in self]
@@ -277,7 +278,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         molecules = [self.molecules[data.idx] for data in data_list]
         self.targets.fit((molecules, data_list))
         if self.targets_path.exists():
-            warnings.warn('Overwriting existing targets.')
+            warnings.warn('Overwriting existing Targets object.')
         self.targets.save(self.targets_path)
 
     def process(self):
@@ -295,13 +296,17 @@ class GraphDataset(pyg.data.InMemoryDataset):
         self.save_molecules(self._molecules)
         self.make_raw_graphs()
         data_list = self.load_raw_graphs()
+        data_list = [graph for graph in data_list if self.pre_filter(graph)]
         
+        if self.fit_tokenizer:
+            self.run_tokenizer_fitting(data_list)
+            
         processed_graph_path = Path(self.processed_paths[0])
         print(f'Processed graphs path: {processed_graph_path}.') if self.verbose else None
         if raw_graphs_path.exists() and self.fit_tokenizer:
             
             print(f'Loaded {len(data_list)} raw graphs from {raw_graphs_path}.') if self.verbose else None
-            data_list = [graph for graph in data_list if self.pre_filter(graph)]
+            
             if not self.tokenizer.is_fitted_ or self.fit_tokenizer:
                 print("Fitting tokenizer...")
                 self.tokenizer.fit(data_list)
@@ -321,6 +326,18 @@ class GraphDataset(pyg.data.InMemoryDataset):
         """
         raw_dir = Path(self.raw_dir)
         raw_dir.mkdir(parents=True, exist_ok=True)
+
+    def run_tokenizer_fitting(self, data_list: list[pyg.data.Data]):
+        """
+        Fit tokenizer on input graphs.
+
+        Parameters:
+        ----------
+        data_list : list[torch_geometric.data.Data]
+            List of raw molecular graphs.
+        """
+        self.tokenizer.fit(data_list)
+        self.tokenizer.save(self.tokenizer_path, params_only=True)
 
     @property
     def raw_file_names(self):
@@ -372,17 +389,6 @@ class GraphDataset(pyg.data.InMemoryDataset):
         else:
             # If raw graphs exist
             return True
-        
-    def check_processed_graphs(self):
-        """
-        Check if processed graphs exist on disk.
-
-        Returns:
-        -------
-        bool
-            `True` if processed graphs exist otherwise `False`.
-        """
-        return self.processed_graphs_path.exists()
         
     def make_raw_graphs(self):
         """
