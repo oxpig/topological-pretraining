@@ -155,14 +155,12 @@ class GraphDataset(pyg.data.InMemoryDataset):
             root=root, pre_filter=PreFilter(split),
         )
         
-        if Path(self.processed_paths[0]).exists():
-            print('Loading processed graphs into memory...') if self.verbose else None
-            self.load(self.processed_paths[0])
-            if self.targets is not None:
-                if not self.targets.is_fitted_:
-                    print('Targets not fitted. Fitting...') if self.verbose else None
-                    data_list = [graph for graph in self]
-                    self.fit_targets(data_list)
+        self.load(self.processed_graphs_path)
+        if self.targets is not None:
+            if not self.targets.is_fitted_:
+                print('Targets not fitted. Fitting...') if self.verbose else None
+                data_list = [graph for graph in self]
+                self.fit_targets(data_list)
             
     def get(self, idx: int):
         """
@@ -302,11 +300,6 @@ class GraphDataset(pyg.data.InMemoryDataset):
 
         data_list = [self.tokenizer.encode(graph) for graph in data_list]
         self.save(data_list, self.processed_graphs_path)
-
-        if self.targets is not None:
-            if not self.targets.is_fitted_:
-                print('Fitting targets...') if self.verbose else None
-                self.fit_targets(data_list)
 
     def make_raw_dir(self):
         """
