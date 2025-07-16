@@ -159,8 +159,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         if self.targets is not None:
             if not self.targets.is_fitted_:
                 print('Targets not fitted. Fitting...') if self.verbose else None
-                data_list = [graph for graph in self]
-                self.fit_targets(data_list)
+                self.fit_targets([graph for graph in self])
             
     def get(self, idx: int):
         """
