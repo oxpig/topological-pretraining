@@ -32,8 +32,15 @@ class Biogen(BaseDataFrame):
 
     Parameters:
     -----------
-    root: str|None
+    root : str | None
         Optional root directory where the dataset will be stored.
+    compression : bool | None
+        Whether to compress DataFrame when saving.
+    verbose : bool
+        Boolean for verbosity. Default is `True`.
+    standardizer : _src.data.mol.Standardizer
+        An object for standardizing dataset molecules.
+        See `_src.data.mol.Standardizer` for default.
 
     Attributes:
     -----------
@@ -100,7 +107,21 @@ class Biogen(BaseDataFrame):
             self.save(csv)
         
 class Biogen_Subset(Biogen, BaseDataFrame):
+    """
+    Class for defining a subset within Biogen (e.g., Human PPB data).
 
+    Parameters:
+    -----------
+    root : str | None
+        Optional root directory where the dataset will be stored.
+    compression : bool | None
+        Whether to compress DataFrame when saving.
+    verbose : bool
+        Boolean for verbosity. Default is `True`.
+    standardizer : _src.data.mol.Standardizer
+        An object for standardizing dataset molecules.
+        See `_src.data.mol.Standardizer` for default.
+    """
     def __init__(
         self, root: str|None = None, compression: bool = True,
         verbose: bool = True, standardizer: Standardizer = Standardizer()
@@ -127,12 +148,22 @@ class Biogen_Subset(Biogen, BaseDataFrame):
 
     @property
     def mols_path(self):
+        """
+        Get the shared csv file path for all subsets.
+
+        Returns:
+        -------
+        str
+        """
         if self.csv is not None:
             return Path(self.csv).parent / f'biogen.npz'
         return None
 
     @property
     def rdkit_mols(self):
+        """
+        Get molecules only in subset.
+        """
         if self.mols_path is not None and self.mols_path.exists():
             mols = np.load(file=self.mols_path, allow_pickle=True)
             mols = mols['arr_0']
