@@ -2,7 +2,6 @@ from __future__ import annotations
 from _src.tokenizers import load_tokenizer
 from _src.tokenizers.targets import Targets
 
-import numpy as np
 from pathlib import Path
 import torch_geometric as pyg
 import torch
