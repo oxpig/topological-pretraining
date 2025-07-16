@@ -5,14 +5,13 @@ from _src.tokenizers.targets import Targets
 import numpy as np
 from pathlib import Path
 import torch_geometric as pyg
-from torch_geometric.data.dataset import _repr
 import torch
 import copy
 from tqdm import tqdm
 from rdkit import Chem
 
 
-from typing import Optional, Callable, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 import warnings
 
 if TYPE_CHECKING:
