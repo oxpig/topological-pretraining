@@ -215,38 +215,6 @@ class BaseDataFrame(pd.DataFrame):
             The total number of columns containing `split` in their name.
         """
         return len([col for col in self.columns if 'split' in col])
-    
-    def save_standard_smiles(self):
-        """
-        Save SMILES strings of loaded RDKit molecules after standardization.
-        SMILES are saved to an `smi` file in the same directory as the csv file.
-
-        Raises:
-        ------
-        Exception
-            If SMILES cannot be saved. 
-        """
-        smi = [Chem.MolToSmiles(m) if m != None else None for m in self.rdkit_mols]
-        try:
-            mols_path = self.mols_path
-            smi_path = mols_path.parent / f'{mols_path.stem}.smi'
-
-            with open(smi_path, 'w') as f:
-                for s in smi:
-                    f.write(f'{s}\n')
-        except:
-            print('Could not save SMILES file')
-
-    def get_smiles(self):
-        """
-        
-        """
-        mols_path = self.mols_path
-        smi_path = mols_path.parent / f'{mols_path.stem}.smi'
-        try:
-            return pd.read_csv(smi_path, header=None).iloc[:,0].tolist()
-        except:
-            print('Could not load SMILES file')
 
     @property
     def hyperopt_average(self):
