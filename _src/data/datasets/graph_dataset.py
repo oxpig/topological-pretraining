@@ -501,8 +501,3 @@ class GraphDataset(pyg.data.InMemoryDataset):
             return self._molecules
         else:
             raise ValueError('Molecules not found.')
-            
-    
-    @property
-    def priors(self):
-        return {target: self.targets[target]['prior'] for target in self.targets}
