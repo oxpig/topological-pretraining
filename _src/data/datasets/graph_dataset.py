@@ -28,9 +28,7 @@ class PreFilter:
     split : tuple[str, torch.Tensor])
         Tuple with a split name at 0 and split indices at 1.
     """
-    def __init__(self, split: tuple[str, torch.Tensor] = None, verbose: bool = False):
-
-        self.verbose = verbose
+    def __init__(self, split: tuple[str, torch.Tensor] = None):
         if split:
             self.split_name, self.indices = split
         else:
@@ -160,7 +158,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
             if not self.targets.is_fitted_:
                 print('Targets not fitted. Fitting...') if self.verbose else None
                 self.fit_targets([graph for graph in self])
-            
+    
     def get(self, idx: int):
         """
         Retrieve molecular graph object at index `idx`.
