@@ -5,6 +5,11 @@ import numpy as np
 from pathlib import Path
 
 class FactorXA(BaseDataFrame):
+    """
+    Dataset of binding affinities of small molecules with Factor XA.
+    Data from ChEMBL, curated by Dablander, M. et al. (2023)
+    (https://doi.org/10.1186/s13321-023-00708-w)
+    """
 
     url = 'https://raw.githubusercontent.com/MarkusFerdinandDablander/QSAR-activity-cliff-experiments/refs/heads/main/data/chembl_factor_xa/molecule_data_clean.csv'
 

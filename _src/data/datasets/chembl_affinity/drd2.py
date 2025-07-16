@@ -5,6 +5,11 @@ from pathlib import Path
 import numpy as np
 
 class DRD2(BaseDataFrame):
+    """
+    Dataset of binding affinities of small molecules with Dopamine Receptor D2 (DRD2).
+    Data from ChEMBL, curated by Dablander, M. et al. (2023) 
+    (https://doi.org/10.1186/s13321-023-00708-w)
+    """
 
     url = 'https://raw.githubusercontent.com/MarkusFerdinandDablander/QSAR-activity-cliff-experiments/refs/heads/main/data/chembl_dopamine_d2/molecule_data_clean.csv'
 
