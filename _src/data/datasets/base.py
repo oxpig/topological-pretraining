@@ -218,10 +218,27 @@ class BaseDataFrame(pd.DataFrame):
 
     @property
     def hyperopt_average(self):
+        """
+        Averaging type for hyperparameter optimization; can be `'mean'` or `'median'`.
+
+        Returns:
+        -------
+        str
+        """
         return 'mean'
     
     @property
     def splits_to_exclude_for_metrics(self):
+        """
+        Get list of splits where `Test` labels are all identical.
+        Useful for excluding splits which aren't informative.
+        Primarily for binary classification datasets with highly imbalanced classes.
+
+        Returns:
+        -------
+        numpy.ndarray
+            Array of split indices to exclude.
+        """
         split_cols = [col for col in self.columns if 'split' in col]
         exclude = []
         for col in split_cols:
