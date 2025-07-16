@@ -291,16 +291,16 @@ class GraphDataset(pyg.data.InMemoryDataset):
         Fits Targets to tokenized graphs
         """
         self.make_raw_dir()
-        raw_graph_path = self.raw_graph_path
+        raw_graphs_path = self.raw_graphs_path
         self.save_molecules(self._molecules)
         self.make_raw_graphs()
         data_list = self.load_raw_graphs()
         
         processed_graph_path = Path(self.processed_paths[0])
         print(f'Processed graphs path: {processed_graph_path}.') if self.verbose else None
-        if raw_graph_path.exists() and self.fit_tokenizer:
+        if raw_graphs_path.exists() and self.fit_tokenizer:
             
-            print(f'Loaded {len(data_list)} raw graphs from {raw_graph_path}.') if self.verbose else None
+            print(f'Loaded {len(data_list)} raw graphs from {raw_graphs_path}.') if self.verbose else None
             data_list = [graph for graph in data_list if self.pre_filter(graph)]
             if not self.tokenizer.is_fitted_ or self.fit_tokenizer:
                 print("Fitting tokenizer...")
@@ -340,8 +340,12 @@ class GraphDataset(pyg.data.InMemoryDataset):
         return Path(self.raw_paths[1])
 
     @property
-    def raw_graph_path(self):
+    def raw_graphs_path(self):
         return Path(self.raw_paths[0])
+    
+    @property
+    def processed_graphs_path(self):
+        return Path(self.processed_paths[0])
     
     def check_raw_graphs(self):
         """
@@ -359,15 +363,26 @@ class GraphDataset(pyg.data.InMemoryDataset):
             If no paths for raw graphs or molecules exist.
             If path for raw graphs does not exist, molecules are needed to create graphs.
         """
-        if not self.raw_graph_path.exists() and not self.molecules_path.exists():
+        if not self.raw_graphs_path.exists() and not self.molecules_path.exists():
             # if no files raise an Error
             raise FileNotFoundError('No molecules or graphs found in the raw directory.')
-        elif not self.raw_graph_path.exists() and self.molecules_path.exists():
+        elif not self.raw_graphs_path.exists() and self.molecules_path.exists():
             # If raw graphs do not exist return False
             return False
         else:
             # If raw graphs exist
             return True
+        
+    def check_processed_graphs(self):
+        """
+        Check if processed graphs exist on disk.
+
+        Returns:
+        -------
+        bool
+            `True` if processed graphs exist otherwise `False`.
+        """
+        return self.processed_graphs_path.exists()
         
     def make_raw_graphs(self):
         """
@@ -384,8 +399,8 @@ class GraphDataset(pyg.data.InMemoryDataset):
                 raw_graph = self.get_raw(idx)
                 data_list.append(raw_graph.to_dict())
                 pbar.update(1)
-        torch.save(data_list, self.raw_graph_path)
-        print(f'Saved {len(data_list)} raw graphs to {self.raw_graph_path}.') if self.verbose else None
+        torch.save(data_list, self.raw_graphs_path)
+        print(f'Saved {len(data_list)} raw graphs to {self.raw_graphs_path}.') if self.verbose else None
 
     def load_raw_graphs(self):
         """
@@ -396,7 +411,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         list[torch_geometric.data.Data] 
             List of molecules as raw graphs.
         """
-        graphs = torch.load(self.raw_graph_path, weights_only=False)
+        graphs = torch.load(self.raw_graphs_path, weights_only=False)
         graphs = [pyg.data.Data(**data_dict) for data_dict in graphs]
         return graphs
 
@@ -457,8 +472,8 @@ class GraphDataset(pyg.data.InMemoryDataset):
         ----------
         molecules : list[rdkit.Chem.Mol | None]
             A list of rdkit molecules to save.
-            Accepts `None` in list to preserve index positions of molecules that fail RDKit 
-            parsing.
+            Accepts `None` in list to preserve index positions in raw graph list of molecules that
+            fail RDKit parsing.
 
         Raises:
         ------
