@@ -28,7 +28,9 @@ class PreFilter:
     split : tuple[str, torch.Tensor])
         Tuple with a split name at 0 and split indices at 1.
     """
-    def __init__(self, split: tuple[str, torch.Tensor] = None):
+    def __init__(self, split: tuple[str, torch.Tensor] = None, verbose: bool = False):
+
+        self.verbose = verbose
         if split:
             self.split_name, self.indices = split
         else:
@@ -132,13 +134,12 @@ class GraphDataset(pyg.data.InMemoryDataset):
         if tokenizer_path.exists():
             warnings.warn("Saved tokenizer found. Using saved tokenizer.", UserWarning)
             tokenizer = load_tokenizer(tokenizer_path)
-            self.fit_tokenizer = not tokenizer.is_fitted_
-
+            
         if tokenizer is None:
             raise ValueError('Tokenizer not found.')
             
         self.tokenizer = tokenizer
-        self.fit_tokenizer = fit_tokenizer
+        self.fit_tokenizer = fit_tokenizer or not tokenizer.is_fitted_
         
         targets_path = Path(root) / 'processed' / f'targets{run_id}{self.split_name}.pt'
         if targets_path.exists():
@@ -167,8 +168,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         """
         Retrieve molecular graph object at index `idx`.
         Altered version of the native method in PyTorch Geometric that
-        computes target values on the fly. Preserves memory efficiency 
-        for large target labels like ECFP fingerprints.
+        computes target values.
 
         Parameters:
         ----------
@@ -297,28 +297,16 @@ class GraphDataset(pyg.data.InMemoryDataset):
         self.make_raw_graphs()
         data_list = self.load_raw_graphs()
         data_list = [graph for graph in data_list if self.pre_filter(graph)]
-        
         if self.fit_tokenizer:
             self.run_tokenizer_fitting(data_list)
-            
-        processed_graph_path = Path(self.processed_paths[0])
-        print(f'Processed graphs path: {processed_graph_path}.') if self.verbose else None
-        if raw_graphs_path.exists() and self.fit_tokenizer:
-            
-            print(f'Loaded {len(data_list)} raw graphs from {raw_graphs_path}.') if self.verbose else None
-            
-            if not self.tokenizer.is_fitted_ or self.fit_tokenizer:
-                print("Fitting tokenizer...")
-                self.tokenizer.fit(data_list)
-                self.tokenizer.save(self.tokenizer_path, params_only=True)
 
-            data_list = [self.tokenizer.encode(graph) for graph in data_list]
-            self.save(data_list, processed_graph_path)
-            if self.targets is not None:
-                if not self.targets.is_fitted_:
-                    print('Fitting targets...') if self.verbose else None
-                    self.fit_targets(data_list)
-            del data_list
+        data_list = [self.tokenizer.encode(graph) for graph in data_list]
+        self.save(data_list, self.processed_graphs_path)
+
+        if self.targets is not None:
+            if not self.targets.is_fitted_:
+                print('Fitting targets...') if self.verbose else None
+                self.fit_targets(data_list)
 
     def make_raw_dir(self):
         """
