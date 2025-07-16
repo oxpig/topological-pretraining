@@ -78,13 +78,23 @@ class BaseDataFrame(pd.DataFrame):
     @property
     def name(self):
         """
-        Get the name of the dataset.
+        Returns:
+        -------
+        str
+            Dataset name
         """
         return self.__class__.__name__
     
     def save(self, csv: str|None = None, compression: bool|None = None):
         """
         Save the dataset to a csv file.
+
+        Parameters:
+        ----------
+        csv : str | None
+            Path to save dataframe to csv. If `None` dataframe is not saved.
+        compression : bool | None
+            Whether to infer compression from the csv path.
         """
         if compression is not None:
             self.compression = compression
@@ -106,6 +116,23 @@ class BaseDataFrame(pd.DataFrame):
     
     @property
     def rdkit_mols(self):
+        """
+        Get dataset molecules.
+        Loaded from disk if a path exists, otherwise DataFrame SMILES are converted into RDKit 
+        molecules and standardardized.
+
+        By default, sanitization does not occur unless specified in the Standardizer.
+
+        Returns:
+        -------
+        list[rdkit.Chem.Mol | None]
+            A list of rdkit molecule objects.
+        
+        Raises:
+        ------
+        ValueError
+            If no saved molecules or SMILES column in the dataset.
+        """
         if self.mols_path is not None and self.mols_path.exists():
             mols = np.load(file=self.mols_path, allow_pickle=True)
             mols = mols['arr_0']
@@ -125,7 +152,8 @@ class BaseDataFrame(pd.DataFrame):
     
     def mol_standardize_check(self):
         """
-        Standardize the dataset.
+        Adds `rdkit_pass` column of booleans to the DataFrame to indicate whether SMILES pass
+        standardization.
         """
         if 'rdkit_pass' in self.columns:
             return
@@ -136,6 +164,16 @@ class BaseDataFrame(pd.DataFrame):
 
     @property
     def mols_path(self):
+        """
+        Path to save RDKit molecules to.
+        Saves as csv path with suffix changed from `.csv` to `.npz`
+
+        Returns:
+        -------
+        str | None
+            Return a path to save molecules to.
+            Returns `None` if no csv path exists.
+        """
         if self.csv is None:
             return None
         else:
@@ -145,6 +183,18 @@ class BaseDataFrame(pd.DataFrame):
 
     @property
     def splits(self):
+        """
+        Generator for yielding pre-defined train-test splits.
+        Split columns must have a heading containing `split`,
+        and contain `Train` and `Test` strings.
+
+        Yields:
+        ------
+        numpy.ndarray
+            Train indexes.
+        numpy.ndarray
+            Test indexes.
+        """
         columns = [col for col in self.columns if 'split' in col]
         columns = list(sorted(columns, key=lambda x: int(x.split('_')[1])))
         for col in columns:
@@ -156,9 +206,26 @@ class BaseDataFrame(pd.DataFrame):
 
     @property
     def num_splits(self):
+        """
+        Count the number of splits in the DataFrame.
+
+        Returns:
+        -------
+        int
+            The total number of columns containing `split` in their name.
+        """
         return len([col for col in self.columns if 'split' in col])
     
     def save_standard_smiles(self):
+        """
+        Save SMILES strings of loaded RDKit molecules after standardization.
+        SMILES are saved to an `smi` file in the same directory as the csv file.
+
+        Raises:
+        ------
+        Exception
+            If SMILES cannot be saved. 
+        """
         smi = [Chem.MolToSmiles(m) if m != None else None for m in self.rdkit_mols]
         try:
             mols_path = self.mols_path
@@ -171,6 +238,9 @@ class BaseDataFrame(pd.DataFrame):
             print('Could not save SMILES file')
 
     def get_smiles(self):
+        """
+        
+        """
         mols_path = self.mols_path
         smi_path = mols_path.parent / f'{mols_path.stem}.smi'
         try:
