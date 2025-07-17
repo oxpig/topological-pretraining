@@ -233,7 +233,27 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
         return mols
 
 class BaseGraph:
+    """
+    Base class for graph transformations.
 
+    This class provides a framework for converting molecules into graph representations.
+
+    Parameters
+    ----------
+    node_types : dict, optional
+        A dictionary mapping node types (e.g., atomic numbers) to integer indices.
+        Defaults to a dictionary with a single entry for 'UNK' (unknown node type).
+    edge_types : dict, optional
+        A dictionary mapping bond types (e.g., single, double, aromatic) to integer indices
+        Defaults to a dictionary with entries for common bond types.
+    max_vocab_size : int, optional
+        The maximum vocabulary size for node types. If specified, the tokenizer will limit
+        the number of unique node types to this size.
+    verbose : bool, optional
+        If True, prints additional information during processing. Defaults to False.
+    global_token : bool, optional
+        If True, adds a global token to the graph. Defaults to False.
+    """
     edge_types = {
         1.0: 0,
         2.0: 1,
@@ -255,6 +275,20 @@ class BaseGraph:
     def get_edges(self, mol: Chem.Mol):
         """
         Get the edges for a molecule.
+
+        Parameters:
+        ----------
+        mol : Chem.Mol
+            RDKit molecule object.
+
+        Returns:
+        -------
+        edge_index : torch.Tensor
+            A tensor of shape (2, number of bonds*2) containing the edge indices.
+            Each column represents an edge from a start atom to an end atom.
+        edge_attr : torch.Tensor
+            A tensor of shape (num_edges, 1) containing the edge attributes.
+            Each row corresponds to an edge and contains the bond type as an integer index.
         """
         num_edges = mol.GetNumBonds()
         edge_index = torch.full(
@@ -292,6 +326,21 @@ class BaseGraph:
     def reset(self, mols: list[Chem.Mol|pyg.data.Data]):
         """
         Reset the node types.
+
+        This method initializes the node types based on the input molecules.
+
+        Parameters
+        ----------
+        mols : list[Chem.Mol|pyg.data.Data]
+            A list of RDKit molecule objects or PyTorch Geometric Data objects.
+            The method will determine the node types based on the unique atomic numbers
+            or node features in the input molecules.
+
+        Raises
+        ------
+        ValueError
+            If the input molecules are not of the same type (either all RDKit molecules or all
+            PyTorch Geometric Data objects).
         """
         node_types = {}
         if all(isinstance(x, Chem.Mol) for x in mols):
@@ -322,6 +371,16 @@ class BaseGraph:
     def add_global_token(self, graph: pyg.data.Data):
         """
         Add a global token to the graph.
+
+        Parameters:
+        ----------
+        graph : pyg.data.Data
+            The graph data to which the global token will be added.
+
+        Returns:
+        -------
+        pyg.data.Data
+            The graph data with the global token added.
         """
         if self.global_token:
             if 'x' not in graph:
@@ -415,6 +474,10 @@ class BaseGraph:
         mol : Chem.Mol
             RDKit molecule object.
         
+        Returns
+        -------
+        pyg.data.Data
+            The tokenized graph data.
         """
         if isinstance(mol, pyg.data.Data):
             return self.encode(mol)
@@ -426,7 +489,24 @@ class BaseGraph:
             self,
             X: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data]
         ) -> pyg.data.Data|list[pyg.data.Data]:
+        """
+        Apply the transformation to a single molecule or a list of molecules.
 
+        Parameters
+        ----------
+        X : Chem.Mol or pyg.data.Data or list[Chem.Mol|pyg
+            data.Data]
+            The input data to be transformed. Can be a single RDKit molecule, 
+            a PyTorch Geometric Data object, or a list of molecules or graphs.
+        
+        Returns
+        -------
+        pyg.data.Data or list[pyg.data.Data]
+            The transformed graph data. If a single molecule is provided, returns a single 
+            `pyg.data.Data` object.
+            If a list of molecules is provided, returns a list of `py
+
+        """
         if isinstance(X, Chem.Mol|pyg.data.Data|None):
             return self.transform(X)
         
@@ -448,7 +528,7 @@ class GraphTokenizer(BaseTokenizer):
     Parameters
     ----------
     transform_kwargs : dict
-        Keyword arguments for the AtomGraph.
+        Keyword arguments for the BaseGraph.
     verbose : bool
         Whether to print progress information.
     """
@@ -463,29 +543,98 @@ class GraphTokenizer(BaseTokenizer):
         )
     
     def raw(self, mol: Chem.Mol):
+        """
+        Generate the raw graph data for a molecule.
+
+        Parameters:
+        ----------
+        mol : Chem.Mol
+            The molecule to generate the graph for.
+
+        Returns:
+        -------
+        pyg.data.Data
+            The raw graph data.
+        """
         return self.transform.raw(mol)
     
     def encode(self, graph: pyg.data.Data):
+        """
+        Encode a raw graph.
+
+        Parameters:
+        ----------
+        graph : pyg.data.Data
+            The raw graph data. (output of `BaseGraph.raw`)
+        
+        Returns:
+        -------
+        pyg.data.Data
+            The encoded graph data.
+        """
         return self.transform.encode(graph)
     
     def fit(self, mols: list[Chem.Mol|pyg.data.Data], y: None = None) -> None:
+        """
+        Fit the tokenizer to the provided molecules.
+
+        Parameters:
+        ----------
+        mols : list[Chem.Mol|pyg.data.Data]
+            A list of RDKit molecule objects or PyTorch Geometric Data objects to be tokenized.
+        y : None, optional
+            An optional array of labels corresponding to the molecules. Not used in this base class,
+            but can be used in subclasses for supervised learning tasks. Defaults to None.
+
+        Returns:
+        -------
+        GraphTokenizer
+            Returns the fitted tokenizer instance.
+        """
         self = super().fit(mols, y)
         self.transform.reset(mols)
         return self
 
     @property
     def vocab_size(self):
+        """
+        How many node types are there in the vocabulary.
+
+        Returns:
+        -------
+        int
+            The number of unique node types in the vocabulary.
+        """
         return len(self.transform.node_types)
     
     @property
     def edge_types(self):
+        """
+        The edge types used in the graph transformation.
+
+        Returns:
+        -------
+        dict
+            A dictionary mapping edge types to integer indices.
+        """
         return self.transform.edge_types
 
     @property
     def node_types(self):
+        """
+        The node types used in the graph transformation.
+
+        Returns:
+        -------
+        dict
+            A dictionary mapping node types (e.g., atomic numbers) to integer indices.
+        """
         return self.transform.node_types
     
     def to_dict(self):
+        """
+        Convert the tokenizer's parameters and state to a dictionary.
+        """
         params = super().to_dict()
         params['transform_kwargs']['node_types'] = self.node_types
         params['transform_kwargs']['edge_types'] = self.edge_types
@@ -493,4 +642,18 @@ class GraphTokenizer(BaseTokenizer):
         return params
 
     def preprocess(self, mols):
+        """
+        Preprocess the input molecules by generating raw graphs.
+
+        Parameters:
+        ----------
+        mols : list[Chem.Mol]
+            A list of RDKit molecule objects to be preprocessed.
+        
+        Returns:
+        -------
+        list[pyg.data.Data]
+            A list of raw graph data objects, where each object corresponds to a molecule.
+            The graphs are generated using the `raw` method of the BaseGraph.
+        """
         return [self.transform.raw(m) for m in mols]
