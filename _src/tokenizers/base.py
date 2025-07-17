@@ -3,14 +3,8 @@ from rdkit import Chem
 import torch
 import torch_geometric as pyg
 from tqdm import tqdm
-from typing import Callable, Optional
-from sklearn.preprocessing import MinMaxScaler
+from typing import Optional
 from sklearn.base import BaseEstimator, TransformerMixin
-
-from copy import deepcopy
-
-from ..data.mol import MolDesc
-from ..data.feature_selection import CoCorr, SelectAll
 
 
 class BaseTokenizer(BaseEstimator, TransformerMixin):
