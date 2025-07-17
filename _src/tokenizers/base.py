@@ -8,7 +8,21 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 
 class BaseTokenizer(BaseEstimator, TransformerMixin):
+    """
+    Base class for tokenizers.
 
+    This class provides a framework for tokenizing molecules into a specific format.
+
+    Parameters:
+    ----------
+    transform_kwargs : dict
+        Keyword arguments for the tokenizer's transformation function.
+    verbose : bool
+        Whether to print progress information during tokenization.
+    is_fitted_ : bool, optional
+        Whether the tokenizer is already fitted. If None, it defaults to False.
+        This is used for tokenizers that do not require fitting, such as ECFP fingerprints.
+    """
     transform = lambda x: x
     fixed_transform_kwargs = {}
     precomputed = False
@@ -28,6 +42,19 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
         self.set_transform(kwargs=transform_kwargs)
 
     def __call__(self, X: Chem.Mol|list[Chem.Mol]) -> np.ndarray:
+        """
+        Apply the tokenizer to the input data.
+
+        Parameters:
+        ----------
+        X : Chem.Mol or list[Chem.Mol]
+            The input data to be tokenized. Can be a single RDKit molecule or a list of molecules.
+            
+        Returns:
+        -------
+        np.ndarray
+            The tokenized representation of the input data.
+        """
         if not self.is_fitted_:
             raise ValueError('Tokenizer must be fit before calling.')
         X = self.transform(X)
@@ -37,27 +64,76 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
     def save_transform(self, X: Chem.Mol|list[Chem.Mol], path: str):
         """
         Transform and save the data to a file.
+
+        Parameters:
+        ----------
+        X : Chem.Mol or list[Chem.Mol]
+            The input data to be transformed and saved. Can be a single RDKit molecule or a list of molecules.
+        path : str
+            The path where the transformed data will be saved.
         """
         X = self.transform(X)
         torch.save(X, path)
 
     def set_transform(self, kwargs):
+        """
+        Set the transformation function for the tokenizer.
+
+        Parameters:
+        ----------
+        kwargs : dict
+            Keyword arguments for the transformation function.
+        """
         self.transform_kwargs = kwargs
         self.transform = self._transform_base(**kwargs)
         
 
     def _transform_base(self, **kwargs):
+        """
+        The base transformation function.
+        This method should be overridden by subclasses to implement the actual transformation logic.
+        """
         raise NotImplementedError
 
     def fit(self, mols: Chem.Mol, y: Optional[np.ndarray] = None) -> None:
+        """
+        Fit the tokenizer to the input data.
+
+        Parameters:
+        ----------
+        mols : Chem.Mol or list[Chem.Mol]
+            The input data to fit the tokenizer on. Can be a single RDKit molecule or a
+            list of molecules.
+        y : Optional[np.ndarray], optional
+            Optional target values. Not used in this base class, but can be used in subclasses
+            for supervised learning tasks. Defaults to None.
+        
+        Returns:
+        -------
+        BaseTokenizer
+            Returns the fitted tokenizer instance.
+        """
         self.is_fitted_ = True
         return self
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """
+        Get the name of the tokenizer.
+        """
         return self.__class__.__name__
     
-    def to_dict(self):
+    def to_dict(self) -> dict:
+        """
+        Convert the tokenizer to a dictionary representation.
+        Useful for saving the tokenizer's parameters and state.
+        Overrides the default `to_dict` method to include additional information.
+
+        Returns:
+        -------
+        dict
+            A dictionary containing the tokenizer's name, fitted status, and transformation parameters.
+        """
         return {
             'name': self.name,
             'is_fitted_': self.is_fitted_,
@@ -65,6 +141,17 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
         }
     
     def save(self, path: str, params_only: bool = False):
+        """
+        Save the tokenizer to a file. Uses PyTorch's `torch.save` method.
+
+        Parameters:
+        ----------
+        path : str
+            The path where the tokenizer will be saved.
+        params_only : bool, optional
+            If True, the tokenizer will be saved as a dictionary.
+            If False, the entire tokenizer object will be saved. Defaults to False.
+        """
         if params_only:
             params = self.to_dict()
             torch.save(params, path)
@@ -112,16 +199,36 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
     def save_raw(self, X: Chem.Mol, path: str):
         """
         Save the raw data to a file.
+
+        Parameters:
+        ----------
+        X : Chem.Mol or list[Chem.Mol]
+            The input data to be saved. Can be a single RDKit molecule or a list of molecules.
+        path : str
+            The path where the raw data will be saved.
         """
         X = self.raw(X)
         torch.save(X, path)
 
     def __sklearn_is_fitted__(self):
+        """
+        Define the `__sklearn_is_fitted__` method to check if the tokenizer is fitted.
+        """
         return self.is_fitted_
     
     def preprocess(self, mols: list[Chem.Mol]):
         """
         Optionally implement a preprocessing step for the data.
+        This method can be used to preprocess the input data before tokenization.
+
+        Parameters
+        ----------
+        mols : list[Chem.Mol]
+            A list of RDKit molecule objects to be preprocessed.
+        Returns
+        -------
+        list[Chem.Mol]
+            A list of preprocessed RDKit molecule objects.
         """
         return mols
 
