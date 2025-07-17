@@ -10,7 +10,32 @@ import warnings
 
 class PredHead(MLP):
     """
-    Prediction head for the model
+    Prediction head for a model.
+
+    This class extends the MLP class to create a prediction head that can be used
+    for various tasks such as regression, binary classification, and multi-class
+    classification. It provides methods for computing loss and score based on the
+    predictions and ground truth labels.
+
+    Parameters:
+    ----------
+    input_dim : int
+        The dimension of the input features.
+    output_dim : int
+        The dimension of the output features.
+    hidden_dim : int, optional
+        The dimension of the hidden layers. If None, it defaults to `input_dim`.
+    num_layers : int, optional
+        The number of layers in the MLP. Defaults to 1.
+    dropout : float, optional
+        The dropout rate applied after each layer. Defaults to 0.0.
+    batch_norm : bool, optional
+        Whether to apply batch normalization after each layer. Defaults to False.
+    act : str, optional
+        The activation function to use in the MLP. Defaults to 'relu'.
+    final_act : str, optional
+        The activation function to apply to the final output. If None, no activation is applied.
+        Defaults to None.
     """
     def __init__(
         self,
@@ -31,9 +56,31 @@ class PredHead(MLP):
 
     @property
     def loss_fn(self):
+        """
+        This property should be overridden in subclasses to provide the appropriate loss function.
+        """
         return torch.nn.Identity()
 
     def loss(self, y, pred, mask=None):
+        """
+        Compute the loss between the predicted values and the ground truth labels.
+        
+        Parameters:
+        ----------
+        y : torch.Tensor
+            The ground truth labels.
+        pred : torch.Tensor
+            The predicted values from the model.
+        mask : torch.Tensor, optional
+            A mask to apply to the loss values. If provided, the loss will be computed only
+            for the elements where the mask is True. Defaults to None.
+
+        Returns:
+        -------
+        torch.Tensor
+            The computed loss values. If a mask is provided, the loss will be averaged over
+            the masked elements. If no mask is provided, the loss will be averaged over all elements.
+        """
         dtype = pred.dtype
         y = y.type(dtype)
         loss_vals = self.loss_fn(pred, y)
@@ -45,14 +92,42 @@ class PredHead(MLP):
         return loss_vals
     
     def score(self, y, pred, mask=None):
+        """
+        Caculate a custom score for the predictions. Override this method in subclasses
+        to implement specific scoring logic.
+        """
         return -np.inf
     
     def set_class_weight(self, class_weights: torch.Tensor):
-        pass
+        raise NotImplementedError(
+            "This method should be overridden in subclasses to set class weights for the loss function."
+        )
 
 class RegressionHead(PredHead):
     """
-    Regression head for the model
+    Regression head for a model.
+
+    This class extends the PredHead class to create a regression head that can be used
+    for regression tasks. It provides a specific loss function for regression and can be
+    used to compute the mean squared error between the predicted values and the ground truth labels.
+
+    Parameters:
+    ----------
+    input_dim : int
+        The dimension of the input features.
+    hidden_dim : int, optional
+        The dimension of the hidden layers. If None, it defaults to `input_dim`.
+    output_dim : int, optional
+        The dimension of the output features. Defaults to 1.
+    num_layers : int, optional
+        The number of layers in the MLP. Defaults to 1.
+    dropout : float, optional
+        The dropout rate applied after each layer. Defaults to 0.0.
+    batch_norm : bool, optional
+        Whether to apply batch normalization after each layer. Defaults to False.
+    act : str, optional
+        The activation function to use in the MLP. Defaults to 'relu'.
+    **kwargs : dict, optional
     """
     def __init__(
         self,
@@ -73,11 +148,43 @@ class RegressionHead(PredHead):
     
     @property
     def loss_fn(self):
+        """
+        Mean Squared Error loss function for regression tasks.
+
+        Returns:
+        -------
+        torch.nn.MSELoss
+            The mean squared error loss function with 'mean' reduction.
+        """
         return torch.nn.MSELoss(reduction='mean')
 
 class BinaryHead(PredHead):
     """
-    Binary classification head for the model
+    Binary classification head for a model.
+    This class extends the PredHead class to create a binary classification head that can be used
+    for binary classification tasks. It provides a specific loss function for binary classification
+    and can be used to compute the binary cross-entropy loss between the predicted probabilities
+    and the ground truth labels.
+
+    Parameters:
+    ----------
+    input_dim : int
+        The dimension of the input features.
+    output_dim : int
+        The dimension of the output features. Defaults to 1.
+    hidden_dim : int, optional
+        The dimension of the hidden layers. If None, it defaults to `input_dim`.
+    num_layers : int, optional
+        The number of layers in the MLP. Defaults to 1.
+    dropout : float, optional
+        The dropout rate applied after each layer. Defaults to 0.0.
+    batch_norm : bool, optional
+        Whether to apply batch normalization after each layer. Defaults to False.
+    act : str, optional
+        The activation function to use in the MLP. Defaults to 'relu'.
+    class_weights : torch.Tensor, optional
+        A tensor containing the class weights for the binary classification task.
+        If provided, it will be used to weight the loss function. Defaults to None.
     """
     def __init__(
         self,
@@ -100,6 +207,16 @@ class BinaryHead(PredHead):
         self.set_class_weight(class_weights)
 
     def set_class_weight(self, class_weights = None):
+        """
+        Set class weights for the binary classification task.
+        This method sets the class weights for the binary classification task.
+
+        Parameters:
+        ----------
+        class_weights : torch.Tensor, optional
+            A tensor containing the class weights for the binary classification task.
+            If None, no class weights will be set. Defaults to None.
+        """
         if class_weights is None:
             self.class_weights = None
             return
@@ -113,10 +230,38 @@ class BinaryHead(PredHead):
 
     @property
     def loss_fn(self):
+        """
+        Binary Cross-Entropy loss function for binary classification tasks.
+
+        Returns:
+        -------
+        torch.nn.functional.binary_cross_entropy
+        """
         return torch.nn.functional.binary_cross_entropy
     
     def score(self, y, pred, mask=None):
+        """
+        Calculate the binary average precision score for the predictions.
 
+        Note: will output nan if there are no positive samples a batch.
+
+        Parameters:
+        ----------
+        y : torch.Tensor
+            The ground truth labels for the binary classification task.
+        pred : torch.Tensor
+            The predicted probabilities from the model.
+        mask : torch.Tensor, optional
+            A mask to apply to the predictions and ground truth labels. If provided, the score
+            will be computed only for the elements where the mask is True. Defaults to None.
+
+        Returns:
+        -------
+        torch.Tensor
+            The computed binary average precision score. If a mask is provided, the score will be
+            averaged over the masked elements. If no mask is provided, the score will be averaged
+            over all elements.
+        """
         y = y.type(pred.dtype)
         if mask is not None:
             y = y[mask]
@@ -126,6 +271,25 @@ class BinaryHead(PredHead):
         return binary_auprc(input=pred, target=y, num_tasks=self.output_dim).mean()
 
     def loss(self, y, pred, mask=None):
+        """
+        Calculate the binary cross-entropy loss for the predictions.
+
+        Parameters:
+        ----------
+        y : torch.Tensor
+            The ground truth labels for the binary classification task.
+        pred : torch.Tensor
+            The predicted probabilities from the model.
+        mask : torch.Tensor, optional
+            A mask to apply to the loss values. If provided, the loss will be computed only
+            for the elements where the mask is True. Defaults to None.
+
+        Returns:
+        -------
+        torch.Tensor
+            The computed loss value. If a mask is provided, the loss will be averaged over
+            the masked elements. If no mask is provided, the loss will be averaged over all elements.
+        """
         y = y.type(pred.dtype)
         if self.class_weights is None:
             return self.loss_fn(pred, y,)
@@ -147,7 +311,28 @@ class BinaryHead(PredHead):
 
 class MultiClassHead(PredHead):
     """
-    Multi-class classification head for the model
+    Multi-class classification head for the model.
+
+    
+    Parameters:
+    ----------
+    input_dim : int
+        The dimension of the input features.
+    output_dim : int
+        The number of classes for multi-class classification.
+    hidden_dim : int, optional
+        The dimension of the hidden layers. If None, it defaults to `input_dim`.
+    num_layers : int, optional
+        The number of layers in the MLP. Defaults to 1.
+    dropout : float, optional
+        The dropout rate applied after each layer. Defaults to 0.0.
+    batch_norm : bool, optional
+        Whether to apply batch normalization after each layer. Defaults to False.
+    act : str, optional
+        The activation function to use in the MLP. Defaults to 'relu'.
+    class_weights : tuple[float], optional
+        A tuple containing the class weights for each class in the multi-class classification task.
+        If provided, it will be used to weight the loss function. Defaults to None.
     """
     def __init__(
         self,
@@ -170,6 +355,15 @@ class MultiClassHead(PredHead):
         self.set_class_weight(class_weights)
 
     def set_class_weight(self, class_weights = None):
+        """
+        Set class weights for the multi-class classification task.
+
+        Parameters:
+        ----------
+        class_weights : tuple[float], optional
+            A tuple containing the class weights for each class in the multi-class classification task.
+            If None, no class weights will be set. Defaults to None.
+        """
         if class_weights is not None:
             assert len(class_weights) == self.output_dim, 'Class weights must have the same length as the output dimension.'
             self.class_weights = torch.tensor(class_weights)
@@ -178,12 +372,20 @@ class MultiClassHead(PredHead):
 
     @property
     def loss_fn(self):
+        """
+        Cross-Entropy loss function for multi-class classification tasks.
+
+        Returns:
+        -------
+        torch.nn.CrossEntropyLoss
+            The cross-entropy loss function with 'none' reduction, which means the loss will be computed
+            for each element in the batch without averaging.
+        """
         return torch.nn.CrossEntropyLoss(weight=self.class_weights, reduction='none')
 
 class MultiTaskLoss(torch.nn.Module):
     """
-    From https://openaccess.thecvf.com/content_cvpr_2018/papers/Kendall_Multi-Task_Learning_Using_CVPR_2018_paper.pdf
-
+    https://openaccess.thecvf.com/content_cvpr_2018/papers/Kendall_Multi-Task_Learning_Using_CVPR_2018_paper.pdf
     """
     def __init__(self, is_regression: torch.BoolTensor):
         super(MultiTaskLoss, self).__init__()

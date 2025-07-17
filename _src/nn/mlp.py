@@ -23,6 +23,40 @@ initializers = {
 }
 
 class MLP(torch.nn.Module):
+    """
+    Multi-Layer Perceptron (MLP) model.
+
+    This model implements a feedforward neural network with multiple layers,
+    where each layer consists of a linear transformation followed by an activation function.
+    
+    Parameters:
+    ----------
+    input_dim : int
+        The dimension of the input features.
+    hidden_dim : int
+        The dimension of the hidden layers.
+    output_dim : int, optional
+        The dimension of the output features. If None, it defaults to `hidden_dim`.
+    num_layers : int, optional
+        The number of layers in the MLP. Defaults to 1.
+    dropout : float, optional
+        The dropout rate applied after each layer. Defaults to 0.0.
+    batch_norm : bool, optional
+        Whether to apply batch normalization after each layer. Defaults to False.
+    act : str, optional
+        The activation function to use in the MLP. Defaults to 'relu'.
+    final_act : str, optional
+        The activation function to apply to the final output. If None, no activation is applied.
+        Defaults to None.
+    weight_init : str or Callable, optional
+        The initialization method for the weights of the MLP layers.
+        If a string, it must be one of the keys in `initializers`. Defaults to
+        'standard', which uses the standard initialization method.
+    bias_init : str or Callable, optional
+        The initialization method for the biases of the MLP layers.
+        If a string, it must be one of the keys in `initializers`. Defaults to
+        'standard', which uses the standard initialization method.
+    """
     def __init__(
         self,
         input_dim: int, 
@@ -85,6 +119,19 @@ class MLP(torch.nn.Module):
         self.final_act_type = final_act
 
     def forward(self, x):
+        """
+        Forward pass of the MLP.
+
+        Parameters:
+        ----------
+        x : torch.Tensor
+            Input tensor of shape (batch_size, input_dim).
+        
+        Returns:
+        -------
+        torch.Tensor
+            Output tensor of shape (batch_size, output_dim) after passing through the MLP.
+        """
         for i, layer in enumerate(self.layers):
             x = layer(x)
             if i < len(self.layers) - 1:
