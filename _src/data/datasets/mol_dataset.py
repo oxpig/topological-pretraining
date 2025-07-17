@@ -149,9 +149,16 @@ class MolDataset:
     def __len__(self):
         return len(self.mols)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int):
         """
         Get the featurized representation of a molecule.
+
+        Returns:
+        -------
+        tuple[Any,  numpy.ndarray] if y labels exist
+            Featurized representations at 0. Labels at 1.
+        numpy.ndarray if y labels exist
+        
         """
         if isinstance(self.X, list) and not isinstance(idx, int):
             X = [self.X[i] for i in idx]
@@ -170,7 +177,11 @@ class MolDataset:
         else:
             return self._extra_transform.transform(X), self.y[idx]
     
-    def reset(self, train_idx: np.ndarray, test_idx = None) -> None:
+    def reset(
+        self,
+        train_idx: np.ndarray, 
+        test_idx: Optional[np.ndarray] = None
+    ) -> None:
         """
         Refit the tokenizer and extra transforms with new training data
         and reset the train and test indices.
