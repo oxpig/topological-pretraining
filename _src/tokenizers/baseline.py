@@ -1,6 +1,5 @@
-from ..data.mol import MorganGenerator, SortAndSlice, MolDesc
-from .base import BaseTokenizer, SelectAll
-
+from _src.data.mol import MorganGenerator, SortAndSlice, MolDesc
+from _src.tokenizers.base import BaseTokenizer
 
 import numpy as np
 from rdkit import Chem
@@ -8,23 +7,45 @@ from rdkit.Chem import Descriptors
 from rdkit.ML.Descriptors.MoleculeDescriptors import MolecularDescriptorCalculator
 from rdkit.Chem.rdFingerprintGenerator import GetMorganFeatureAtomInvGen
 
-from sklearn.feature_selection import SelectKBest
-
-from typing import Callable, Literal, Optional
+from typing import Optional, TYPE_CHECKING
 
 morgan_feat_inv = GetMorganFeatureAtomInvGen()
 
 default_descriptors = [i[0] for i in Descriptors._descList]
 
 class PDV(BaseTokenizer):
-    precomputed = True
+    """
+    Tokenizer that computes molecular descriptors using RDKit's MolDesc.
+    This tokenizer is designed to compute a set of predefined molecular descriptors
+    for each molecule in the input data.
+
+    Parameters:
+    ----------
+    transform_kwargs : dict
+        Keyword arguments for the MolDesc transformation function.
+        This can include parameters such as `descriptors` to specify which descriptors to compute.
+    verbose : bool, optional
+    """
+    precomputed = True 
     def _transform_base(self, **kwargs):
         if 'descriptors' not in kwargs:
             kwargs['descriptors'] = default_descriptors 
         return MolDesc(verbose=self.verbose, **kwargs)
 
 class ECFP(BaseTokenizer):
+    """
+    Tokenizer that computes Extended Connectivity Fingerprints (ECFP) using RDKit's Morgan fingerprints.
+    This tokenizer is designed to compute ECFP fingerprints for each molecule in the input data.
 
+    Parameters:
+    ----------
+    transform_kwargs : dict
+        Keyword arguments for the MorganGenerator transformation function.
+        This can include parameters such as `fpsize` to specify the size of the fingerprint.
+        See `MorganGenerator` in `_src/data/mol.py` for more details.
+    verbose : bool, optional
+        If True, the tokenizer will print additional information during processing.
+    """
     is_fitted_ = False
     precomputed = True
     def _transform_base(self, **kwargs):
@@ -41,11 +62,43 @@ class ECFP(BaseTokenizer):
         self.transform.fpsize = value
 
 class FCFP(ECFP):
+    """
+    Modified version of ECFP that uses a different fingerprint generator.
+    This tokenizer computes Functional Connectivity Fingerprints (FCFP) using RDKit's Morgan fingerprints.
+
+    Parameters:
+    ----------
+    transform_kwargs : dict
+        Keyword arguments for the MorganGenerator transformation function.
+        This can include parameters such as `fpsize` to specify the size of the fingerprint.
+        See `MorganGenerator` in `_src/data/mol.py` for more details.
+    verbose : bool, optional
+        If True, the tokenizer will print additional information during processing.
+    """
     precomputed = True
     is_fitted_ = False
     fixed_transform_kwargs = {'atom_inv': morgan_feat_inv}
 
 class SNS(BaseTokenizer):
+    """
+    Molecular tokenizer that computes a sorted and sliced version of Morgan fingerprints.
+    This tokenizer is designed to compute Morgan fingerprints, sort them, and slice them 
+    to a specified size.
+
+    Parameters:
+    ----------
+    identifiers : dict, optional
+        A pre-definced SortAndSlice dictionary of identifiers for the molecules.
+    encoder : dict, optional
+        A dictionary specifying a pre-determined encoding scheme for the fingerprints. 
+        This can include parameters such as `fpsize` to specify the size of the fingerprint.
+    transform_kwargs : dict, optional
+        Keyword arguments for the SortAndSlice transformation function.
+        This can include parameters such as the `morgan_kwargs` parameter used to pass additional 
+        parameters to the MorganGenerator and `fpsize` to specify the size of the fingerprint.
+        See `SortAndSlice` in `_src/data/mol.py` for more details.
+    verbose : bool, optional
+    """
     is_fitted_ = False
     precomputed = False
 
@@ -55,6 +108,22 @@ class SNS(BaseTokenizer):
         self.transform.encoder = encoder
 
     def _transform_base(self, **kwargs):
+        """
+        Create a SortAndSlice transformation that uses a MorganGenerator.
+
+        Parameters:
+        ----------
+        morgan_kwargs : dict, optional
+            Keyword arguments for the MorganGenerator. 
+        **kwargs : dict, optional
+            Additional keyword arguments for the SortAndSlice transformation.
+            This can include parameters such as `fpsize` to specify the size of the fingerprint.
+
+        Returns:
+        -------
+        SortAndSlice
+            An instance of the SortAndSlice transformation that uses a MorganGenerator.
+        """
         if 'morgan_kwargs' in kwargs:
             morgan: dict = kwargs.pop('morgan_kwargs')
         else:
@@ -63,6 +132,21 @@ class SNS(BaseTokenizer):
         return SortAndSlice(generator=morgan, **kwargs)
         
     def fit(self, mols: list[Chem.Mol], y: Optional[np.ndarray] = None) -> None:
+        """
+        Fit the tokenizer to the provided molecules and their corresponding labels.
+
+        Parameters:
+        ----------
+        mols : list[Chem.Mol]
+            A list of RDKit molecule objects to be tokenized.
+        y : np.ndarray, optional
+            An optional array of labels corresponding to the molecules.
+        
+        Returns:
+        -------
+        self : SNS
+            Returns the fitted tokenizer instance.
+        """
         self = super().fit(mols=mols, y=y)
         self.transform.clear()
         self.transform.update(mols)
@@ -87,12 +171,27 @@ class SNS(BaseTokenizer):
         self.transform.slice(value)
 
     def to_dict(self):
+        """
+        Convert the tokenizer's parameters and state to a dictionary.
+
+        Returns:
+        -------
+        dict
+            A dictionary containing the tokenizer's name, fitted status, and 
+            transformation parameters. This includes the identifiers and 
+            encoder used in the SortAndSlice transformation.
+        """
         params = super().to_dict()
         params['identifiers'] = self.identifiers
         params['encoder'] = self.encoder
         return params
     
     def preprocess(self, mols: list[Chem.Mol]) -> list[np.ndarray]:
+        """
+        Preprocess the input molecules by calculating the atomic environment identifiers 
+        for each molecule. Useful for preparing molecules for repeated sort and slice operations
+        under different conditions, e.g., embedding with SNS fitted on with new data.
+        """
         return [self.transform.generator.environments(mol) if mol is not None else mol for mol in mols]
 
     
