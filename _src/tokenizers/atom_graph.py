@@ -61,6 +61,16 @@ class AtomGraph(BaseGraph):
     def get_nodes(self, mol: Chem.Mol):
         """
         Get the raw node descriptor for an atom.
+
+        Parameters
+        ----------
+        mol : Chem.Mol
+            RDKit molecule object.
+
+        Returns
+        -------
+        torch.Tensor
+            A tensor of shape (num_atoms, 1) containing the atomic numbers of the atoms.
         """
         x = torch.full((mol.GetNumAtoms(), 1), fill_value=-1, dtype=torch.long)
         for atom in mol.GetAtoms():
@@ -69,6 +79,21 @@ class AtomGraph(BaseGraph):
     
     @property
     def empty_graph(self):
+        """
+        Initialize an empty graph with a single node of type 'UNK'.
+
+        Returns
+        -------
+        pyg.data.Data
+            An empty graph with a single node of type 'UNK'.
+
+        The node type is represented by the integer corresponding to 'UNK' in `self.node_types`.
+        The edge index and edge attributes are empty tensors.
+        The node features tensor `x` contains a single element with the value of 'UNK'.
+        The `raw` attribute is set to True, indicating that this is a raw graph.
+        The `empty` attribute is set to a tensor containing a single True value, indicating that
+        the graph is empty.
+        """
         return pyg.data.Data(
                 raw=True,
                 empty=torch.tensor([True]),
@@ -78,7 +103,21 @@ class AtomGraph(BaseGraph):
             )
     
 class AtomGraphTokenizer(GraphTokenizer):
+    """
+    AtomGraphTokenizer is a tokenizer for converting molecules into graphs
+    based on atomic numbers and bond types. It inherits from GraphTokenizer.
 
+    Parameters:
+    ----------
+    verbose : bool, optional
+    transform_kwargs : dict, optional
+        Additional keyword arguments for the transformation.
+        node_types : dict, optional
+            Mapping from atomic numbers to integers. If not provided, will be automatically generated.
+        edge_types : dict, optional
+            Mapping from RDKit bond types to integers. Defaults to {SINGLE: 0,
+            DOUBLE: 1, AROMATIC: 2, TRIPLE: 3}.
+    """
     def _transform_base(self, **kwargs):
         return AtomGraph(verbose=self.verbose, **kwargs)
 
@@ -86,6 +125,16 @@ class AtomFeatureGraph(BaseGraph):
     """
     Based on atomic featurization by Dablander et al. 
     (https://jcheminf.biomedcentral.com/articles/10.1186/s13321-023-00708-w/figures/4)
+
+    Unused due to high feature dimensionality, sparsity, and lack of performance improvement
+    over simpler tokenizers.
+
+    Parameters
+    ----------
+    verbose : bool, optional
+        If True, prints additional information during processing.
+    global_token : bool, optional
+        If True, adds a global token to the graph. Defaults to False.
     """
     def __init__(
         self, verbose: bool = False, global_token: bool = False

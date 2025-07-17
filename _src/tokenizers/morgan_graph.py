@@ -13,7 +13,8 @@ from .base import BaseGraph, GraphTokenizer
 
 class MorganGraph(BaseGraph):
     """
-    Class to convert a molecule into a graph using Morgan hashed identifiers.
+    Class to convert a molecule into a graph using Morgan hashed identifiers,
+    and sort and slice.
 
     Parameters
     ----------
@@ -30,6 +31,8 @@ class MorganGraph(BaseGraph):
         Mapping from RDKit bond types to integers.
     morgan : MorganGenerator
         MorganGenerator object to generate hashed identifiers.
+    sort_and_slice : SortAndSlice
+        Sort and slice the hashed identifiers based on the maximum vocabulary size.
     """
     def __init__(
         self,
@@ -51,6 +54,14 @@ class MorganGraph(BaseGraph):
 
     @property
     def empty_graph(self):
+        """
+        Generate an empty graph with the correct node and edge types.
+
+        Returns
+        -------
+        pyg.data.Data
+            An empty graph with the node types set to 'UNK' and no edges.
+        """
         return pyg.data.Data(
                 raw=True,
                 empty=torch.tensor([True]),
@@ -63,7 +74,21 @@ class MorganGraph(BaseGraph):
                 edge_attr=torch.empty((0, 1), dtype=torch.long),
             )
     
-    def get_nodes(self, mol):
+    def get_nodes(self, mol: Chem.Mol) -> torch.Tensor:
+        """
+        Get the hashed identifiers for a molecule in a Tensor.
+
+        Parameters:
+        ----------
+        mol : Chem.Mol
+            RDKit molecule object.
+
+        Returns:
+        -------
+        torch.Tensor
+            A tensor of shape (number of atoms, max radius + 1) containing the hashed identifiers for each atom.
+            The radius is determined by the MorganGenerator used in SortAndSlice.
+        """
         envs = self.sort_and_slice.generator.environments(mol)
         x = torch.tensor(envs, dtype=torch.long)
         return x
@@ -71,6 +96,7 @@ class MorganGraph(BaseGraph):
     def reset(self, mols: list[Chem.Mol|pyg.data.Data]) -> None:
         """
         Reset the hashed identifiers for a new set of molecules.
+        Performs sorting and slicing of the identifiers based on the maximum vocabulary size.
 
         Parameters
         ----------
@@ -97,7 +123,6 @@ class MorganGraph(BaseGraph):
             for i in range(num_tokens_per_node):
                 self.sort_and_slice.encoder[f'GLOBAL_{i}'] = len(self.sort_and_slice.encoder)
         self.node_types = self.sort_and_slice.encoder
-
 
 
 class MorganGraphTokenizer(GraphTokenizer):
