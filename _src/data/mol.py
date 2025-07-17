@@ -31,6 +31,35 @@ default_atom_colors['H'] = (1,1,1)
 class MorganGenerator:
     """
     Python wrapper for Morgan fingerprint generator.
+
+    Parameters:
+    ----------
+    radius : int, optional
+        Radius of the fingerprint. Default is 2.
+    fpsize : int, optional
+        Size of the dense fingerprint with hash-based folding. Default is 2048.
+    chirality : bool, optional
+        Whether to include chirality in the fingerprint. Default is True.
+    count_sim : bool, optional
+        Whether to use count simulation. Default is False.
+    bond_types : bool, optional
+        Whether to include bond types in the fingerprint. Default is True.
+    non_zero_inv : bool, optional
+        Whether to only include non-zero invariants. Default is False.
+    rings : bool, optional
+        Whether to include ring membership in the fingerprint. Default is True.
+    count_bounds : tuple, optional
+        Bounds for count simulation. Default is None.
+    atom_inv : AtomInvariantsGenerator, optional
+        RDKit atom invariants generator. Default uses daylight atomic invariants, the RDKit default.
+    bond_inv : BondInvariantsGenerator, optional
+        RDKit bond invariants generator.
+    redundant_envs : bool, optional
+        Whether to include redundant environments in the fingerprint. Default is False.
+    asarray : bool, optional
+        Whether to return the fingerprint as a numpy array. Default is True.
+    verbose : bool, optional
+        Whether to print progress. Default is False.
     """
     def __init__(
         self,
@@ -68,6 +97,20 @@ class MorganGenerator:
     def __call__(
             self, mol: Chem.Mol|list[Chem.Mol]
         ) -> DataStructs.ExplicitBitVect|np.ndarray:
+        """
+        Generate dense, folded Morgan fingerprints for a molecule or a list of molecules.
+
+        Parameters:
+        ----------
+        mol : Chem.Mol or list[Chem.Mol]
+            The molecule or list of molecules to generate fingerprints for.
+
+        Returns:
+        -------
+        DataStructs.ExplicitBitVect or np.ndarray
+            The dense Morgan fingerprint(s). If `asarray` is True, returns a numpy array.
+            Otherwise, returns an ExplicitBitVect.
+        """
         if mol is None:
             return None
         if isinstance(mol, Chem.Mol):
@@ -94,14 +137,14 @@ class MorganGenerator:
         """
         Generate a dense Morgan fingerprint for a molecule.
 
-        Parameters
+        Parameters:
         ----------
         mol : rdkit.Chem.rdchem.Mol
             The molecule.
         array : bool, optional
             Whether to return as an array. Defaults to False.
 
-        Returns
+        Returns:
         -------
         rdkit.DataStructs.cDataStructs.ExplicitBitVect
             The dense Morgan fingerprint.
@@ -115,12 +158,12 @@ class MorganGenerator:
         """
         Generate a sparse Morgan fingerprint for a molecule.
 
-        Parameters
+        Parameters:
         ----------
         mol : rdkit.Chem.rdchem.Mol
             The molecule.
 
-        Returns
+        Returns:
         -------
         rdkit.DataStructs.ExplicitBitVect
             The sparse Morgan fingerprint.
@@ -131,12 +174,12 @@ class MorganGenerator:
         """
         Get hashed identifiers mapped to atom indices and radii.
 
-        Parameters
+        Parameters:
         ----------
         mol : rdkit.Chem.rdchem.Mol
             The molecule.
 
-        Returns
+        Returns:
         -------
         dict
             Identifier map of molecule. Keys are hashed identifiers.
@@ -151,12 +194,12 @@ class MorganGenerator:
         """
         Get array of hashed substructure identifiers mapped to atom indices and radii.
 
-        Parameters
+        Parameters:
         ----------
         mol : rdkit.Chem.rdchem.Mol
             The molecule.
         
-        Returns
+        Returns:
         -------
         np.ndarray
             Array of sparse hashed identifiers mapped to atom indices and radii.
@@ -186,43 +229,123 @@ class MorganGenerator:
         return out
 
     @property
-    def radius(self):
+    def radius(self) -> int:
+        """
+        Get the maximum circular radius of the Morgan fingerprint generator.
+        
+        Returns:
+        -------
+        int
+            The maximum circular radius of the Morgan fingerprint generator.
+        """
         return self.generator.GetOptions().radius
     
     @radius.setter
-    def radius(self, value):
+    def radius(self, value: int):
+        """
+        Set the maximum circular radius of the Morgan fingerprint generator.
+
+        Parameters:
+        ----------
+        value : int
+            The new maximum circular radius.
+        """
         self.generator.GetOptions().radius = value
 
     @property
-    def fpsize(self):
+    def fpsize(self) -> int:
+        """
+        The dense fingerprint size output by the Morgan fingerprint generator.
+
+        Returns:
+        -------
+        int
+            The dense fingerprint size output by the Morgan fingerprint generator.
+        """
         return self.generator.GetOptions().fpSize
     
     @fpsize.setter
-    def fpsize(self, value):
+    def fpsize(self, value: int):
+        """
+        Set the dense fingerprint size output by the Morgan fingerprint generator.
+
+        Parameters:
+        ----------
+        value : int
+            The new dense fingerprint size.
+        """
         self.generator.GetOptions().fpSize = value
 
     @property
-    def chirality(self):
+    def chirality(self) -> bool:
+        """
+        Boolean indicating whether chirality is included in the fingerprint.
+
+        Returns:
+        -------
+        bool
+            True if chirality is included, False otherwise.
+        """
         return self.generator.GetOptions().includeChirality
     
     @chirality.setter
-    def chirality(self, value):
+    def chirality(self, value: bool):
+        """
+        Set whether chirality is included in the fingerprint.
+
+        Parameters:
+        ----------
+        value : bool
+            True to include chirality, False to exclude it.
+        """
         self.generator.GetOptions().includeChirality = value
 
     @property
-    def redundant_envs(self):
+    def redundant_envs(self) -> bool:
+        """
+        Boolean indicating whether redundant environments are included in the fingerprint.
+
+        Returns:
+        -------
+        bool
+            True if redundant environments are included, False otherwise.
+        """
         return self.generator.GetOptions().includeRedundantEnvironments
     
     @redundant_envs.setter
-    def redundant_envs(self, value):
+    def redundant_envs(self, value: bool):
+        """
+        Set whether redundant environments are included in the fingerprint.
+
+        Parameters:
+        ----------
+        value : bool
+            True to include redundant environments, False to exclude them.
+        """
         self.generator.GetOptions().includeRedundantEnvironments = value
 
     @property
-    def counts(self):
+    def counts(self) -> bool:
+        """
+        Boolean indicating whether count simulation is used.
+
+        Returns:
+        -------
+        bool
+            True if count simulation is used, False otherwise.
+        """
         return self.generator.GetOptions().countSimulation
     
     @counts.setter
-    def counts(self, value):
+    def counts(self, value: bool):
+        """
+        Set whether count simulation is used.
+
+        Parameters:
+        ----------
+        value : bool
+            True to use count simulation, False to not use it.
+        """
         self.generator.GetOptions().countSimulation = value
 
 class SortAndSlice:
@@ -236,17 +359,25 @@ class SortAndSlice:
 
     Parameters:
     ----------
-        molecules (list[Chem.Mol]): List of RDKit molecules.
-        generator (FingeprintGenerator64): RDKit fingerprint generator.
-        fpsize (int): Length of the output vector.
-        verbose (bool): Whether to print progress.
-
-    Attributes:
-    ----------
-        generator (MorganGenerator): Morgan fingerprint generator.
-        verbose (bool): Whether to print progress.
-        identifiers (dict[str, int]): Dictionary of identifiers and their counts.
-        encoder (dict[str, int]): Dictionary of identifiers and their enumerated values.
+        molecules : list[Chem.Mol]
+            List of RDKit molecules.
+        generator : A MorganGenerator
+            RDKit fingerprint generator.
+        fpsize : int
+            Length of the output vector. If None, uses the number of unique identifiers.
+        save_img : bool
+            Whether to save images of the substructures. Default is False.
+        central_atom_colors : dict[str, tuple[float, float, float]]
+            Dictionary of colors for central atoms. Keys are atom symbols, values are RGB tuples.
+            Default is a dictionary of common atom colors.
+        ring_color : tuple[float]
+            Color for ring atoms. Default is white (1, 1, 1).
+        aromatic_color : tuple[float, float, float]
+            Color for aromatic atoms. Default is white (1, 1, 1).
+        extra_color : tuple[float, float, float]
+            Color for connecting atoms that are not within the radius of the substructure.
+        verbose : bool
+            Whether to print progress.
 
     Example:
     -------
@@ -286,9 +417,16 @@ class SortAndSlice:
             self.update(molecules)
             self.slice(fpsize)
 
-    def append(self, mol: Chem.Mol|np.ndarray):
+    def append(self, mol: Chem.Mol | np.ndarray):
         """
-        Adds identifiers from a molecule to the identifiers attribute.
+        Computes and adds identifiers from a molecule.
+        If identifiers already exist, updates their counts.
+
+        Parameters:
+        ----------
+        mol : Chem.Mol|np.ndarray
+            RDKit molecule or an array of pre-computed environments with shape 
+            (number of atoms, max radius).
         """
         if mol is None:
             return
@@ -341,15 +479,17 @@ class SortAndSlice:
 
     def update(self, molecules: list[Chem.Mol|np.ndarray]):
         """
-        Updates the identifiers attribute with identifiers from new molecules.
+        Adds indentifiers from a list of molecules.
         
         Parameters:
         ----------
-            molecules (list[Chem.Mol]): List of RDKit molecules.
+        molecules : list[Chem.Mol]
+            List of RDKit molecules.
 
         Sets:
         ------
-            identifiers (dict[str, int]): Dictionary of identifiers and their counts.
+        identifiers : dict[str, int]
+            Dictionary of identifiers and their counts.
         """
         self.pbar = tqdm(total=len(molecules), desc='Collecting identifiers', disable=not self.verbose)
         for mol in molecules:
@@ -361,6 +501,14 @@ class SortAndSlice:
     def sort(self, key_order = ('num_mols', 'count')):
         """
         Sorts the identifiers by the number of molecules they appear in and their total count.
+
+        Parameters:
+        ----------
+        key_order : tuple[str, str]
+            Tuple of keys to sort by. Default is ('num_mols', 'count').
+            The first key is the primary sort key, the second is the secondary sort key.
+            `num_mols` is the number of molecules the identifier appears in, 
+            and `count` is the total count of the identifier.
         """                
         self.identifiers = dict(sorted(
             self.identifiers.items(), key=lambda x: (x[1][key_order[0]], x[1][key_order[1]]), reverse=True,
@@ -373,11 +521,13 @@ class SortAndSlice:
 
         Parameters:
         ----------
-            fpsize (int): Length of the output vector.
+        fpsize : int
+            Length of the output vector.
 
         Sets:
-        ------
-            encoder (dict[str, int]): Dictionary of identifiers and their enumerated values.
+        -----
+        encoder : dict[str, int]
+            Dictionary of identifiers and their enumerated values.
         """
         if fpsize is None:
             if self.fpsize is None:
@@ -412,7 +562,8 @@ class SortAndSlice:
 
         Parameters:
         ----------
-            mol (Chem.Mol): RDKit molecule.
+        mol : Chem.Mol | np.ndarray
+            RDKit molecule or an array of pre-computed environments with shape (number of atoms, max radius).
 
         Returns:
         -------
@@ -438,11 +589,14 @@ class SortAndSlice:
 
         Parameters:
         ----------
-            molecules (list[Chem.Mol]): List of RDKit molecules.
+        molecules : list[Chem.Mol]
+            List of RDKit molecules.
 
         Returns:
         -------
-            np.ndarray: Binary matrix indicating substructure presence.
+        np.ndarray
+            Binary matrix indicating substructure presence.
+            Has shape (number of molecules, number of unique identifiers).
         """
         if molecules is None:
             return None
@@ -481,17 +635,31 @@ class SortAndSlice:
         return self.identifiers.items()
     
     def keys(self) -> list:
+        """
+        Returns:
+        -------
+        list
+            Substructure identifiers.
+        """
         return self.identifiers.keys()
     
     def values(self) -> list:
+        """
+        Returns:
+        -------
+        list
+            Identifier values, which are dictionaries containing counts and other properties.
+        """
         return self.identifiers.values()
     
     def clear(self):
+        """
+        Resets the identifiers and encoder attributes to empty dictionaries.
+        """
         self.identifiers = {}
         self.encoder = None
 
 class MolDesc:
-
     def __init__(self, descriptors: list[str], verbose: bool = False, **kwargs):
         self.verbose = verbose
         self.set_generator(descriptors=descriptors)
