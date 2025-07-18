@@ -9,6 +9,14 @@ from _src.data.datasets import BaseDataFrame
 from _src.data.utils import load_dataset
 from _src.data.mol import FPOps, Standardizer, MorganGenerator
 
+"""
+Script for preprocessing data for pretraining models.
+
+This script includes functions for calculating Tanimoto similarity, filtering fingerprints,
+and generating splits based on Butina clustering and GroupKFold. It also includes functions
+for converting float arrays to binary arrays and for generating random subsets of indices.
+"""
+
 def max_tanimoto(
     fps_1: list[DataStructs.ExplicitBitVect],
     fps_2: list[DataStructs.ExplicitBitVect],
@@ -41,6 +49,26 @@ def float_to_binary(
     threshold: float = 0.5,
     below: bool = True
 ) -> np.ndarray:
+    """
+    Convert a float array to a binary array based on a threshold.
+
+    Parameters:
+    ----------
+    array : np.ndarray
+        The array to convert.
+    threshold : float
+        The threshold to use for conversion. Default is 0.5.
+    below : bool
+        If True, values below the threshold are set to 1, and values above are set to 0.
+        If False, values above the threshold are set to 1, and values below are set to 0.
+        Default is True.
+
+    Returns:
+    -------
+    np.ndarray
+        A binary array where values are 1 if they meet the condition based on the threshold,
+        and 0 otherwise.
+    """
     if below:
         return np.where(array < threshold, 1, 0)
     else:
@@ -55,7 +83,7 @@ def tanimoto_filter(
     """
     Get fingerprint filter for fp_1 based on Tanimoto similarity to fp_2.
 
-    Parameters
+    Parameters:
     ----------
     fp_1: list[DataStructs.ExplicitBitVect]
         List of fingerprints to compare.
@@ -64,6 +92,15 @@ def tanimoto_filter(
     threshold: float
         The threshold for Tanimoto similarity. Labels values below the threshold with 1 and values
         above with 0. Default is 0.5.
+    verbose: bool
+        Whether to show the progress bar or not. Default is False.
+
+    Returns:
+    -------
+    out : np.ndarray
+        A binary array where 1 indicates that the data point is dissimilar to the fp_2 set and
+        0 indicates that the data point is similar to at least one molecule in fp_2 set.
+        The last column represents an aggregate filter for all fp_2 sets.
     """
     out = max_tanimoto(fp_1, fp_2, verbose=verbose)
     return float_to_binary(out, threshold=threshold, below=True)
@@ -78,7 +115,7 @@ def batch_tanimoto_filter(
     Apply Tanimoto filter to multiple sets of fingerprints.
     Useful for filtering pretraining data based on multiple benchmark sets.
 
-    Parameters
+    Parameters:
     ----------
     fp_1: list[DataStructs.ExplicitBitVect]
         List of fingerprints to compare. (e.g. pretraining data)
@@ -87,8 +124,10 @@ def batch_tanimoto_filter(
     threshold: float
         The threshold for Tanimoto similarity. Labels values below the threshold with 1 and values
         above with 0. Default is 0.5.
+    verbose: bool
+        Whether to show the progress bar or not. Default is False.
 
-    Returns
+    Returns:
     -------
     out: np.ndarray
         Array of filters. Each column represents a list in fp_2.
@@ -111,6 +150,27 @@ def batch_max_tanimoto(
     fp_2: list[list[DataStructs.ExplicitBitVect]],
     verbose: bool = False,
 ) -> np.ndarray:
+    """
+    Calculate the maximum Tanimoto similarity for each molecule in fp_1 to all molecules in each set of fp_2.
+
+    Parameters:
+    ----------
+    fp_1: list[DataStructs.ExplicitBitVect]
+        List of fingerprints to compare. (e.g. pretraining data)
+    fp_2: list[list[DataStructs.ExplicitBitVect]]
+        List of list of fingerprints to compare against. (e.g. list of benchmark data)
+    verbose: bool
+        Whether to show the progress bar or not. Default is False.
+
+    Returns:
+    -------
+    out: np.ndarray
+        Array of maximum Tanimoto scores. Each column represents a set in fp_2.
+        Each row represents a data point in fp_1.
+        The values are the maximum Tanimoto scores for each data point in fp_1 against
+        the corresponding set in fp_2.
+        The shape of the array is (len(fp_1), len(fp_2)).
+    """
     out = np.zeros((len(fp_1), len(fp_2)))
     pbar = tqdm(total=len(fp_2), disable=not verbose)
     for i, fps in enumerate(fp_2):
@@ -119,6 +179,7 @@ def batch_max_tanimoto(
     pbar.close()
 
     return out
+
 def repeat_groupkfold(
     X: np.ndarray,
     y: np.ndarray,
@@ -131,7 +192,7 @@ def repeat_groupkfold(
     """
     Repeat GroupKFold splits.
 
-    Parameters
+    Parameters:
     ----------
     X: np.ndarray
         data to split.
@@ -149,7 +210,7 @@ def repeat_groupkfold(
         Whether to stratify splits by y. Only applicable
         for classification.
 
-    Returns
+    Returns:
     -------
     out: np.ndarray
         Array of splits. Each column represents a split, where 1 is the test set and 0 is the
@@ -179,7 +240,7 @@ def butina_splitting(
     """
     Split the data using Butina clustering and GroupKFold.
     
-    Parameters
+    Parameters:
     ----------
     fps: list[DataStructs.ExplicitBitVect]
         List of fingerprints to split.
@@ -196,7 +257,7 @@ def butina_splitting(
         Whether to stratify splitting by y. Only applicable for classification.
         Default is False.
 
-    Returns
+    Returns:
     -------
     out: np.ndarray
         Array of splits. Each column represents a split, where 1 is the test set and 0 is the
@@ -214,14 +275,14 @@ def subset_indices(total: int|np.ndarray, n: int) -> np.ndarray:
     """
     Choose a random subset of indices.
 
-    Parameters
+    Parameters:
     ----------
     total: int
         The total number of indices.
     n: int
         The number of indices to choose.
 
-    Returns
+    Returns:
     -------
     out: pd.DataFrame
         The subset of the data.
@@ -232,12 +293,12 @@ def indices_to_binary(indices: np.ndarray, total: int) -> np.ndarray:
     """
     Convert indices to binary array.
 
-    Parameters
+    Parameters:
     ----------
     indices: np.ndarray
         The indices to convert.
 
-    Returns
+    Returns:
     -------
     out: np.ndarray
         The binary array.
@@ -258,6 +319,40 @@ def splitters(name: str):
 def preprocess(config: dict):
     """
     Preprocess the data.
+
+    Parameters:
+    ----------
+    config: dict
+        Configuration dictionary containing:
+            - data: str
+                Path to the data directory. Contains the datasets to process.
+                If datasets are not stored in the data directory, they will be downloaded.
+            - verbose: bool
+                Whether to print progress messages.
+            - benchmark: list
+                List of benchmark datasets to process. E.g., ["Human_PPB", "Efflux", etc.]
+            - morgan: dict
+                Configuration for Morgan fingerprint generation (for butina splitting), including:
+                - radius: int
+                    The radius for Morgan fingerprints. Default is 2.
+                - nbits: int
+                    The number of bits for Morgan fingerprints. Default is 2048.
+            - standardizer: dict
+                Configuration for standardizing molecules, e.g., sanitization.
+            - splitting: dict
+                Configuration for splitting the data, including:
+                - kind: str
+                    The type of splitter to use. Currently supports 'butina'.
+                - params: dict
+                    Parameters for the splitter, such as:
+                    - kfolds: int
+                        The number of folds for k-fold cross-validation. Default is 5.
+                    - repeats: int
+                        The number of times to repeat the splits. Default is 1.
+            - pretrain: str
+                Pre-training dataset name e.g., "QMugs".
+            - pretrain_filter: bool
+                Whether to apply the pretraining filter based on Tanimoto similarity.
     """
     data_path = config['data']
     verbose: bool = config['verbose']
@@ -320,7 +415,7 @@ def preprocess(config: dict):
         verbose=verbose
     )
 
-    if 'butina_filter' and 'max_tanimoto' not in pretrain_data.columns:
+    if 'tanimoto_filter' and 'max_tanimoto' not in pretrain_data.columns:
         print(f'Processing filters for {pretrain_data.name}') if verbose else None
         print(f'Data shape: {pretrain_data.shape}') if verbose else None
         rdkit_passes = pretrain_data[pretrain_data['rdkit_pass'] == True]
@@ -348,7 +443,7 @@ def preprocess(config: dict):
                 filter_indices = subset_indices(filter_indices, num_keep)
                 pretrain_filter = indices_to_binary(filter_indices, len(pretrain_filter))
                 
-            pretrain_data[f'butina_filter_{threshold}'] = pretrain_filter
+            pretrain_data[f'tanimoto_filter_{threshold}'] = pretrain_filter
 
         for fail in rdkit_fails.index:
             max_tanimote_scores_all = np.insert(max_tanimote_scores_all, fail, np.nan, axis=0)
