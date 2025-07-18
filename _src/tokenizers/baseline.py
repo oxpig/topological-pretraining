@@ -4,7 +4,6 @@ from _src.tokenizers.base import BaseTokenizer
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem import Descriptors
-from rdkit.ML.Descriptors.MoleculeDescriptors import MolecularDescriptorCalculator
 from rdkit.Chem.rdFingerprintGenerator import GetMorganFeatureAtomInvGen
 
 from typing import Optional, TYPE_CHECKING
