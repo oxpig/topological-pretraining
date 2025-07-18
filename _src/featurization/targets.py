@@ -1,12 +1,10 @@
-from . import PDV, SNS, ECFP, FCFP
-from .. import featurization 
+from _src.featurization import PDV, SNS, ECFP, FCFP
+from _src.featurization import read_from_dict 
 
 from copy import deepcopy
 from rdkit import Chem
 import torch_geometric as pyg
 import torch
-
-
 
 
 
@@ -49,7 +47,21 @@ possible_targets_ = {
 }
 
 class Targets(dict):
+    """
+    Class for turning featurization methods into a dict of targets for pre-training.
+    Used to label molecular graphs with various target labels.
 
+    Parameters
+    ----------
+    targets : dict[str, dict[str, str]]
+        A dictionary where keys are target names and values are 
+        dictionaries of parameters for each target.
+        Targets can include 'SNS', 'ECFP', 'FCFP', and 'PDV'.
+        For parameters, refer to the individual target classes in the 
+        `featurization` module.
+    targets_path : str, optional
+        Path to a file containing saved targets. If provided, the targets will be loaded from this path.
+    """
     def __init__(
         self, targets: dict[str, dict[str, str]] = {}, targets_path: str = None
     ):
@@ -68,6 +80,19 @@ class Targets(dict):
                 self[target_name]['input_type'] = possible_targets_[target_name]['input_type']
 
     def fit(self, data: tuple[list[Chem.Mol], list[pyg.data.Data]]):
+        """
+        Fit the featurizers for each target to a list of molecules and graphs.
+
+        Parameters
+        ----------
+        data : tuple[list[Chem.Mol], list[pyg.data.Data]]
+            A tuple containing a list of RDKit molecule objects and a list of corresponding PyG Data objects.
+
+        Returns
+        -------
+        Targets
+            The instance of Targets with fitted pipelines for each target.
+        """
         for target_name in self:
             input_type = self[target_name]['input_type']
             
@@ -95,6 +120,21 @@ class Targets(dict):
         return self
 
     def transform(self, mol: Chem.Mol, graph: pyg.data.Data):
+        """
+        For each target, compute and add the target label to the graph.
+
+        Parameters
+        ----------
+        mol : Chem.Mol
+            The RDKit molecule object to transform.
+        graph : pyg.data.Data
+            The PyG Data object to transform.
+
+        Returns
+        -------
+        pyg.data.Data
+            The transformed PyG Data object with target labels.
+        """
 
         for target_name in self:
             if target_name in graph:
@@ -125,6 +165,15 @@ class Targets(dict):
         return graph
     
     def to_dict(self):
+        """
+        Convert the Targets instance to a dictionary format.
+        
+        Returns:
+        -------
+        dict
+            A dictionary representation of the Targets instance,
+            where each target's pipeline is converted to a dictionary
+        """
         out = {}
         for target in self:
             out[target] = self[target].copy()
@@ -132,6 +181,15 @@ class Targets(dict):
         return out 
     
     def save(self, targets_path: str = None):
+        """
+        Save the Targets instance to a file.
+
+        Parameters:
+        ----------
+        targets_path : str, optional
+            The file path where the targets will be saved. If not provided, the existing targets_path
+            will be used. If no path is set, the targets will not be saved.
+        """
         if targets_path is None:
             targets_path = self.targets_path
         else:
@@ -139,16 +197,30 @@ class Targets(dict):
         torch.save(self.to_dict(), targets_path)
 
     def load(self):
+        """
+        Load the Targets instance from a file.
+
+        If the targets_path is set, it will load the targets from that path.
+        If the targets_path is not set, it will not load any targets.
+        """
         targets = torch.load(self.targets_path, weights_only=True)
         for target in targets:
             self[target] = targets[target]
-            self[target]['pipeline'] = featurization.read_from_dict(self[target]['pipeline'])
+            self[target]['pipeline'] = read_from_dict(self[target]['pipeline'])
             self[target]['prediction_head'] = possible_targets_[target]['head_type']
             self[target]['level'] = possible_targets_[target]['level']
             self[target]['input_type'] = possible_targets_[target]['input_type']
 
     @property
     def is_fitted_(self):
+        """
+        Check if all pipelines in the Targets instance are fitted.
+
+        Returns
+        -------
+        bool
+            True if all pipelines are fitted, False otherwise.
+        """
         return all([
             self[target_name]['pipeline'].__sklearn_is_fitted__()
             for target_name in self
