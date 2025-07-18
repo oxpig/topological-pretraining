@@ -19,7 +19,52 @@ import optuna
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+"""
+Script for benchmarking models on various datasets.
+"""
+
 class HyperOpt:
+
+    """
+    Hyperparameter optimization class using Optuna.
+
+    Parameters
+    ----------
+    model : callable
+        The model to optimize.
+    model_kwargs : dict
+        The keyword arguments for the model, i.e., fixed hyperparameters.
+    task : str
+        The task to optimize for. Must be one of 'classification' or 'regression'.
+    hyperparameters : dict
+        The hyperparameters to optimize. Must be a dictionary with keys as hyperparameter names and values
+        as dictionaries with keys 'target' (str, one of 'int', 'float', 'categorical') and other parameters
+        for the Optuna suggestion method (e.g., 'low', 'high', 'choices').
+    dataset : MolDataset
+        The dataset to use for optimization.
+    splits : list
+        The list of splits to use for optimization. Each split is a tuple of (train_idx, val_idx).
+    scorer : Callable
+        The scoring function to use for optimization. Must take two arguments: true values and predicted values.
+    direction : str
+        The direction of optimization. Must be one of 'minimize' or 'maximize'.
+    val_size : float
+        The size of the validation set. Only used if `splits` is not provided.
+    verbose : bool
+        Whether to print verbose output.
+    neptune_run : neptune.Run, optional
+        The Neptune run object to log the hyperparameter tuning results.
+    name : str
+        The name of the hyperparameter tuning run. Used for logging in Neptune.
+    seed : int
+        The random seed to use for reproducibility.
+    data_clusters : np.ndarray, optional
+        The data clusters to use for grouped cross-validation. If provided, must be a 1D array of integers,
+        where each integer corresponds to a cluster label for a sample in the dataset.
+    average : Literal['mean', 'median']
+        The method to use for averaging the scores across splits. Must be one of 'mean' or 'median'.
+        Default is 'mean'.
+    """
     trial_count = 0
     def __init__(
         self, model, model_kwargs: dict,
@@ -53,6 +98,20 @@ class HyperOpt:
             optuna.logging.set_verbosity(optuna.logging.WARNING)
 
     def objective(self, trial: optuna.Trial):
+        """
+        The objective function for Optuna hyperparameter optimization.
+
+        Parameters
+        ----------
+        trial : optuna.Trial
+            The Optuna trial object containing the hyperparameters to evaluate.
+
+        Returns
+        -------
+        float
+            The score for the current set of hyperparameters. This is the value that Optuna will
+            try to minimize or maximize based on the `direction` specified during initialization.
+        """
         hyperparameters = self.hyperparameters
         params = {}
         for key, value in hyperparameters.items():
@@ -112,6 +171,19 @@ class HyperOpt:
         return out_score
     
     def run(self, trials: int = 50):
+        """
+        Run the hyperparameter tuning using Optuna.
+
+        Parameters
+        ----------
+        trials : int
+            The number of trials to run for hyperparameter tuning. Default is 50.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the best hyperparameters found and the trial number of the best trial.
+        """
         print(f'Running hyperparameter tuning with {trials} trials.') if self.verbose else None
         study = optuna.create_study(direction=self.direction, sampler=optuna.samplers.TPESampler(seed=42), )
         study.optimize(self.objective, n_trials=trials)
@@ -145,6 +217,7 @@ def benchmark(config: dict):
             - transform_kwargs: dict
                 The keyword arguments for the featurizer.
     """
+    # Setup configuration
     neptune_run = config.pop('neptune_run')
     if neptune_run is not None:
         neptune_run['config'] = config
@@ -209,7 +282,7 @@ def benchmark(config: dict):
     hyperparam_path  = hyperparam_path / name
     hyperparam_path.mkdir(parents=True, exist_ok=True)
 
-
+    # loop over benchmark datasets
     pbar = tqdm(total=len(benchmark_data), desc='Benchmarking', disable=not verbose)
     for benchmark in benchmark_data:
         hyperparameters_running = deepcopy(hyperparameters)
