@@ -15,7 +15,9 @@ from rdkit import Chem
 import torch
 from tqdm import tqdm
 
-
+"""
+Script for pretraining models on graph datasets.
+"""
 
 pred_head_map = {
     'binary': BinaryHead,
@@ -28,6 +30,59 @@ pred_head_map = {
 def pretrain(config: dict):
     """
     Run the pretraining process.
+
+    Parameters:
+    ----------
+    config : dict
+        Configuration dictionary containing the following keys:
+        - name: str
+            The name of the pretraining run.
+        - experiment: str
+            The name of the experiment.
+        - raw_name: str, optional
+            Name of the directory where the graphs are stored.
+            Defaults to the value of `experiment`.
+        - data: str
+            The path to the data directory.
+        - results: str
+            The path to the results directory.
+        - verbose: bool
+            Whether to print verbose output. Defaults to False.
+        - pretrain_data: list[str]|str
+            The name(s) of the dataset(s) to use for pretraining.
+        - featurizer: str
+            The class name of the featurizer to use.
+        - featurizer_kwargs: dict, optional
+            Additional keyword arguments for the featurizer.
+        - device: str
+            The device to use for training. Defaults to 'cuda' if available, otherwise 'cpu'.
+        - batch_size: int
+            The batch size for training. Defaults to 32.
+        - epochs: int
+            The number of epochs to train for. Defaults to 100.
+        - warmup_epochs: int, optional
+            The number of warmup epochs for learning rate scheduling. Defaults to 0.
+        - lr_decay_half_life: int, optional
+            The half-life for learning rate decay. Defaults to 5.
+        - weight_decay: float, optional
+            The weight decay for the optimizer. Defaults to 0.0.
+        - targets: dict
+            A dictionary of targets for the model, where each key is a target name and the value is a dictionary
+            containing target-specific parameters.
+        - splits: list[str], optional
+            A list of splits to use for training. If empty, all data will be used for pretraining.
+        - neptune_run: optional
+            A Neptune run object for logging. If None, no logging will be done.
+        - seed: int
+            The random seed for reproducibility. Defaults to 42.
+        - model: str
+            The class name of the model to use for pretraining.
+        - model_kwargs: dict, optional
+            Additional keyword arguments for the model.
+        - standardization: bool, optional
+            Settings for standardizing the molecules.
+        - class_weights: bool, optional
+            Whether to use class weights for the loss function. Defaults to False.
     """
     name: str = config['name']
     experiment_name: str = config['experiment']
@@ -347,6 +402,7 @@ def pretrain(config: dict):
 def pretrain_autoencoder(config: dict):
     """
     Run the pretraining process.
+    Same parameters as `pretrain`, but for an autoencoder model rather than a GNN.
     """
     name: str = config['name']
     experiment_name: str = config['experiment']
