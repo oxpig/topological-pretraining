@@ -1,16 +1,13 @@
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import GroupKFold, train_test_split, StratifiedGroupKFold
+from sklearn.model_selection import GroupKFold, StratifiedGroupKFold
 
-from rdkit import Chem, DataStructs
-from rdkit.Chem.rdFingerprintGenerator import (
-    AdditionalOutput, GetMorganGenerator
-)
+from rdkit import DataStructs
 from tqdm import tqdm
 
-from .data.datasets import BaseDataFrame
-from .data.utils import load_dataset, load_molecules
-from .data.mol import FPOps, Standardizer, MorganGenerator
+from _src.data.datasets import BaseDataFrame
+from _src.data.utils import load_dataset
+from _src.data.mol import FPOps, Standardizer, MorganGenerator
 
 def max_tanimoto(
     fps_1: list[DataStructs.ExplicitBitVect],
