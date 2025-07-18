@@ -1,5 +1,5 @@
 from _src.data.mol import MorganGenerator, SortAndSlice, MolDesc
-from _src.tokenizers.base import BaseTokenizer
+from _src.featurization.base import BaseTokenizer
 
 import numpy as np
 from rdkit import Chem

@@ -4,7 +4,7 @@ import torch_geometric as pyg
 import numpy as np
 from rdkit import Chem
 
-from _src.tokenizers.base import BaseGraph, GraphTokenizer
+from _src.featurization.base import BaseGraph, GraphTokenizer
 from _src.data.encoder import OneHotEncoder
 
 import torch

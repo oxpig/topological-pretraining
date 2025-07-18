@@ -1,5 +1,5 @@
 from . import PDV, SNS, ECFP, FCFP
-from .. import tokenizers 
+from .. import featurization 
 
 from copy import deepcopy
 from rdkit import Chem
@@ -142,7 +142,7 @@ class Targets(dict):
         targets = torch.load(self.targets_path, weights_only=True)
         for target in targets:
             self[target] = targets[target]
-            self[target]['pipeline'] = tokenizers.read_from_dict(self[target]['pipeline'])
+            self[target]['pipeline'] = featurization.read_from_dict(self[target]['pipeline'])
             self[target]['prediction_head'] = possible_targets_[target]['head_type']
             self[target]['level'] = possible_targets_[target]['level']
             self[target]['input_type'] = possible_targets_[target]['input_type']

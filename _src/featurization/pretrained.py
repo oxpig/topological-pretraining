@@ -1,5 +1,5 @@
-from _src.tokenizers.base import BaseTokenizer
-from _src.tokenizers.load import read_from_dict
+from _src.featurization.base import BaseTokenizer
+from _src.featurization.load import read_from_dict
 from _src.nn.pred_head import PredHead
 from _src.nn import get_nn
 
