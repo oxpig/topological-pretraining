@@ -85,8 +85,8 @@ def pretrain(config: dict):
 
     if len(splits) == 0:
         print('No splits found, using all data for pretraining.') if verbose else None
-        df['butina_filter'] = 1
-        splits = ['butina_filter']
+        df['tanimoto_filter'] = 1
+        splits = ['tanimoto_filter']
 
     if not config.get('standardization', True):
         print('Loading molecules without standardization...') if verbose else None
@@ -400,8 +400,8 @@ def pretrain_autoencoder(config: dict):
 
     if len(splits) == 0:
         print('No splits found, using all data for pretraining.') if verbose else None
-        df['butina_filter'] = 1
-        splits = ['butina_filter']
+        df['tanimoto_filter'] = 1
+        splits = ['tanimoto_filter']
 
     if not config.get('standardization', True):
         print('Loading molecules without standardization...') if verbose else None
