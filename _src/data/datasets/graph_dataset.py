@@ -14,7 +14,7 @@ from typing import Optional, TYPE_CHECKING
 import warnings
 
 if TYPE_CHECKING:
-    from _src.featurization import GraphTokenizer
+    from _src.featurization import GraphFeaturizer
     
 
 class PreFilter:
@@ -81,15 +81,15 @@ class GraphDataset(pyg.data.InMemoryDataset):
     ----------
     root : str
         Path to store or retrieve molecular dataset.
-    featurizer : GraphTokenizer
-        Tokenizer that converts molecules into PyTorch Geometric Data objects.
+    featurizer : GraphFeaturizer
+        Featurizer that converts molecules into PyTorch Geometric Data objects.
         See `_src/featurizers.py` for definition
     molecules : Optional[List[rdkit.Chem.Mol]]
         A list of RDKit molecules.
     split : Optional[tuple[str, torch.Tensor]]
         A tuple containing a name for the split for saving, and a tensor of indices.
     fit_featurizer : bool
-        Boolean for whether to fit the GraphTokenizer.
+        Boolean for whether to fit the GraphFeaturizer.
         Defaults to True unless the input featurizer or saved featurizer has already been fitted.
     run_id : Optional[str]
         Optional id name for save paths.
@@ -103,7 +103,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
     """
     _indexes = None
     def __init__(
-        self, root: str, featurizer: GraphTokenizer = None,
+        self, root: str, featurizer: GraphFeaturizer = None,
         molecules: Optional[list[Chem.Mol]] = None,
         split: Optional[tuple[str, torch.Tensor]] = None,
         fit_featurizer: bool = True,
@@ -132,7 +132,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
             featurizer = load_featurizer(featurizer_path)
             
         if featurizer is None:
-            raise ValueError('Tokenizer not found.')
+            raise ValueError('Featurizer not found.')
             
         self.featurizer = featurizer
         self.fit_featurizer = fit_featurizer or not featurizer.is_fitted_
@@ -223,7 +223,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         Returns:
         -------
         pathlib.Path
-            Path to saved GraphTokenizer.
+            Path to saved GraphFeaturizer.
         """
         return Path(self.processed_dir) / f'featurizer{self.run_id}{self.split_name}.pt'
     
@@ -279,8 +279,8 @@ class GraphDataset(pyg.data.InMemoryDataset):
         Process raw molecular data.
         Makes raw graphs if they do not exist.
         Filters graphs using split indices.
-        Fits GraphTokenizer to filtered raw graphs.
-        Saves GraphTokenizer as a dictionary.
+        Fits GraphFeaturizer to filtered raw graphs.
+        Saves GraphFeaturizer as a dictionary.
         Tokenizes filtered raw graphs and saves to processed path.
         Fits Targets to tokenized graphs
         """
@@ -369,7 +369,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
     def make_raw_graphs(self):
         """
         Method for making raw graphs and saving to disk.
-        E.g., with an AtomGraphTokenizer raw node features are atomic numbers.
+        E.g., with an AtomGraphFeaturizer raw node features are atomic numbers.
 
         Raw graphs are saved as dictionaries.
         """

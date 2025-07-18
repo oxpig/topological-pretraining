@@ -189,7 +189,7 @@ def benchmark(config: dict):
     print(f'\n##################################################\n') if verbose else None
     print(f'Run {name}.') if verbose else None
     print(f'Benchmarking {config["featurizer"]}.') if verbose else None
-    print(f'Tokenizer kwargs: {featurizer_kwargs}') if verbose else None
+    print(f'Featurizer kwargs: {featurizer_kwargs}') if verbose else None
 
     hyperparameters: dict = config.get('model_hyperparameters', {})
     print(f'Hyperparameters: {hyperparameters}') if verbose else None

@@ -8,7 +8,7 @@ from typing import Optional
 from scipy import sparse
 
 from ..data.mol import MorganGenerator, SortAndSlice
-from .base import BaseGraph, GraphTokenizer
+from .base import BaseGraph, GraphFeaturizer
 
 
 class MorganGraph(BaseGraph):
@@ -125,7 +125,7 @@ class MorganGraph(BaseGraph):
         self.node_types = self.sort_and_slice.encoder
 
 
-class MorganGraphTokenizer(GraphTokenizer):
+class MorganGraphFeaturizer(GraphFeaturizer):
     """
     Class to tokenize molecules into graphs using Morgan hashed identifiers.
 

@@ -4,7 +4,7 @@ import torch_geometric as pyg
 import numpy as np
 from rdkit import Chem
 
-from _src.featurization.base import BaseGraph, GraphTokenizer
+from _src.featurization.base import BaseGraph, GraphFeaturizer
 from _src.data.encoder import OneHotEncoder
 
 import torch
@@ -102,10 +102,10 @@ class AtomGraph(BaseGraph):
                 edge_attr=torch.empty((0, 1), dtype=torch.long),
             )
     
-class AtomGraphTokenizer(GraphTokenizer):
+class AtomGraphFeaturizer(GraphFeaturizer):
     """
-    AtomGraphTokenizer is a featurizer for converting molecules into graphs
-    based on atomic numbers and bond types. It inherits from GraphTokenizer.
+    AtomGraphFeaturizer is a featurizer for converting molecules into graphs
+    based on atomic numbers and bond types. It inherits from GraphFeaturizer.
 
     Parameters:
     ----------
@@ -229,9 +229,9 @@ class AtomFeatureGraph(BaseGraph):
             'Pb'
         ]
 
-class AtomFeatureTokenizer(GraphTokenizer):
+class AtomFeatureFeaturizer(GraphFeaturizer):
     """
-    Tokenizer for AtomFeatureGraph.
+    Featurizer for AtomFeatureGraph.
     """
     def _transform_base(self, **kwargs):
         return AtomFeatureGraph(verbose=self.verbose, **kwargs)

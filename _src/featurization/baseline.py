@@ -1,5 +1,5 @@
 from _src.data.mol import MorganGenerator, SortAndSlice, MolDesc
-from _src.featurization.base import BaseTokenizer
+from _src.featurization.base import BaseFeaturizer
 
 import numpy as np
 from rdkit import Chem
@@ -12,9 +12,9 @@ morgan_feat_inv = GetMorganFeatureAtomInvGen()
 
 default_descriptors = [i[0] for i in Descriptors._descList]
 
-class PDV(BaseTokenizer):
+class PDV(BaseFeaturizer):
     """
-    Tokenizer that computes molecular descriptors using RDKit's MolDesc.
+    Featurizer that computes molecular descriptors using RDKit's MolDesc.
     This featurizer is designed to compute a set of predefined molecular descriptors
     for each molecule in the input data.
 
@@ -31,9 +31,9 @@ class PDV(BaseTokenizer):
             kwargs['descriptors'] = default_descriptors 
         return MolDesc(verbose=self.verbose, **kwargs)
 
-class ECFP(BaseTokenizer):
+class ECFP(BaseFeaturizer):
     """
-    Tokenizer that computes Extended Connectivity Fingerprints (ECFP) using RDKit's Morgan fingerprints.
+    Featurizer that computes Extended Connectivity Fingerprints (ECFP) using RDKit's Morgan fingerprints.
     This featurizer is designed to compute ECFP fingerprints for each molecule in the input data.
 
     Parameters:
@@ -78,7 +78,7 @@ class FCFP(ECFP):
     is_fitted_ = False
     fixed_transform_kwargs = {'atom_inv': morgan_feat_inv}
 
-class SNS(BaseTokenizer):
+class SNS(BaseFeaturizer):
     """
     Molecular featurizer that computes a sorted and sliced version of Morgan fingerprints.
     This featurizer is designed to compute Morgan fingerprints, sort them, and slice them 

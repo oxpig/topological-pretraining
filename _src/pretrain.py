@@ -65,7 +65,7 @@ def pretrain(config: dict):
 
     print(f'\n##################################################\n') if verbose else None
     print(f'Pretraining run {name}') if verbose else None
-    print(f'Tokenizer: {featurizer_class}') if verbose else None
+    print(f'Featurizer: {featurizer_class}') if verbose else None
     print(f'Model: {config['model']}') if verbose else None
     print(f'Data: {pretrain_data}') if verbose else None
     print(f'Splits: {splits}') if verbose else None
@@ -380,7 +380,7 @@ def pretrain_autoencoder(config: dict):
 
     print(f'\n##################################################\n') if verbose else None
     print(f'Pretraining run {name}') if verbose else None
-    print(f'Tokenizer: {featurizer_class}') if verbose else None
+    print(f'Featurizer: {featurizer_class}') if verbose else None
     print(f'Model: {config['model']}') if verbose else None
     print(f'Data: {pretrain_data}') if verbose else None
     print(f'Splits: {splits}') if verbose else None

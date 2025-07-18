@@ -1,4 +1,4 @@
-from _src.featurization.base import BaseTokenizer
+from _src.featurization.base import BaseFeaturizer
 from _src.featurization.load import read_from_dict
 from _src.nn.pred_head import PredHead
 from _src.nn import get_nn
@@ -22,7 +22,7 @@ class PreTrainedModel(torch.nn.Module):
         Dictionary containing the model details.
         Includes
         - featurizer: dict 
-            Tokenizer details. See _src.featurizers.base.BaseTokenizer.to_dict for details.
+            Featurizer details. See _src.featurizers.base.BaseFeaturizer.to_dict for details.
         - main: dict
             Main model details.
             - cls: class name of the main model.
@@ -73,7 +73,7 @@ class PreTrainedModel(torch.nn.Module):
             Dictionary containing the model details.
             Includes:
             - featurizer: dict 
-                Tokenizer details. See _src.featurizers.base.BaseTokenizer.to_dict for details.
+                Featurizer details. See _src.featurizers.base.BaseFeaturizer.to_dict for details.
             - main: dict
                 Main model details.
                 - cls: class name of the main model.
@@ -451,7 +451,7 @@ class PreTrainedGNN(PreTrainedModel):
         return [self.model.embed_graph_nodes(x, keep_tokens=keep_tokens) for x in X]
         
  
-class PreTrainedTokenizer(BaseTokenizer):
+class PreTrainedFeaturizer(BaseFeaturizer):
     """
     Wrapper for a pre-trained model such that it can be used for featurization.
 

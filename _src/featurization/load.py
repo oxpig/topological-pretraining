@@ -1,13 +1,13 @@
 from . import (
-    BaseTokenizer,
-    AtomGraphTokenizer, MorganGraphTokenizer,
+    BaseFeaturizer,
+    AtomGraphFeaturizer, MorganGraphFeaturizer,
     ECFP, FCFP, PDV, SNS
 )
 import torch
 
 all_featurizers = {
-    'AtomGraphTokenizer': AtomGraphTokenizer,
-    'MorganGraphTokenizer': MorganGraphTokenizer,
+    'AtomGraphFeaturizer': AtomGraphFeaturizer,
+    'MorganGraphFeaturizer': MorganGraphFeaturizer,
     'ECFP': ECFP,
     'FCFP': FCFP,
     'PDV': PDV,
@@ -15,7 +15,7 @@ all_featurizers = {
 }
 
 
-def read_from_dict(parameters: dict) -> BaseTokenizer:
+def read_from_dict(parameters: dict) -> BaseFeaturizer:
     """
     Load featurizer from a dictionary.
 
@@ -28,7 +28,7 @@ def read_from_dict(parameters: dict) -> BaseTokenizer:
 
     Returns:
     -------
-    BaseTokenizer
+    BaseFeaturizer
         An instance of the specified featurizer class, initialized with the provided parameters.
 
     Raises:
@@ -37,14 +37,14 @@ def read_from_dict(parameters: dict) -> BaseTokenizer:
         If the 'name' key is not found in the parameters dictionary.
     """
     if 'name' not in parameters:
-        raise ValueError('Tokenizer name not found in parameters.')
+        raise ValueError('Featurizer name not found in parameters.')
     featurizer = parameters.pop('name')
     featurizer = all_featurizers[featurizer](**parameters)
     featurizer.is_fitted_ = parameters['is_fitted_']
     return featurizer
 
 
-def load_featurizer(path: str, parameters: bool = True) -> BaseTokenizer:
+def load_featurizer(path: str, parameters: bool = True) -> BaseFeaturizer:
     """
     Load a featurizer from a file.
 
@@ -58,7 +58,7 @@ def load_featurizer(path: str, parameters: bool = True) -> BaseTokenizer:
 
     Returns:
     -------
-    BaseTokenizer or dict
+    BaseFeaturizer or dict
         If `parameters` is True, loads a saved dictionary and initializes a featurizer from it.
         If `parameters` is False, returns the featurizer object directly.
     """

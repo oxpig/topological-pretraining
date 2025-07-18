@@ -7,7 +7,7 @@ from typing import Optional
 from sklearn.base import BaseEstimator, TransformerMixin
 
 
-class BaseTokenizer(BaseEstimator, TransformerMixin):
+class BaseFeaturizer(BaseEstimator, TransformerMixin):
     """
     Base class for featurizers.
 
@@ -34,7 +34,7 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
         verbose: bool = False,
         is_fitted_: bool = None,
     ):
-        super(BaseTokenizer, self).__init__()
+        super(BaseFeaturizer, self).__init__()
         self.verbose = verbose
         if is_fitted_ is not None:
             self.is_fitted_ = is_fitted_
@@ -56,7 +56,7 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
             The tokenized representation of the input data.
         """
         if not self.is_fitted_:
-            raise ValueError('Tokenizer must be fit before calling.')
+            raise ValueError('Featurizer must be fit before calling.')
         X = self.transform(X)
         return X
     
@@ -110,7 +110,7 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
         
         Returns:
         -------
-        BaseTokenizer
+        BaseFeaturizer
             Returns the fitted featurizer instance.
         """
         self.is_fitted_ = True
@@ -169,7 +169,7 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
         Useful for featurizers that alter the encoding of the data depending on the vocabulary
         of the training data.
 
-        E.g. AtomGraphTokenizer
+        E.g. AtomGraphFeaturizer
             Raw method is used to generate graphs with atomic numbers as node features.
             Encode method is used to convert the raw graph into a tokenized graph by mapping atomic
             numbers to atom indices in a vocabulary.
@@ -188,7 +188,7 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
         Useful for featurizers that alter the encoding of the data depending on the vocabulary
         of the training data.
 
-        E.g. AtomGraphTokenizer
+        E.g. AtomGraphFeaturizer
             Raw method is used to generate graphs with atomic numbers as node features.
             Encode method is used to convert the raw graph into a tokenized graph by mapping atomic
             numbers to atom indices in a vocabulary.
@@ -521,7 +521,7 @@ class BaseGraph:
         return out
 
 
-class GraphTokenizer(BaseTokenizer):
+class GraphFeaturizer(BaseFeaturizer):
     """
     Class to tokenize molecules into graphs using atom types and bond types.
 
@@ -538,7 +538,7 @@ class GraphTokenizer(BaseTokenizer):
         verbose: bool = False,
         **kwargs,
     ):
-        super(GraphTokenizer, self).__init__(
+        super(GraphFeaturizer, self).__init__(
             transform_kwargs=transform_kwargs, verbose=verbose
         )
     
@@ -588,7 +588,7 @@ class GraphTokenizer(BaseTokenizer):
 
         Returns:
         -------
-        GraphTokenizer
+        GraphFeaturizer
             Returns the fitted featurizer instance.
         """
         self = super().fit(mols, y)

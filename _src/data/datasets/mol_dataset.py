@@ -1,9 +1,9 @@
 from _src.featurization import (
-    BaseTokenizer,
+    BaseFeaturizer,
     ECFP, FCFP, PDV, SNS,
-    AtomGraphTokenizer, MorganGraphTokenizer,
-    AtomFeatureTokenizer,
-    PreTrainedTokenizer
+    AtomGraphFeaturizer, MorganGraphFeaturizer,
+    AtomFeatureFeaturizer,
+    PreTrainedFeaturizer
 )
 from _src.data.feature_selection import CoCorr, SelectAll
 
@@ -29,10 +29,10 @@ featurizers_dict = {
     'FCFP': FCFP,
     'PDV': PDV,
     'SNS': SNS,
-    'AtomGraphTokenizer': AtomGraphTokenizer,
-    'MorganGraphTokenizer': MorganGraphTokenizer,
-    'PreTrainedTokenizer': PreTrainedTokenizer,
-    'AtomFeatureTokenizer': AtomFeatureTokenizer,
+    'AtomGraphFeaturizer': AtomGraphFeaturizer,
+    'MorganGraphFeaturizer': MorganGraphFeaturizer,
+    'PreTrainedFeaturizer': PreTrainedFeaturizer,
+    'AtomFeatureFeaturizer': AtomFeatureFeaturizer,
 }
 
 extra_transform_classes = {
@@ -60,9 +60,9 @@ class MolDataset:
         Indices of test samples
     featurizer: Literal[
         'ECFP', 'FCFP', 'PDV', 'SNS',
-        'AtomGraphTokenizer', 'MorganGraphTokenizer', 'SNSGraphTokenizer'
+        'AtomGraphFeaturizer', 'MorganGraphFeaturizer', 'SNSGraphFeaturizer'
     ], optional
-        Tokenizer to use for featurization. Default is None.
+        Featurizer to use for featurization. Default is None.
         If None, self.X is a list of RDKit molecules.
     featurizer_kwargs: dict, optional
         Keyword arguments for the featurizer.
@@ -87,8 +87,8 @@ class MolDataset:
         train_idx: Optional[np.ndarray] = None, test_idx: Optional[np.ndarray] = None,
         featurizer: Literal[
             'ECFP', 'FCFP', 'PDV', 'SNS',
-            'AtomGraphTokenizer', 'MorganGraphTokenizer',
-            'PreTrainedTokenizer'
+            'AtomGraphFeaturizer', 'MorganGraphFeaturizer',
+            'PreTrainedFeaturizer'
         ] = None,
         featurizer_kwargs: dict = {}, extra_transform_kwargs: dict = {},
         verbose: bool = False, fit_transform: bool = False,
@@ -105,9 +105,9 @@ class MolDataset:
             print('Setting featurizer...') if self.verbose else None
             if self.featurizer not in featurizers_dict:
                 raise ValueError(f'Invalid featurizer: {self.featurizer}')
-            self.featurizer: BaseTokenizer = featurizers_dict[self.featurizer]
+            self.featurizer: BaseFeaturizer = featurizers_dict[self.featurizer]
             self.featurizer = self.featurizer(verbose=verbose, **self.featurizer_kwargs)
-            print(f'Tokenizer set.\n{self.featurizer}') if self.verbose else None
+            print(f'Featurizer set.\n{self.featurizer}') if self.verbose else None
 
         if train_idx is None:
             train_idx = np.arange(len(mols))
@@ -207,7 +207,7 @@ class MolDataset:
             self.featurizer.fit(train_mols, y)
             self.X = self.featurizer.transform(self.mols) 
         else:
-            print('Tokenizer is precomputed. Skipping fit.') if self.verbose else None
+            print('Featurizer is precomputed. Skipping fit.') if self.verbose else None
         if isinstance(self.X, np.ndarray):
             if np.any(np.isnan(self.X[train_idx])) or np.any(np.isnan(self.X[test_idx])):
                 num_cols = len(np.where(np.isnan(self.X).sum(axis=0))[0])
