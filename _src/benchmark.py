@@ -87,7 +87,7 @@ class HyperOpt:
             train_X, train_y = self.dataset.train
             val_X, val_y = self.dataset.test
             if self.model.__name__ == 'SklearnGIN':
-                params['vocab_size'] = self.dataset.tokenizer.vocab_size
+                params['vocab_size'] = self.dataset.featurizer.vocab_size
                 params['input_dim'] = train_X[0].x.size(1)
                 params['neptune_location'] = f'{self.name}/trials'
                 params['neptune_run'] = self.neptune_run
@@ -140,10 +140,10 @@ def benchmark(config: dict):
                 The model to use.
             - model_kwargs: dict
                 The keyword arguments for the model.
-            - tokenizer: str
-                The tokenizer (i.e. molecular featurization method) to use.
+            - featurizer: str
+                The featurizer (i.e. molecular featurization method) to use.
             - transform_kwargs: dict
-                The keyword arguments for the tokenizer.
+                The keyword arguments for the featurizer.
     """
     neptune_run = config.pop('neptune_run')
     if neptune_run is not None:
@@ -176,8 +176,8 @@ def benchmark(config: dict):
     model_class = get_model(config['model'])
     base_model_kwargs = config.get('model_kwargs', {})
     base_model_kwargs['device'] = device
-    tokenizer_class = config['tokenizer']
-    tokenizer_kwargs = config.get('tokenizer_kwargs', {})
+    featurizer_class = config['featurizer']
+    featurizer_kwargs = config.get('featurizer_kwargs', {})
     extra_transform_kwargs = config.get('extra_transform_kwargs', {})
     clusters = config.get('clusters', None)
 
@@ -188,8 +188,8 @@ def benchmark(config: dict):
 
     print(f'\n##################################################\n') if verbose else None
     print(f'Run {name}.') if verbose else None
-    print(f'Benchmarking {config["tokenizer"]}.') if verbose else None
-    print(f'Tokenizer kwargs: {tokenizer_kwargs}') if verbose else None
+    print(f'Benchmarking {config["featurizer"]}.') if verbose else None
+    print(f'Tokenizer kwargs: {featurizer_kwargs}') if verbose else None
 
     hyperparameters: dict = config.get('model_hyperparameters', {})
     print(f'Hyperparameters: {hyperparameters}') if verbose else None
@@ -345,7 +345,7 @@ def benchmark(config: dict):
 
         dataset = MolDataset(
             mols=mols, y=y,
-            tokenizer=tokenizer_class, tokenizer_kwargs=tokenizer_kwargs,
+            featurizer=featurizer_class, featurizer_kwargs=featurizer_kwargs,
             extra_transform_kwargs=extra_transform_kwargs,
             verbose=verbose, fit_transform=False,
         )
@@ -424,7 +424,7 @@ def benchmark(config: dict):
             if config['model'] == 'SklearnGIN':
                 model_kwargs['verbose'] = 0
                 model_kwargs['input_dim'] = train_X[0].x.size(1)
-                model_kwargs['vocab_size'] = dataset.tokenizer.vocab_size
+                model_kwargs['vocab_size'] = dataset.featurizer.vocab_size
             
             print(f'Fitting model...') if verbose else None
             model = model_class(

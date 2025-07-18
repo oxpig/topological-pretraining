@@ -9,19 +9,19 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 class BaseTokenizer(BaseEstimator, TransformerMixin):
     """
-    Base class for tokenizers.
+    Base class for featurizers.
 
     This class provides a framework for tokenizing molecules into a specific format.
 
     Parameters:
     ----------
     transform_kwargs : dict
-        Keyword arguments for the tokenizer's transformation function.
+        Keyword arguments for the featurizer's transformation function.
     verbose : bool
         Whether to print progress information during tokenization.
     is_fitted_ : bool, optional
-        Whether the tokenizer is already fitted. If None, it defaults to False.
-        This is used for tokenizers that do not require fitting, such as ECFP fingerprints.
+        Whether the featurizer is already fitted. If None, it defaults to False.
+        This is used for featurizers that do not require fitting, such as ECFP fingerprints.
     """
     transform = lambda x: x
     fixed_transform_kwargs = {}
@@ -43,7 +43,7 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
 
     def __call__(self, X: Chem.Mol|list[Chem.Mol]) -> np.ndarray:
         """
-        Apply the tokenizer to the input data.
+        Apply the featurizer to the input data.
 
         Parameters:
         ----------
@@ -77,7 +77,7 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
 
     def set_transform(self, kwargs):
         """
-        Set the transformation function for the tokenizer.
+        Set the transformation function for the featurizer.
 
         Parameters:
         ----------
@@ -97,12 +97,12 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
 
     def fit(self, mols: Chem.Mol, y: Optional[np.ndarray] = None) -> None:
         """
-        Fit the tokenizer to the input data.
+        Fit the featurizer to the input data.
 
         Parameters:
         ----------
         mols : Chem.Mol or list[Chem.Mol]
-            The input data to fit the tokenizer on. Can be a single RDKit molecule or a
+            The input data to fit the featurizer on. Can be a single RDKit molecule or a
             list of molecules.
         y : Optional[np.ndarray], optional
             Optional target values. Not used in this base class, but can be used in subclasses
@@ -111,7 +111,7 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
         Returns:
         -------
         BaseTokenizer
-            Returns the fitted tokenizer instance.
+            Returns the fitted featurizer instance.
         """
         self.is_fitted_ = True
         return self
@@ -119,20 +119,20 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
     @property
     def name(self) -> str:
         """
-        Get the name of the tokenizer.
+        Get the name of the featurizer.
         """
         return self.__class__.__name__
     
     def to_dict(self) -> dict:
         """
-        Convert the tokenizer to a dictionary representation.
-        Useful for saving the tokenizer's parameters and state.
+        Convert the featurizer to a dictionary representation.
+        Useful for saving the featurizer's parameters and state.
         Overrides the default `to_dict` method to include additional information.
 
         Returns:
         -------
         dict
-            A dictionary containing the tokenizer's name, fitted status, and transformation parameters.
+            A dictionary containing the featurizer's name, fitted status, and transformation parameters.
         """
         return {
             'name': self.name,
@@ -142,15 +142,15 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
     
     def save(self, path: str, params_only: bool = False):
         """
-        Save the tokenizer to a file. Uses PyTorch's `torch.save` method.
+        Save the featurizer to a file. Uses PyTorch's `torch.save` method.
 
         Parameters:
         ----------
         path : str
-            The path where the tokenizer will be saved.
+            The path where the featurizer will be saved.
         params_only : bool, optional
-            If True, the tokenizer will be saved as a dictionary.
-            If False, the entire tokenizer object will be saved. Defaults to False.
+            If True, the featurizer will be saved as a dictionary.
+            If False, the entire featurizer object will be saved. Defaults to False.
         """
         if params_only:
             params = self.to_dict()
@@ -164,9 +164,9 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
 
         Optionally implement raw and encode methods to allow for splitting of tokenization into
         two steps.
-        Only some tokenizers will implement this.
+        Only some featurizers will implement this.
 
-        Useful for tokenizers that alter the encoding of the data depending on the vocabulary
+        Useful for featurizers that alter the encoding of the data depending on the vocabulary
         of the training data.
 
         E.g. AtomGraphTokenizer
@@ -183,9 +183,9 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
 
         Optionally implement raw and encode methods to allow for splitting of tokenization into
         two steps.
-        Only some tokenizers will implement this.
+        Only some featurizers will implement this.
 
-        Useful for tokenizers that alter the encoding of the data depending on the vocabulary
+        Useful for featurizers that alter the encoding of the data depending on the vocabulary
         of the training data.
 
         E.g. AtomGraphTokenizer
@@ -212,7 +212,7 @@ class BaseTokenizer(BaseEstimator, TransformerMixin):
 
     def __sklearn_is_fitted__(self):
         """
-        Define the `__sklearn_is_fitted__` method to check if the tokenizer is fitted.
+        Define the `__sklearn_is_fitted__` method to check if the featurizer is fitted.
         """
         return self.is_fitted_
     
@@ -247,7 +247,7 @@ class BaseGraph:
         A dictionary mapping bond types (e.g., single, double, aromatic) to integer indices
         Defaults to a dictionary with entries for common bond types.
     max_vocab_size : int, optional
-        The maximum vocabulary size for node types. If specified, the tokenizer will limit
+        The maximum vocabulary size for node types. If specified, the featurizer will limit
         the number of unique node types to this size.
     verbose : bool, optional
         If True, prints additional information during processing. Defaults to False.
@@ -576,7 +576,7 @@ class GraphTokenizer(BaseTokenizer):
     
     def fit(self, mols: list[Chem.Mol|pyg.data.Data], y: None = None) -> None:
         """
-        Fit the tokenizer to the provided molecules.
+        Fit the featurizer to the provided molecules.
 
         Parameters:
         ----------
@@ -589,7 +589,7 @@ class GraphTokenizer(BaseTokenizer):
         Returns:
         -------
         GraphTokenizer
-            Returns the fitted tokenizer instance.
+            Returns the fitted featurizer instance.
         """
         self = super().fit(mols, y)
         self.transform.reset(mols)
@@ -633,7 +633,7 @@ class GraphTokenizer(BaseTokenizer):
     
     def to_dict(self):
         """
-        Convert the tokenizer's parameters and state to a dictionary.
+        Convert the featurizer's parameters and state to a dictionary.
         """
         params = super().to_dict()
         params['transform_kwargs']['node_types'] = self.node_types

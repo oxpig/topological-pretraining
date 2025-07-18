@@ -104,7 +104,7 @@ class AtomGraph(BaseGraph):
     
 class AtomGraphTokenizer(GraphTokenizer):
     """
-    AtomGraphTokenizer is a tokenizer for converting molecules into graphs
+    AtomGraphTokenizer is a featurizer for converting molecules into graphs
     based on atomic numbers and bond types. It inherits from GraphTokenizer.
 
     Parameters:
@@ -127,7 +127,7 @@ class AtomFeatureGraph(BaseGraph):
     (https://jcheminf.biomedcentral.com/articles/10.1186/s13321-023-00708-w/figures/4)
 
     Unused due to high feature dimensionality, sparsity, and lack of performance improvement
-    over simpler tokenizers.
+    over simpler featurizers.
 
     Parameters
     ----------

@@ -5,7 +5,7 @@ from . import (
 )
 import torch
 
-all_tokenizers = {
+all_featurizers = {
     'AtomGraphTokenizer': AtomGraphTokenizer,
     'MorganGraphTokenizer': MorganGraphTokenizer,
     'ECFP': ECFP,
@@ -17,19 +17,19 @@ all_tokenizers = {
 
 def read_from_dict(parameters: dict) -> BaseTokenizer:
     """
-    Load tokenizer from a dictionary.
+    Load featurizer from a dictionary.
 
     Parameters:
     ----------
     parameters : dict
-        A dictionary containing the tokenizer's parameters. The dictionary must include
-        a 'name' key that specifies the type of tokenizer to instantiate, along with any
-        additional parameters required for that tokenizer.
+        A dictionary containing the featurizer's parameters. The dictionary must include
+        a 'name' key that specifies the type of featurizer to instantiate, along with any
+        additional parameters required for that featurizer.
 
     Returns:
     -------
     BaseTokenizer
-        An instance of the specified tokenizer class, initialized with the provided parameters.
+        An instance of the specified featurizer class, initialized with the provided parameters.
 
     Raises:
     ------
@@ -38,32 +38,32 @@ def read_from_dict(parameters: dict) -> BaseTokenizer:
     """
     if 'name' not in parameters:
         raise ValueError('Tokenizer name not found in parameters.')
-    tokenizer = parameters.pop('name')
-    tokenizer = all_tokenizers[tokenizer](**parameters)
-    tokenizer.is_fitted_ = parameters['is_fitted_']
-    return tokenizer
+    featurizer = parameters.pop('name')
+    featurizer = all_featurizers[featurizer](**parameters)
+    featurizer.is_fitted_ = parameters['is_fitted_']
+    return featurizer
 
 
-def load_tokenizer(path: str, parameters: bool = True) -> BaseTokenizer:
+def load_featurizer(path: str, parameters: bool = True) -> BaseTokenizer:
     """
-    Load a tokenizer from a file.
+    Load a featurizer from a file.
 
     Parameters:
     ----------
     path : str
-        The file path to the saved tokenizer. The file should be a PyTorch model file.
+        The file path to the saved featurizer. The file should be a PyTorch model file.
     parameters : bool, optional
-        If True, the function will return a dictionary of parameters instead of the tokenizer object.
+        If True, the function will return a dictionary of parameters instead of the featurizer object.
         Defaults to True.
 
     Returns:
     -------
     BaseTokenizer or dict
-        If `parameters` is True, loads a saved dictionary and initializes a tokenizer from it.
-        If `parameters` is False, returns the tokenizer object directly.
+        If `parameters` is True, loads a saved dictionary and initializes a featurizer from it.
+        If `parameters` is False, returns the featurizer object directly.
     """
-    tokenizer = torch.load(path, weights_only=parameters)
+    featurizer = torch.load(path, weights_only=parameters)
     if parameters:
-        return read_from_dict(tokenizer)
+        return read_from_dict(featurizer)
     else:
-        return tokenizer
+        return featurizer

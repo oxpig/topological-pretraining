@@ -1,4 +1,4 @@
-from . import __dict__ as tokenizers
+from . import __dict__ as featurizers
 
-def get_tokenizer(name):
-    return tokenizers[name]
+def get_featurizer(name):
+    return featurizers[name]

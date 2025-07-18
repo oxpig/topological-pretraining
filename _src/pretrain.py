@@ -1,6 +1,6 @@
 from _src.nn import get_nn
 from _src.nn.autoencoder import AutoEncoder
-from _src.tokenizers import get_tokenizer
+from _src.featurization import get_featurizer
 from _src.models import get_model
 from _src.data.utils import load_dataset
 from _src.data.datasets import BaseDataFrame
@@ -39,8 +39,8 @@ def pretrain(config: dict):
     results_path: str = config['results']
     verbose: bool = config['verbose']
     pretrain_data: list[str]|str = config['pretrain_data']
-    tokenizer_class = config['tokenizer']
-    tokenizer_kwargs = config.get('tokenizer_kwargs', {})
+    featurizer_class = config['featurizer']
+    featurizer_kwargs = config.get('featurizer_kwargs', {})
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     batch_size: int = config['batch_size']
     epochs: int = config['epochs']
@@ -59,13 +59,13 @@ def pretrain(config: dict):
     model_class = get_nn(config['model'])
     model_kwargs = config.get('model_kwargs', {})
     if model_kwargs.get('graph_pool_type', None) == 'global_node':
-        tokenizer_kwargs['global_token'] = True
+        featurizer_kwargs['global_token'] = True
     else:
-        tokenizer_kwargs['global_token'] = False
+        featurizer_kwargs['global_token'] = False
 
     print(f'\n##################################################\n') if verbose else None
     print(f'Pretraining run {name}') if verbose else None
-    print(f'Tokenizer: {tokenizer_class}') if verbose else None
+    print(f'Tokenizer: {featurizer_class}') if verbose else None
     print(f'Model: {config['model']}') if verbose else None
     print(f'Data: {pretrain_data}') if verbose else None
     print(f'Splits: {splits}') if verbose else None
@@ -80,8 +80,8 @@ def pretrain(config: dict):
     # Load the dataset as a dataframe
     df: BaseDataFrame = load_dataset(name=pretrain_data, root=data_path, verbose=verbose)
     
-    # Load the tokenizer
-    tokenizer = get_tokenizer(tokenizer_class)(transform_kwargs=tokenizer_kwargs)
+    # Load the featurizer
+    featurizer = get_featurizer(featurizer_class)(transform_kwargs=featurizer_kwargs)
 
     root = Path(data_path) / pretrain_data / raw_name
     root.mkdir(parents=True, exist_ok=True)
@@ -102,9 +102,9 @@ def pretrain(config: dict):
     # prepare raw graphs
     raw_dataset = GraphDataset(
         root=root,
-        tokenizer=tokenizer,
+        featurizer=featurizer,
         molecules=mols,
-        fit_tokenizer=False,
+        fit_featurizer=False,
         verbose=verbose,
     )
     del raw_dataset
@@ -123,8 +123,8 @@ def pretrain(config: dict):
             continue
         idx = df[split]
         pretrain_dataset = GraphDataset(
-            root=root, split=(split, idx), tokenizer=tokenizer,
-            targets=targets, run_id=name, fit_tokenizer=True,
+            root=root, split=(split, idx), featurizer=featurizer,
+            targets=targets, run_id=name, fit_featurizer=True,
             verbose=verbose
         )
 
@@ -134,7 +134,7 @@ def pretrain(config: dict):
         model_kwargs['input_dim'] = pretrain_dataset[0].x.size(1)
         if 'node_embedding' in model_kwargs and isinstance(model_kwargs['node_embedding'], int):
             model_kwargs['node_embedding'] = (
-                len(pretrain_dataset.tokenizer.node_types), model_kwargs['node_embedding']
+                len(pretrain_dataset.featurizer.node_types), model_kwargs['node_embedding']
             )
 
         model = torch.nn.ModuleDict({
@@ -296,7 +296,7 @@ def pretrain(config: dict):
 
             if (epoch + 1) % 15 == 0:
                 model_dict = {
-                    'tokenizer': pretrain_dataset.tokenizer.to_dict(),
+                    'featurizer': pretrain_dataset.featurizer.to_dict(),
                     'main': {
                         'state': model['main'].state_dict(),
                         'cls': model_class.__name__,
@@ -320,7 +320,7 @@ def pretrain(config: dict):
                 torch.save(model_dict, results_path / experiment_name / f'epoch_{epoch+1}_{file_name}')
 
         model_dict = {
-            'tokenizer': pretrain_dataset.tokenizer.to_dict(),
+            'featurizer': pretrain_dataset.featurizer.to_dict(),
             'main': {
                 'state': model['main'].state_dict(),
                 'cls': model_class.__name__,
@@ -358,8 +358,8 @@ def pretrain_autoencoder(config: dict):
     results_path: str = config['results']
     verbose: bool = config['verbose']
     pretrain_data: list[str]|str = config['pretrain_data']
-    tokenizer_class = config['tokenizer']
-    tokenizer_kwargs = config.get('tokenizer_kwargs', {})
+    featurizer_class = config['featurizer']
+    featurizer_kwargs = config.get('featurizer_kwargs', {})
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     batch_size: int = config['batch_size']
     epochs: int = config['epochs']
@@ -380,7 +380,7 @@ def pretrain_autoencoder(config: dict):
 
     print(f'\n##################################################\n') if verbose else None
     print(f'Pretraining run {name}') if verbose else None
-    print(f'Tokenizer: {tokenizer_class}') if verbose else None
+    print(f'Tokenizer: {featurizer_class}') if verbose else None
     print(f'Model: {config['model']}') if verbose else None
     print(f'Data: {pretrain_data}') if verbose else None
     print(f'Splits: {splits}') if verbose else None
@@ -395,8 +395,8 @@ def pretrain_autoencoder(config: dict):
     # Load the dataset as a dataframe
     df: BaseDataFrame = load_dataset(name=pretrain_data, root=data_path, verbose=verbose)
     
-    # Load the tokenizer
-    tokenizer = get_tokenizer(tokenizer_class)(transform_kwargs=tokenizer_kwargs)
+    # Load the featurizer
+    featurizer = get_featurizer(featurizer_class)(transform_kwargs=featurizer_kwargs)
 
     root = Path(data_path) / pretrain_data / raw_name
     root.mkdir(parents=True, exist_ok=True)
@@ -435,8 +435,8 @@ def pretrain_autoencoder(config: dict):
         if dataset_path.exists():
             dataset = torch.load(dataset_path, map_location=device, weights_only=True)
         else:
-            tokenizer.fit(split_mols)
-            dataset = tokenizer.transform(split_mols)
+            featurizer.fit(split_mols)
+            dataset = featurizer.transform(split_mols)
             if isinstance(dataset, np.ndarray):
                 dataset = torch.tensor(dataset)
             torch.save(dataset, dataset_path)
@@ -538,7 +538,7 @@ def pretrain_autoencoder(config: dict):
             
             if (epoch + 1) % 15 == 0:
                 model_dict = {
-                    'tokenizer': tokenizer.to_dict(),
+                    'featurizer': featurizer.to_dict(),
                     'state': model.state_dict(),
                     'cls': model_class.__name__,
                     'kwargs': model_kwargs
@@ -546,7 +546,7 @@ def pretrain_autoencoder(config: dict):
                 torch.save(model_dict, results_path / experiment_name / f'epoch_{epoch+1}_{file_name}')
             
         model_dict = {
-            'tokenizer': tokenizer.to_dict(),
+            'featurizer': featurizer.to_dict(),
             'main':{
                 'state': model.state_dict(),
                 'cls': model_class.__name__,

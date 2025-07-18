@@ -1,4 +1,4 @@
-from _src.tokenizers import (
+from _src.featurization import (
     BaseTokenizer,
     ECFP, FCFP, PDV, SNS,
     AtomGraphTokenizer, MorganGraphTokenizer,
@@ -24,7 +24,7 @@ import torch_geometric as pyg
 from tqdm import tqdm
 from typing import Callable, Literal, Optional
 
-tokenizers_dict = {
+featurizers_dict = {
     'ECFP': ECFP,
     'FCFP': FCFP,
     'PDV': PDV,
@@ -58,14 +58,14 @@ class MolDataset:
         Indices of training samples
     test_idx: np.ndarray, optional
         Indices of test samples
-    tokenizer: Literal[
+    featurizer: Literal[
         'ECFP', 'FCFP', 'PDV', 'SNS',
         'AtomGraphTokenizer', 'MorganGraphTokenizer', 'SNSGraphTokenizer'
     ], optional
         Tokenizer to use for featurization. Default is None.
         If None, self.X is a list of RDKit molecules.
-    tokenizer_kwargs: dict, optional
-        Keyword arguments for the tokenizer.
+    featurizer_kwargs: dict, optional
+        Keyword arguments for the featurizer.
     extra_transform_kwargs: dict, optional
         Keyword arguments for extra transforms after tokenization.
         Currently supported transforms are:
@@ -85,37 +85,37 @@ class MolDataset:
         self,
         mols: list[Chem.Mol], y: Optional[np.ndarray] = None,
         train_idx: Optional[np.ndarray] = None, test_idx: Optional[np.ndarray] = None,
-        tokenizer: Literal[
+        featurizer: Literal[
             'ECFP', 'FCFP', 'PDV', 'SNS',
             'AtomGraphTokenizer', 'MorganGraphTokenizer',
             'PreTrainedTokenizer'
         ] = None,
-        tokenizer_kwargs: dict = {}, extra_transform_kwargs: dict = {},
+        featurizer_kwargs: dict = {}, extra_transform_kwargs: dict = {},
         verbose: bool = False, fit_transform: bool = False,
     ):
         self.verbose = verbose
         self.mols = mols
         self.X = None
         self.y = y
-        self.tokenizer = tokenizer
-        self.tokenizer_kwargs = tokenizer_kwargs
+        self.featurizer = featurizer
+        self.featurizer_kwargs = featurizer_kwargs
         self.set_extra_transform(extra_transform_kwargs)
 
-        if self.tokenizer is not None:
-            print('Setting tokenizer...') if self.verbose else None
-            if self.tokenizer not in tokenizers_dict:
-                raise ValueError(f'Invalid tokenizer: {self.tokenizer}')
-            self.tokenizer: BaseTokenizer = tokenizers_dict[self.tokenizer]
-            self.tokenizer = self.tokenizer(verbose=verbose, **self.tokenizer_kwargs)
-            print(f'Tokenizer set.\n{self.tokenizer}') if self.verbose else None
+        if self.featurizer is not None:
+            print('Setting featurizer...') if self.verbose else None
+            if self.featurizer not in featurizers_dict:
+                raise ValueError(f'Invalid featurizer: {self.featurizer}')
+            self.featurizer: BaseTokenizer = featurizers_dict[self.featurizer]
+            self.featurizer = self.featurizer(verbose=verbose, **self.featurizer_kwargs)
+            print(f'Tokenizer set.\n{self.featurizer}') if self.verbose else None
 
         if train_idx is None:
             train_idx = np.arange(len(mols))
             test_idx = np.array([])
 
-        if self.tokenizer is not None:
+        if self.featurizer is not None:
             print('Preprocessing molecules...') if self.verbose else None
-            self.mols = self.tokenizer.preprocess(self.mols)
+            self.mols = self.featurizer.preprocess(self.mols)
 
         if fit_transform:
             self.reset(train_idx, test_idx)
@@ -183,7 +183,7 @@ class MolDataset:
         test_idx: Optional[np.ndarray] = None
     ) -> None:
         """
-        Refit the tokenizer and extra transforms with new training data
+        Refit the featurizer and extra transforms with new training data
         and reset the train and test indices.
 
         Parameters:
@@ -197,15 +197,15 @@ class MolDataset:
         """
         print('Resetting train and test indices...') if self.verbose else None
         self.train_idx, self.test_idx = train_idx, test_idx
-        # Fit the tokenizer if it is not precomputed or if the tokenized data is not available
-        # Precomputed tokenizers do not need to be refit (e.g. Morgan fingerprints)
-        if not self.tokenizer.precomputed or self.X is None:
+        # Fit the featurizer if it is not precomputed or if the tokenized data is not available
+        # Precomputed featurizers do not need to be refit (e.g. Morgan fingerprints)
+        if not self.featurizer.precomputed or self.X is None:
             del self.X
-            print('Fitting tokenizer...') if self.verbose else None
+            print('Fitting featurizer...') if self.verbose else None
             train_mols = [self.mols[i] for i in train_idx]
             y = self.y[train_idx] if self.y is not None else None
-            self.tokenizer.fit(train_mols, y)
-            self.X = self.tokenizer.transform(self.mols) 
+            self.featurizer.fit(train_mols, y)
+            self.X = self.featurizer.transform(self.mols) 
         else:
             print('Tokenizer is precomputed. Skipping fit.') if self.verbose else None
         if isinstance(self.X, np.ndarray):

@@ -21,8 +21,8 @@ class PreTrainedModel(torch.nn.Module):
     params : dict | None
         Dictionary containing the model details.
         Includes
-        - tokenizer: dict 
-            Tokenizer details. See _src.tokenizers.base.BaseTokenizer.to_dict for details.
+        - featurizer: dict 
+            Tokenizer details. See _src.featurizers.base.BaseTokenizer.to_dict for details.
         - main: dict
             Main model details.
             - cls: class name of the main model.
@@ -72,8 +72,8 @@ class PreTrainedModel(torch.nn.Module):
         params : dict
             Dictionary containing the model details.
             Includes:
-            - tokenizer: dict 
-                Tokenizer details. See _src.tokenizers.base.BaseTokenizer.to_dict for details.
+            - featurizer: dict 
+                Tokenizer details. See _src.featurizers.base.BaseTokenizer.to_dict for details.
             - main: dict
                 Main model details.
                 - cls: class name of the main model.
@@ -86,8 +86,8 @@ class PreTrainedModel(torch.nn.Module):
                     - kwargs: keyword arguments for the head model.
                     - state: state dictionary of the head model.
         """
-        tokenizer = params.pop('tokenizer')
-        self.tokenizer = read_from_dict(tokenizer)
+        featurizer = params.pop('featurizer')
+        self.featurizer = read_from_dict(featurizer)
         main_model = params.pop('main')
         main_cls = main_model['cls']
         main_cls = get_nn(main_cls)
@@ -199,15 +199,15 @@ class PreTrainedModel(torch.nn.Module):
     
     def to_dict(self):
         """
-        Convert the model and tokenizer to a dictionary format.
+        Convert the model and featurizer to a dictionary format.
 
         Returns:
         -------
         dict
-            A dictionary containing the model and tokenizer details.
+            A dictionary containing the model and featurizer details.
         """
         params = {
-            'tokenizer': self.tokenizer.to_dict(),
+            'featurizer': self.featurizer.to_dict(),
             'main': {
                 'cls': self.model_cls,
                 'kwargs': self.model_kwargs,
@@ -225,14 +225,14 @@ class PreTrainedModel(torch.nn.Module):
 
     def save(self, path):
         """
-        Save the model and tokenizer to a file.
+        Save the model and featurizer to a file.
 
         Parameters:
         ----------
         path : str
-            Path to save the model and tokenizer.
+            Path to save the model and featurizer.
             The model will be saved in a dictionary format.
-            The dictionary will include the tokenizer, main model, and prediction heads.
+            The dictionary will include the featurizer, main model, and prediction heads.
             Saving uses `torch.save` to serialize the dictionary.
         """
         params = self.to_dict()
@@ -241,12 +241,12 @@ class PreTrainedModel(torch.nn.Module):
 
     def to_device(self, device = None):
         """
-        Move the model and tokenizer to the specified device.
+        Move the model and featurizer to the specified device.
         
         Parameters:
         ----------
         device : str | None
-            Device to move the model and tokenizer to.
+            Device to move the model and featurizer to.
             If None, the model will be moved to `self.device`.
         """
         if device is None:
@@ -257,13 +257,13 @@ class PreTrainedModel(torch.nn.Module):
         
     def load(self, path: str):
         """
-        Load the model and tokenizer from a file.
+        Load the model and featurizer from a file.
 
         Parameters:
         ----------
         path : str
             Path to the pre-trained model file.
-            The file should contain a dictionary with the model and tokenizer details.
+            The file should contain a dictionary with the model and featurizer details.
         """
         self.path = path
         params = torch.load(path, weights_only=True, map_location='cpu')
@@ -283,7 +283,7 @@ class PreTrainedModel(torch.nn.Module):
         Any
             Tokenized representation of the input data. E.g., pytorch geometric Data object or a tensor.
         """
-        X = self.tokenizer.transform(X)
+        X = self.featurizer.transform(X)
         if isinstance(X, list):
             X = [x.to(self.device) for x in X]
         else:
@@ -300,7 +300,7 @@ class PreTrainedGNN(PreTrainedModel):
         Path to the pre-trained GNN model file.
     params : dict | None
         Dictionary containing the GNN model details.
-        See _src.tokenizers.pretrained.PreTrainedModel.from_dict for details.
+        See _src.featurizers.pretrained.PreTrainedModel.from_dict for details.
     embed_state : Literal['node', 'global', 'all']
         State to embed. Can be 'node', 'global', or 'all'.
         Option for changing the embedding state.
@@ -342,7 +342,7 @@ class PreTrainedGNN(PreTrainedModel):
         params : dict
             Dictionary containing the GNN model details.
             Includes:
-            - tokenizer: dict
+            - featurizer: dict
             - main: dict
                 - cls: class name of the main model.
                 - kwargs: keyword arguments for the main model.
@@ -461,15 +461,15 @@ class PreTrainedTokenizer(BaseTokenizer):
         gnn : bool
             Whether the model is a GNN. If True, uses PreTrainedGNN, otherwise uses PreTrainedModel.
         Additional keyword arguments for the model.
-        See _src.tokenizers.pretrained.PreTrainedModel and
-        _src.tokenizers.pretrained.PreTrainedGNN for details.
+        See _src.featurizers.pretrained.PreTrainedModel and
+        _src.featurizers.pretrained.PreTrainedGNN for details.
     """
     is_fitted_ = True
     precomputed = True
 
     def _transform_base(self, **kwargs):
         """
-        Set the transformation function for the tokenizer.
+        Set the transformation function for the featurizer.
         
         Parameters:
         ----------
@@ -489,13 +489,13 @@ class PreTrainedTokenizer(BaseTokenizer):
     
     def to_dict(self):
         """
-        Convert the tokenizer to a dictionary format.
+        Convert the featurizer to a dictionary format.
         
         Returns:
         -------
         dict
-            A dictionary containing the tokenizer details.
-            Includes the parameters of the tokenizer and the transformation function.
+            A dictionary containing the featurizer details.
+            Includes the parameters of the featurizer and the transformation function.
         """
         params = super().to_dict()
         params.update(self.transform.to_dict())

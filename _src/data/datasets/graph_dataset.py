@@ -1,6 +1,6 @@
 from __future__ import annotations
-from _src.tokenizers import load_tokenizer
-from _src.tokenizers.targets import Targets
+from _src.featurization import load_featurizer
+from _src.featurization.targets import Targets
 
 from pathlib import Path
 import torch_geometric as pyg
@@ -14,7 +14,7 @@ from typing import Optional, TYPE_CHECKING
 import warnings
 
 if TYPE_CHECKING:
-    from _src.tokenizers import GraphTokenizer
+    from _src.featurization import GraphTokenizer
     
 
 class PreFilter:
@@ -81,16 +81,16 @@ class GraphDataset(pyg.data.InMemoryDataset):
     ----------
     root : str
         Path to store or retrieve molecular dataset.
-    tokenizer : GraphTokenizer
+    featurizer : GraphTokenizer
         Tokenizer that converts molecules into PyTorch Geometric Data objects.
-        See `_src/tokenizers.py` for definition
+        See `_src/featurizers.py` for definition
     molecules : Optional[List[rdkit.Chem.Mol]]
         A list of RDKit molecules.
     split : Optional[tuple[str, torch.Tensor]]
         A tuple containing a name for the split for saving, and a tensor of indices.
-    fit_tokenizer : bool
+    fit_featurizer : bool
         Boolean for whether to fit the GraphTokenizer.
-        Defaults to True unless the input tokenizer or saved tokenizer has already been fitted.
+        Defaults to True unless the input featurizer or saved featurizer has already been fitted.
     run_id : Optional[str]
         Optional id name for save paths.
     targets : dict[str, dict[str, str]] | None
@@ -103,10 +103,10 @@ class GraphDataset(pyg.data.InMemoryDataset):
     """
     _indexes = None
     def __init__(
-        self, root: str, tokenizer: GraphTokenizer = None,
+        self, root: str, featurizer: GraphTokenizer = None,
         molecules: Optional[list[Chem.Mol]] = None,
         split: Optional[tuple[str, torch.Tensor]] = None,
-        fit_tokenizer: bool = True,
+        fit_featurizer: bool = True,
         run_id: Optional[str] = None,
         targets: dict[str, dict[str, str]] | None = None,
         verbose: bool = False,
@@ -126,16 +126,16 @@ class GraphDataset(pyg.data.InMemoryDataset):
         self.run_id = run_id
         self.verbose = verbose
         
-        tokenizer_path = Path(root) / 'processed' / f'tokenizer{run_id}{self.split_name}.pt'
-        if tokenizer_path.exists():
-            warnings.warn("Saved tokenizer found. Using saved tokenizer.", UserWarning)
-            tokenizer = load_tokenizer(tokenizer_path)
+        featurizer_path = Path(root) / 'processed' / f'featurizer{run_id}{self.split_name}.pt'
+        if featurizer_path.exists():
+            warnings.warn("Saved featurizer found. Using saved featurizer.", UserWarning)
+            featurizer = load_featurizer(featurizer_path)
             
-        if tokenizer is None:
+        if featurizer is None:
             raise ValueError('Tokenizer not found.')
             
-        self.tokenizer = tokenizer
-        self.fit_tokenizer = fit_tokenizer or not tokenizer.is_fitted_
+        self.featurizer = featurizer
+        self.fit_featurizer = fit_featurizer or not featurizer.is_fitted_
         
         targets_path = Path(root) / 'processed' / f'targets{run_id}{self.split_name}.pt'
         if targets_path.exists():
@@ -216,16 +216,16 @@ class GraphDataset(pyg.data.InMemoryDataset):
         return graph
     
     @property
-    def tokenizer_path(self):
+    def featurizer_path(self):
         """
-        Path to save and retrieve graph tokenizer.
+        Path to save and retrieve graph featurizer.
 
         Returns:
         -------
         pathlib.Path
             Path to saved GraphTokenizer.
         """
-        return Path(self.processed_dir) / f'tokenizer{self.run_id}{self.split_name}.pt'
+        return Path(self.processed_dir) / f'featurizer{self.run_id}{self.split_name}.pt'
     
     @property
     def targets_path(self):
@@ -290,10 +290,10 @@ class GraphDataset(pyg.data.InMemoryDataset):
         self.make_raw_graphs()
         data_list = self.load_raw_graphs()
         data_list = [graph for graph in data_list if self.pre_filter(graph)]
-        if self.fit_tokenizer:
-            self.run_tokenizer_fitting(data_list)
+        if self.fit_featurizer:
+            self.run_featurizer_fitting(data_list)
 
-        data_list = [self.tokenizer.encode(graph) for graph in data_list]
+        data_list = [self.featurizer.encode(graph) for graph in data_list]
         self.save(data_list, self.processed_graphs_path)
 
     def make_raw_dir(self):
@@ -303,17 +303,17 @@ class GraphDataset(pyg.data.InMemoryDataset):
         raw_dir = Path(self.raw_dir)
         raw_dir.mkdir(parents=True, exist_ok=True)
 
-    def run_tokenizer_fitting(self, data_list: list[pyg.data.Data]):
+    def run_featurizer_fitting(self, data_list: list[pyg.data.Data]):
         """
-        Fit tokenizer on input graphs.
+        Fit featurizer on input graphs.
 
         Parameters:
         ----------
         data_list : list[torch_geometric.data.Data]
             List of raw molecular graphs.
         """
-        self.tokenizer.fit(data_list)
-        self.tokenizer.save(self.tokenizer_path, params_only=True)
+        self.featurizer.fit(data_list)
+        self.featurizer.save(self.featurizer_path, params_only=True)
 
     @property
     def raw_file_names(self):
@@ -412,7 +412,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
             A molecule as a graph data object.
         """
         molecule = self.molecules[idx]
-        graph = self.tokenizer.raw(molecule)
+        graph = self.featurizer.raw(molecule)
         graph.idx = idx
         return graph
     

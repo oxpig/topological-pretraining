@@ -15,7 +15,7 @@ default_descriptors = [i[0] for i in Descriptors._descList]
 class PDV(BaseTokenizer):
     """
     Tokenizer that computes molecular descriptors using RDKit's MolDesc.
-    This tokenizer is designed to compute a set of predefined molecular descriptors
+    This featurizer is designed to compute a set of predefined molecular descriptors
     for each molecule in the input data.
 
     Parameters:
@@ -34,7 +34,7 @@ class PDV(BaseTokenizer):
 class ECFP(BaseTokenizer):
     """
     Tokenizer that computes Extended Connectivity Fingerprints (ECFP) using RDKit's Morgan fingerprints.
-    This tokenizer is designed to compute ECFP fingerprints for each molecule in the input data.
+    This featurizer is designed to compute ECFP fingerprints for each molecule in the input data.
 
     Parameters:
     ----------
@@ -43,7 +43,7 @@ class ECFP(BaseTokenizer):
         This can include parameters such as `fpsize` to specify the size of the fingerprint.
         See `MorganGenerator` in `_src/data/mol.py` for more details.
     verbose : bool, optional
-        If True, the tokenizer will print additional information during processing.
+        If True, the featurizer will print additional information during processing.
     """
     is_fitted_ = False
     precomputed = True
@@ -63,7 +63,7 @@ class ECFP(BaseTokenizer):
 class FCFP(ECFP):
     """
     Modified version of ECFP that uses a different fingerprint generator.
-    This tokenizer computes Functional Connectivity Fingerprints (FCFP) using RDKit's Morgan fingerprints.
+    This featurizer computes Functional Connectivity Fingerprints (FCFP) using RDKit's Morgan fingerprints.
 
     Parameters:
     ----------
@@ -72,7 +72,7 @@ class FCFP(ECFP):
         This can include parameters such as `fpsize` to specify the size of the fingerprint.
         See `MorganGenerator` in `_src/data/mol.py` for more details.
     verbose : bool, optional
-        If True, the tokenizer will print additional information during processing.
+        If True, the featurizer will print additional information during processing.
     """
     precomputed = True
     is_fitted_ = False
@@ -80,8 +80,8 @@ class FCFP(ECFP):
 
 class SNS(BaseTokenizer):
     """
-    Molecular tokenizer that computes a sorted and sliced version of Morgan fingerprints.
-    This tokenizer is designed to compute Morgan fingerprints, sort them, and slice them 
+    Molecular featurizer that computes a sorted and sliced version of Morgan fingerprints.
+    This featurizer is designed to compute Morgan fingerprints, sort them, and slice them 
     to a specified size.
 
     Parameters:
@@ -132,7 +132,7 @@ class SNS(BaseTokenizer):
         
     def fit(self, mols: list[Chem.Mol], y: Optional[np.ndarray] = None) -> None:
         """
-        Fit the tokenizer to the provided molecules and their corresponding labels.
+        Fit the featurizer to the provided molecules and their corresponding labels.
 
         Parameters:
         ----------
@@ -144,7 +144,7 @@ class SNS(BaseTokenizer):
         Returns:
         -------
         self : SNS
-            Returns the fitted tokenizer instance.
+            Returns the fitted featurizer instance.
         """
         self = super().fit(mols=mols, y=y)
         self.transform.clear()
@@ -171,12 +171,12 @@ class SNS(BaseTokenizer):
 
     def to_dict(self):
         """
-        Convert the tokenizer's parameters and state to a dictionary.
+        Convert the featurizer's parameters and state to a dictionary.
 
         Returns:
         -------
         dict
-            A dictionary containing the tokenizer's name, fitted status, and 
+            A dictionary containing the featurizer's name, fitted status, and 
             transformation parameters. This includes the identifiers and 
             encoder used in the SortAndSlice transformation.
         """
