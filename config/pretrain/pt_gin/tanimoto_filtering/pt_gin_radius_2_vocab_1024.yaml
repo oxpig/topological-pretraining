@@ -1,0 +1,19 @@
+process: pretrain
+experiment: tanimoto_filtering
+raw_name: pt_gin_radius_2
+featurizer_kwargs:
+  max_vocab_size: 1024
+  radius: 2
+  chirality: True
+targets:
+  ECFP:
+    transform_kwargs:
+      fpsize: 2048
+      radius: 2
+      chirality: True
+splits:
+  - tanimoto_filter_0.6
+  - tanimoto_filter_0.7
+  - tanimoto_filter_0.8
+  - tanimoto_filter_0.9
+  - tanimoto_filter_1.0

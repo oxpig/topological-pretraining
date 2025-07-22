@@ -1,0 +1,29 @@
+process: pretrain
+pretrain_data: QMugs
+splits:
+  - tanimoto_filter_0.5
+verbose: True
+featurizer: MorganGraphTokenizer
+model: GIN
+GIN:
+  model_kwargs:
+    node_embedding: 512
+    hidden_dim: 512
+    num_layers: 3
+    act: hardswish
+    layer_pool_type: last
+    graph_pool_type: sum
+    batch_norm: False
+    dropout: 0.125
+    gnn_kwargs:
+      num_layers: 3
+      train_eps: True
+      weight_init: xavier_normal
+      bias_init: zeros
+    share_weights: True
+warmup_epochs: 2
+lr_decay_half_life: 5
+batch_size: 128
+epochs: 50
+neptune: True
+class_weights: True
