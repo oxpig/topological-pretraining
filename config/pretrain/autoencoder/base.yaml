@@ -5,7 +5,7 @@ splits:
   - butina_filter_0.5
 verbose: True
 tokenizer: ECFP
-tokenizer_kwargs:
+featurizer_kwargs:
   fpsize: 2048
   radius: 2
   chirality: True
