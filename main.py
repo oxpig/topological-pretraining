@@ -21,7 +21,6 @@ parser.add_argument('--config', '-C', type=str, required=True, help='Path to the
 parser.add_argument('--base_config', '-B', type=str, default=None, help='Base config')
 parser.add_argument('--data', '-D', type=str, required=True, help='Path to the data')
 parser.add_argument('--output', '-o', type=str, default='output', help='Path to save')
-parser.add_argument('--pt_model', '-P', type=str, default=None, help='Path to the pre-trained model')
 
 def load_base_settings() -> dict:
     config_dir = Path(__file__).parent / 'config' / 'base'
@@ -45,8 +44,6 @@ def main():
     config.update(exp_base_config)
     config.update(exp_config)
     config['path'] = args.config
-    if args.pt_model:
-        config['featurizer_kwargs']['transform_kwargs']['path'] = args.pt_model
     if 'model' in config:
         config.update(config[config['model']])
     process = config.pop('process')
