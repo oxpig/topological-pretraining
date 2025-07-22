@@ -3,7 +3,7 @@ pretrain_data: QMugs
 splits:
   - tanimoto_filter_0.5
 verbose: True
-featurizer: MorganGraphTokenizer
+featurizer: MorganGraphFeaturizer
 model: GIN
 GIN:
   model_kwargs:
