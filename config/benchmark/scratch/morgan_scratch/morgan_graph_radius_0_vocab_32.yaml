@@ -1,12 +1,12 @@
-experiment: scratch_mtg2
+experiment: scratch_morgan_graph_radius_0
 model: SklearnGIN
 neptune: true
 process: benchmark
-tokenizer: MorganGraphTokenizer
-tokenizer_kwargs:
+featurizer: MorganGraphFeaturizer
+featurizer_kwargs:
   transform_kwargs: {
-    max_vocab_size: 128,
-    radius: 1,
+    max_vocab_size: 32,
+    radius: 0,
     chirality: True
   }
 verbose: true

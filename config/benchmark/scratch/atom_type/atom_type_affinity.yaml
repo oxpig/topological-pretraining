@@ -2,8 +2,8 @@ experiment: scratch_atom_type
 model: SklearnGIN
 neptune: true
 process: benchmark
-tokenizer: AtomGraphTokenizer
-tokenizer_kwargs:
+featurizer: AtomGraphFeaturizer
+featurizer_kwargs:
   transform_kwargs: {}
 verbose: true
 benchmark:

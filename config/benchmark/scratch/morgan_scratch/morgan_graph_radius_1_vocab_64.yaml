@@ -1,0 +1,19 @@
+experiment: scratch_morgan_graph_radius_1
+model: SklearnGIN
+neptune: true
+process: benchmark
+featurizer: MorganGraphFeaturizer
+featurizer_kwargs:
+  transform_kwargs: {
+    max_vocab_size: 64,
+    radius: 1,
+    chirality: True
+  }
+verbose: true
+benchmark:
+  - Human_CLint
+  - Rat_CLint
+  - Human_PPB
+  - Rat_PPB
+  - Efflux
+  - Solu
