@@ -9,9 +9,9 @@ bin/cache/
 results/
 data_files
 figures
-pt_models
 .neptune
 *archive
+*epoch*
 
 # except
 !visualization.ipynb
