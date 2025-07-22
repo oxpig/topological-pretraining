@@ -1,7 +1,7 @@
 process: benchmark
 verbose: True
 tokenizer: FCFP
-tokenizer_kwargs:
+featurizer_kwargs:
     transform_kwargs:
         radius: 2
         chirality: True
