@@ -2,7 +2,7 @@ process: pretrain_autoencoder
 pretrain_data: QMugs
 experiment: autoencoder
 splits:
-  - butina_filter_0.5
+  - tanimoto_filter_0.5
 verbose: True
 featurizer: ECFP
 featurizer_kwargs:
