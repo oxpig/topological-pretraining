@@ -23,7 +23,7 @@ parser.add_argument('--data', '-D', type=str, required=True, help='Path to the d
 parser.add_argument('--output', '-o', type=str, default='output', help='Path to save')
 
 
-def load_base_config() -> dict:
+def load_base_settings() -> dict:
     config_dir = Path(__file__).parent / 'config' / 'base'
     base_config = {}
     for file in config_dir.iterdir():
@@ -36,8 +36,8 @@ def load_base_config() -> dict:
 
 def main():
     args = parser.parse_args()
-    config = load_base_config()
-    if args.base_config is not None:
+    config = load_base_settings()
+    if args.base_config:
         exp_base_config = yaml.load(open(args.base_config), Loader=yaml.Loader)
     else:
         exp_base_config = {}
