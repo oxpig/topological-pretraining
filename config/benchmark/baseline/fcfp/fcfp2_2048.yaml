@@ -1,6 +1,6 @@
 process: benchmark
 verbose: True
-tokenizer: FCFP
+featurizer: FCFP
 featurizer_kwargs:
     transform_kwargs:
         radius: 1

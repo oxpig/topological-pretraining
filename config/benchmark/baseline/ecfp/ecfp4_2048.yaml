@@ -1,6 +1,6 @@
 process: benchmark
 verbose: True
-tokenizer: ECFP
+featurizer: ECFP
 featurizer_kwargs:
     transform_kwargs:
         radius: 2

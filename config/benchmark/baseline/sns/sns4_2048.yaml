@@ -1,6 +1,6 @@
 process: benchmark
 verbose: True
-tokenizer: SNS
+featurizer: SNS
 featurizer_kwargs:
   transform_kwargs:
     fpsize: 2048
