@@ -1,0 +1,12 @@
+model: LGBM
+process: benchmark
+benchmark: all
+tokenizer: PreTrainedFeaturizer
+extra_transform_kwargs: {}
+neptune: True
+verbose: True
+featurizer_kwargs:
+    transform_kwargs:
+        path: False
+        layer_pool_type: concat
+        gnn: True
