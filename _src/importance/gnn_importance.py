@@ -1,6 +1,7 @@
 from joblib import Parallel, delayed
 import numpy as np
 import traceback
+from typing import Union
 
 from sklearn.inspection._permutation_importance import (
     _create_importances_bunch, _weights_scorer
@@ -191,15 +192,15 @@ def check_token_presence(graph_list, token_idx):
 
 def calculate_token_scores(
     estimator,
-    gnn: PreTrainedGNN,
-    X: list[pyg.data.Data],
-    y,
-    token_idx,
-    n_repeats,
-    baseline_score,
-    random_state=42,
-    scorer = "",
-    perm_type = "dist",
+    gnn : PreTrainedGNN,
+    X : list[pyg.data.Data],
+    y : np.ndarray,
+    token_idx : int,
+    n_repeats : int,
+    baseline_score : float | dict,
+    random_state : int = 42,
+    scorer : Union[str, callable] = "",
+    perm_type : str = "dist",
 ):
     """
     Calculates the importance scores for a specific token by permuting its embeddings
@@ -285,12 +286,12 @@ def token_importance(
     gnn: PreTrainedGNN,
     X : list[pyg.data.Data],
     y : np.ndarray,
-    n_repeats : int =5,
-    random_state : int=42,
-    scorer : str|callable|list|tuple|dict = None,
-    n_jobs=-1,
-    sample_weight=None,
-    perm_type="dist",
+    n_repeats : int = 5,
+    random_state : int = 42,
+    scorer : Union[str, callable] = None,
+    n_jobs = -1,
+    sample_weight = None,
+    perm_type = "dist",
 ):
     """
     Computes the importance of tokens by permuting their embeddings and evaluating the impact
