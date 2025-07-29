@@ -6,7 +6,6 @@ bin/cache/
 /temp
 *.ipynb
 *__pycache__/
-results/
 data_files
 figures
 .neptune
