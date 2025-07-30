@@ -22,7 +22,7 @@ class PreTrainedModel(torch.nn.Module):
         Dictionary containing the model details.
         Includes
         - featurizer: dict 
-            Featurizer details. See _src.featurizers.base.BaseFeaturizer.to_dict for details.
+            Featurizer details. See _src.featurization.base.BaseFeaturizer.to_dict for details.
         - main: dict
             Main model details.
             - cls: class name of the main model.
@@ -73,7 +73,7 @@ class PreTrainedModel(torch.nn.Module):
             Dictionary containing the model details.
             Includes:
             - featurizer: dict 
-                Featurizer details. See _src.featurizers.base.BaseFeaturizer.to_dict for details.
+                Featurizer details. See _src.featurization.base.BaseFeaturizer.to_dict for details.
             - main: dict
                 Main model details.
                 - cls: class name of the main model.
@@ -300,7 +300,7 @@ class PreTrainedGNN(PreTrainedModel):
         Path to the pre-trained GNN model file.
     params : dict | None
         Dictionary containing the GNN model details.
-        See _src.featurizers.pretrained.PreTrainedModel.from_dict for details.
+        See _src.featurization.pretrained.PreTrainedModel.from_dict for details.
     embed_state : Literal['node', 'global', 'all']
         State to embed. Can be 'node', 'global', or 'all'.
         Option for changing the embedding state.
@@ -461,8 +461,8 @@ class PreTrainedFeaturizer(BaseFeaturizer):
         gnn : bool
             Whether the model is a GNN. If True, uses PreTrainedGNN, otherwise uses PreTrainedModel.
         Additional keyword arguments for the model.
-        See _src.featurizers.pretrained.PreTrainedModel and
-        _src.featurizers.pretrained.PreTrainedGNN for details.
+        See _src.featurization.pretrained.PreTrainedModel and
+        _src.featurization.pretrained.PreTrainedGNN for details.
     """
     is_fitted_ = True
     precomputed = True
