@@ -91,7 +91,7 @@ class MUV_Subset(MUV, BaseDataFrame):
     @property
     def mols_path(self):
         if self.csv is not None:
-            return Path(self.csv).parent / f'muv.npz'
+            return Path(self.csv).parent / f'muv_molecules.npz'
         return None
 
     @property

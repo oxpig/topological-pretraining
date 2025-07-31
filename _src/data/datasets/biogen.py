@@ -156,7 +156,7 @@ class Biogen_Subset(Biogen, BaseDataFrame):
         str
         """
         if self.csv is not None:
-            return Path(self.csv).parent / f'biogen.npz'
+            return Path(self.csv).parent / f'biogen_molecules.npz'
         return None
 
     @property

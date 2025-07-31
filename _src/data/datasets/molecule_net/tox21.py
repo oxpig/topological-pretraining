@@ -76,7 +76,7 @@ class Tox21_Subset(Tox21, BaseDataFrame):
     @property
     def mols_path(self):
         if self.csv is not None:
-            return Path(self.csv).parent / f'tox21.npz'
+            return Path(self.csv).parent / f'tox21_molecules.npz'
         return None
 
     @property
