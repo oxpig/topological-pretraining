@@ -178,7 +178,7 @@ class BaseDataFrame(pd.DataFrame):
             return None
         else:
             mols_path = Path(self.csv)
-            mols_path = mols_path.parent / f'{mols_path.stem.split(".")[0]}.npz'
+            mols_path = mols_path.parent / f'{mols_path.stem.split(".")[0]}_molecules.npz'
             return mols_path
 
     @property
