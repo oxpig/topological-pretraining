@@ -699,6 +699,9 @@ class Standardizer:
         neutralize (bool): Whether to neutralize the molecule.
         reionize (bool): Whether to reionize the molecule after neutralization.
         canonical_tautomer (bool): Whether to canonicalize the tautomer.
+        keep_chirality (bool): Whether to keep chirality in the tautomer.
+        verbose (bool): Whether to print progress.
+        break_at_none (bool): Whether to end the standardization process at the first None molecule.
 
     Attributes:
     ----------
@@ -915,6 +918,19 @@ class Standardizer:
         """
         return rdMolStandardize.Reionize(mol)
 
+    def to_dict(self):
+        return {
+            "sanitize": self.sanitize,
+            "cleanup": self.cleanup,
+            "fragment_parent": self.fragment_parent,
+            "neutralize": self.neutralize,
+            "reionize": self.reionize,
+            "canonical_tautomer": self.canonical_tautomer,
+            "keep_chirality": self.tautomer_keep_chirality,
+            "verbose": self.verbose,
+            "break_at_none": self.break_at_none
+        }
+
 class FPOps:
     """
     Functions that operate on Morgan fingerprints.
@@ -1079,3 +1095,4 @@ def get_incidence(mol: Chem.Mol, radius: int = 2) -> np.ndarray:
 
     inc = np.where(inc > 0, 1, 0)
     return inc
+
