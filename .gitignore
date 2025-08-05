@@ -11,6 +11,7 @@ figures
 *epoch*
 data/*molecules.npz
 data/temp/*
+*symlink*
 
 
 # except
