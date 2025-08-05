@@ -1,0 +1,10 @@
+bagging_fraction: 0.6931058488911706
+best_trial: 13
+feature_fraction: 0.38743764445882367
+learning_rate: 0.09925694138663059
+min_data_in_leaf: 12
+n_estimators: 115
+num_leaves: 30
+reg_alpha: 0.6088720736332025
+reg_lambda: 9.928343959845407
+subsample_for_bin: 199886

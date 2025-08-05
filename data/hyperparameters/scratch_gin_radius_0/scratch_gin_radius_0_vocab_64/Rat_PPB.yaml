@@ -1,0 +1,12 @@
+best_trial: 21
+dropout: 0.09414021631724734
+gnn_layers: 3
+head_hidden_dim: 8
+head_layers: 2
+hidden_dim: 8
+lr_half_life: 23
+lr_scale: 0.7636462976900433
+mlp_layers: 1
+node_embedding_dim: 4
+share_weights: true
+train_eps: true
