@@ -16,6 +16,7 @@ import torch
 from tqdm import tqdm
 from typing import Callable, Literal
 import optuna
+import yaml
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -425,10 +426,11 @@ def benchmark(config: dict):
         
         print('Dataset loaded.') if verbose else None
         print('Checking for saved hyperparameters.') if verbose else None
-        benchmark_hp_path = hyperparam_path / f'{benchmark}.pt'
+        benchmark_hp_path = hyperparam_path / f'{benchmark}.yaml'
         best_trial_num = None
         if benchmark_hp_path.exists():
-            best_params = torch.load(benchmark_hp_path, map_location='cpu')
+            with open(benchmark_hp_path, 'r') as f:
+                best_params = yaml.safe_load(f)
             print(
                 f'Using saved hyperparameters: \n{best_params}'
             ) if verbose else None
@@ -460,7 +462,8 @@ def benchmark(config: dict):
                 print(f'Best hyperparameters: {best_params}') if verbose else None
                 print(f'Best trial: {best_trial_num}') if verbose else None
                 best_params['best_trial'] = best_trial_num
-                torch.save(best_params, benchmark_hp_path)
+                with open(benchmark_hp_path, 'w') as f:
+                    yaml.dump(best_params, f)
                 print('Saved hyperparameters.') if verbose else None
 
             else:
