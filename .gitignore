@@ -1,16 +1,17 @@
 # ignore
 .env
 .servers.yaml
-run.py
 bin/cache/
 /temp
 *.ipynb
 *__pycache__/
-data_files
 figures
 .neptune
 *archive
 *epoch*
+data/*molecules.npz
+data/temp/*
+
 
 # except
 !visualization.ipynb
