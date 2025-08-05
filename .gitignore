@@ -14,5 +14,6 @@ data/temp/*
 
 
 # except
-!visualization.ipynb
+!evaluation.ipynb
 !visualization_2.ipynb
+!visualization.ipynb
