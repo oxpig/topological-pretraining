@@ -167,7 +167,7 @@ def pretrain(config: dict):
     for split in splits:
         assert split in df.columns, f'{split} not found in dataframe.'
         if len(splits) > 1:
-            file_name = f'{name}_{split}.pt'
+            file_name = f'{name}_{split.replace(".","")}.pt'
         else:
             file_name = f'{name}.pt'
         if (save_path / file_name).exists():
