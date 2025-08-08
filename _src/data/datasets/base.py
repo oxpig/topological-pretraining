@@ -38,8 +38,11 @@ class BaseDataFrame(pd.DataFrame):
         url: str|None = None,
         compression: bool = True,
         verbose: bool = False,
-        standardizer: Standardizer = Standardizer(),
+        standardizer: Standardizer|dict = Standardizer(),
     ):
+
+        if isinstance(standardizer, dict):
+            standardizer = Standardizer(**standardizer)
         standardizer.verbose = verbose
         # Check if csv or url is provided
         if csv is None and url is None and data is None:
