@@ -116,8 +116,6 @@ class MUV_Subset(MUV, BaseDataFrame):
             mols = self['SMILES'].values
             mols = [Chem.MolFromSmiles(m, sanitize=False) for m in mols]
             mols = self.standardizer(mols)
-            if self.mols_path is not None:
-                np.savez_compressed(self.mols_path, mols)
             return mols
         else:
             raise ValueError('SMILES column not found in the dataset and no saved molecules')
