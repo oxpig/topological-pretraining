@@ -82,6 +82,15 @@ class MUV_Subset(MUV, BaseDataFrame):
             self['original_index'] = self.index
             self.reset_index(drop=True, inplace=True)
             self.save(csv)
+        elif csv.exists() and not self.mols_path.exists():
+            MUV.__init__(
+                self, root=root, compression=compression,
+                verbose=verbose, standardizer=standardizer
+            )
+            BaseDataFrame.__init__(
+                self, csv=csv, url=self.url,
+                compression=compression, verbose=verbose, standardizer=standardizer
+            )
         else:
             BaseDataFrame.__init__(
                 self, csv=csv, url=self.url,
