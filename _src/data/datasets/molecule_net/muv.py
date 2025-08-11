@@ -36,7 +36,8 @@ class MUV(BaseDataFrame):
                 columns={'smiles': 'SMILES'},
                 inplace=True
             )
-            self.mol_standardize_check()
+            if root is not None:
+                self.mol_standardize_check()
             self.save()
 
     @property
@@ -71,7 +72,7 @@ class MUV_Subset(MUV, BaseDataFrame):
         if csv is None or not csv.exists():
             MUV.__init__(
                 self, root=root, compression=compression,
-                verbose=verbose, standardizer=standardizer
+                verbose=verbose, standardizer=standardizer,
             )
             self.rename(
                 columns={f'MUV-{self.aid_number}': 'y'},
@@ -84,6 +85,8 @@ class MUV_Subset(MUV, BaseDataFrame):
             self.dropna(subset=['y'], inplace=True)
             self['original_index'] = self.index
             self.reset_index(drop=True, inplace=True)
+            if root is None:
+                self.mol_standardize_check()
             self.save(csv)
         elif csv.exists() and not mols_path.exists():
             MUV.__init__(
@@ -108,26 +111,11 @@ class MUV_Subset(MUV, BaseDataFrame):
 
     @property
     def rdkit_mols(self):
+        mols = BaseDataFrame.rdkit_mols.fget(self)
         if self.mols_path is not None and self.mols_path.exists():
-            # kept on disk to preserve memory
-            mols = np.load(file=self.mols_path, allow_pickle=True)
-            mols = mols['arr_0']
             mols = mols[self['original_index'].values]
-            return mols
-        
-        elif self._rdkit_mols is not None:
-            return self._rdkit_mols
+        return mols
 
-        elif 'SMILES' in self.columns:
-            print('Running standardization check of molecules') if self.verbose else None
-            mols = self['SMILES'].values
-            mols = [Chem.MolFromSmiles(m, sanitize=False) for m in mols]
-            mols = self.standardizer(mols)
-            self._rdkit_mols = mols
-            return mols
-        else:
-            raise ValueError('SMILES column not found in the dataset and no saved molecules')
-        
     @property
     def task(self):
         return 'classification'

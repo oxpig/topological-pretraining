@@ -31,6 +31,8 @@ class BaseDataFrame(pd.DataFrame):
     compression: bool
         Whether the saved csv is compressed or not.
     """
+    # hold molecules in memory if no path given
+    _rdkit_mols = None
     def __init__(
         self,
         data: pd.DataFrame|None = None,
@@ -140,6 +142,9 @@ class BaseDataFrame(pd.DataFrame):
             mols = np.load(file=self.mols_path, allow_pickle=True)
             mols = mols['arr_0']
             return mols
+    
+        elif self._rdkit_mols is not None:
+            return self._rdkit_mols
 
         elif 'SMILES' in self.columns:
             print('Running standardization check of molecules') if self.verbose else None
@@ -149,6 +154,8 @@ class BaseDataFrame(pd.DataFrame):
             
             if self.mols_path is not None:
                 np.savez_compressed(self.mols_path, mols)
+            else:
+                self._rdkit_mols = mols
             return mols
         else:
             raise ValueError('SMILES column not found in the dataset and no saved molecules')
