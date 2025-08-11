@@ -58,6 +58,8 @@ class MUV(BaseDataFrame):
 class MUV_Subset(MUV, BaseDataFrame):
 
     aid_number = None
+    # for holding mols in memory if no path provided
+    _rdkit_mols = None 
 
     def __init__(
         self, root: str|None = None, compression: bool = True,
@@ -65,6 +67,7 @@ class MUV_Subset(MUV, BaseDataFrame):
     ):
         compression = '.gz' if compression else ''
         csv = Path(root) / f'muv{self.aid_number}.csv{compression}' if root else None
+        mols_path = Path(root) / "muv_molecules.npz" if root else None 
         if csv is None or not csv.exists():
             MUV.__init__(
                 self, root=root, compression=compression,
@@ -82,7 +85,7 @@ class MUV_Subset(MUV, BaseDataFrame):
             self['original_index'] = self.index
             self.reset_index(drop=True, inplace=True)
             self.save(csv)
-        elif csv.exists() and not self.mols_path.exists():
+        elif csv.exists() and not mols_path.exists():
             MUV.__init__(
                 self, root=root, compression=compression,
                 verbose=verbose, standardizer=standardizer
@@ -106,16 +109,21 @@ class MUV_Subset(MUV, BaseDataFrame):
     @property
     def rdkit_mols(self):
         if self.mols_path is not None and self.mols_path.exists():
+            # kept on disk to preserve memory
             mols = np.load(file=self.mols_path, allow_pickle=True)
             mols = mols['arr_0']
             mols = mols[self['original_index'].values]
             return mols
+        
+        elif self._rdkit_mols is not None:
+            return self._rdkit_mols
 
         elif 'SMILES' in self.columns:
             print('Running standardization check of molecules') if self.verbose else None
             mols = self['SMILES'].values
             mols = [Chem.MolFromSmiles(m, sanitize=False) for m in mols]
             mols = self.standardizer(mols)
+            self._rdkit_mols = mols
             return mols
         else:
             raise ValueError('SMILES column not found in the dataset and no saved molecules')
