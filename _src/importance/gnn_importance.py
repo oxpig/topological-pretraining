@@ -166,7 +166,7 @@ def _chunk_random_indices(random_idx, n_chunks):
     while len(random_idx_chunks) < n_chunks:
         random_idx_chunks = torch.chunk(random_idx, n_chunks + chunk_count)
         chunk_count += 1
-        if len(random_idx_chunks) >= n_chunks:
+        if len(random_idx_chunks) == n_chunks:
             break
 
         num_to_merge = len(random_idx_chunks) - n_chunks
