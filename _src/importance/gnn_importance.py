@@ -168,7 +168,8 @@ def _chunk_random_indices(random_idx, n_chunks):
         chunk_count += 1
         if len(random_idx_chunks) == n_chunks:
             break
-
+        elif len(random_idx_chunks) < n_chunks:
+            continue
         num_to_merge = len(random_idx_chunks) - n_chunks
         new_chunks = [random_idx_chunks[i] for i in range(len(random_idx_chunks) - num_to_merge)]
         to_merge = [new_chunks[-1]] + list(random_idx_chunks[-num_to_merge:])
