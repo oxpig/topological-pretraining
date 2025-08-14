@@ -74,14 +74,13 @@ def permute_graph(graph, token_idx, random_idx, perm_type="dist", seed=42):
     """
     token_mask = (graph.tokens == token_idx)
     token_indices = torch.nonzero(token_mask, as_tuple=False)
-    out = graph.clone()
 
     if token_indices.dim() > 0 and token_indices.size(0) > 0:
         if perm_type == "single":
-            _apply_single_permutation(out, token_indices, random_idx, seed)
+            _apply_single_permutation(graph, token_indices, random_idx, seed)
         elif perm_type == "dist":
-            _apply_distributed_permutation(out, token_indices, random_idx, seed)
-    return out
+            _apply_distributed_permutation(graph, token_indices, random_idx, seed)
+    return graph
 
 
 def _apply_single_permutation(graph, token_indices, random_idx, seed=42):
