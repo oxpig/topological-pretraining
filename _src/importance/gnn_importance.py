@@ -15,7 +15,7 @@ import torch
 from _src.featurization.pretrained import PreTrainedGNN
 
 # graph batching
-def batch_graphs(graphs: list[pyg.data.Data]):
+def batch_graphs(graphs: list[pyg.data.Data], batch_size: int|None = None):
     """
     Batches a list of PyTorch Geometric Data objects into a single batch.
     
@@ -29,7 +29,14 @@ def batch_graphs(graphs: list[pyg.data.Data]):
     pyg.data.Batch
         A PyTorch Geometric Batch object containing all graphs in the input list.
     """
-    return pyg.data.Batch.from_data_list(graphs)
+    if batch_size is not None:
+        batches = [
+            pyg.data.Batch.from_data_list(graphs[i:i + batch_size]) 
+            for i in range(0, len(graphs), batch_size)
+        ]
+        return batches
+    else:
+        return pyg.data.Batch.from_data_list(graphs)
 
 
 # get node permutation indexes
@@ -201,6 +208,7 @@ def calculate_token_scores(
     random_state : int = 42,
     scorer : Union[str, callable] = "",
     perm_type : str = "dist",
+    batch_size : int = 256,
 ):
     """
     Calculates the importance scores for a specific token by permuting its embeddings
@@ -253,17 +261,29 @@ def calculate_token_scores(
                     permute_graph(G, token_idx, idx, perm_type=perm_type)
                     for G in X_permuted
                 ]
-                X_permuted = batch_graphs(X_permuted)
-                X_permuted = gnn(X_permuted)
+                X_permuted = batch_graphs(X_permuted, batch_size=batch_size)
+                if isinstance(X_permuted, list):
+                    embeddings = []
+                    for batch in X_permuted:
+                        batch = batch.to(gnn.device)
+                        embeddings.append(gnn(batch))
+                    embeddings = np.vstack(embeddings)
+                else:
+                    X_permuted = X_permuted.to(gnn.device)
+                    embeddings = gnn(X_permuted)
+                
                 scores.append(
                     _weights_scorer(
                         scorer,
                         estimator,
-                        X_permuted,
+                        embeddings,
                         y,
                         sample_weight=None,
                     )
                 )
+                del X_permuted, embeddings
+                torch.cuda.empty_cache()
+                
             if isinstance(scores[0], dict):
                 scores = _aggregate_score_dicts(scores)
             else:
@@ -332,6 +352,8 @@ def token_importance(
     num_tokens = len(gnn.transform.featurizer.node_types)
     scorer = check_scoring(estimator, scorer)
     baseline_X = gnn(X)
+    [G.to("cpu") for G in X]
+    torch.cuda.empty_cache()
     baseline_score = _weights_scorer(scorer, estimator, baseline_X, y, sample_weight)
 
     scores = Parallel(n_jobs=n_jobs, prefer="threads")(
