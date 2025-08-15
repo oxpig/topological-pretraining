@@ -312,6 +312,7 @@ def token_importance(
     n_jobs = -1,
     sample_weight = None,
     perm_type = "dist",
+    batch_size: int = 256,
 ):
     """
     Computes the importance of tokens by permuting their embeddings and evaluating the impact
@@ -368,6 +369,7 @@ def token_importance(
             random_state=random_state,
             scorer=scorer,
             perm_type=perm_type,
+            batch_size=batch_size,
         )
         for token_idx in range(num_tokens)
     )
@@ -380,5 +382,5 @@ def token_importance(
             )
             for name in baseline_score
         }
-
+    torch.cuda.empty_cache()
     return _create_importances_bunch(baseline_score, np.array(scores))
