@@ -151,6 +151,7 @@ class PreTrainedModel(torch.nn.Module):
             x = self.embed(x)
         if self.asarray:
             x = x.detach().cpu().numpy()
+        torch.cuda.empty_cache()
         return x
     
     def get_head_preds(
@@ -394,10 +395,10 @@ class PreTrainedGNN(PreTrainedModel):
             X = self.tokenize(X)
         out_shape = (1, self.model.out_shape)
         out = []
-        for x in X:
-            if not torch.all(x.get("empty", False)):
-                x = x.to(self.device)
-                x = self.model(**x)
+        for graph in X:
+            if not torch.all(graph.get("empty", False)):
+                graph = graph.to(self.device)
+                x = self.model(**graph)
                 if self.embed_state == 'node':
                     x = x['final_state']
                 elif self.embed_state == 'global':
@@ -413,6 +414,8 @@ class PreTrainedGNN(PreTrainedModel):
                 x = torch.full(
                     size=out_shape, fill_value=torch.nan, device=self.device
                 )
+            graph.to('cpu')
+            torch.cuda.empty_cache()
             out.append(x)
         if self.embed_state != 'all':
             out = torch.vstack(out)
