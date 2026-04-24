@@ -12,10 +12,8 @@ class LGBM(BaseEstimator):
         The type of task to perform. Can be 'classification' or 'regression'.
     seed : int, optional
         Random seed for reproducibility. Default is 42.
-    neptune_run : Optional[neptune.Run], optional
-        Neptune run object for logging. Default is None.
-    neptune_location : Optional[str], optional
-        Location of the Neptune run. Default is None.
+    logging : dict, optional
+        For compatibility with sklearn_gin logging.
     device : str, optional
         Device to use for training. Can be 'cpu' or 'gpu'. Default is 'cpu'.
     proba_as_pred : bool, optional
@@ -25,7 +23,7 @@ class LGBM(BaseEstimator):
     """
     def __init__(
         self, task, seed=42,
-        neptune_run=None, neptune_location=None,
+        logging=None,
         device='cpu',
         proba_as_pred=True,
         **kwargs
@@ -38,8 +36,7 @@ class LGBM(BaseEstimator):
             self.model = LGBMRegressor(random_state=seed, **kwargs)
         
         self.task = task
-        self.neptune_run = neptune_run # for compatibility with other models
-        self.neptune_location = neptune_location # for compatibility with other models
+        self.logging = None
         self.proba_as_pred = proba_as_pred
         if device == 'cuda':
             device = 'gpu'
