@@ -6,7 +6,6 @@ bin/cache/
 *.ipynb
 *__pycache__/
 figures
-.neptune
 *archive
 *epoch*
 data/*molecules.npz
