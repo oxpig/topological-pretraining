@@ -70,28 +70,12 @@ class MoleculeNet:
         self.compression = compression
 
     @property
-    def BACE(self):
-        return BACE(root=self.root, compression=self.compression)
-    
-    @property
-    def BBBP(self):
-        return BBBP(root=self.root, compression=self.compression)
-    
-    @property
-    def ClinTox(self):
-        return ClinTox(root=self.root, compression=self.compression)
-    
-    @property
     def ESOL(self):
         return ESOL(root=self.root, compression=self.compression)
     
     @property
     def FreeSolv(self):
         return FreeSolv(root=self.root, compression=self.compression)
-
-    @property
-    def HIV(self):
-        return HIV(root=self.root, compression=self.compression)
 
     @property
     def Lipo(self):
@@ -102,15 +86,5 @@ class MoleculeNet:
         return MUV(root=self.root, compression=self.compression)
 
     @property
-    def SIDER(self):
-        return SIDER(root=self.root, compression=self.compression)
-    
-    @property
     def Tox21(self):
         return Tox21(root=self.root, compression=self.compression)
-
-    @property
-    def ToxCast(self):
-        return ToxCast(root=self.root, compression=self.compression)
-
-    
