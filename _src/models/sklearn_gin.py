@@ -106,10 +106,8 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         The hidden dimension of the prediction head. If None, it defaults to `hidden_dim`.
     return_loss : bool, optional
         If True, the `fit` method returns the training losses. Default is False.
-    neptune_run : Optional[neptune.Run], optional
-        A Neptune run object for logging training metrics. Default is None.
-    neptune_location : str, optional
-        The location in Neptune to log the training metrics. Default is 'model_loss'.
+    logging : dict, optional
+        A dictionary to store logging information such as losses and hyperparameters. Default is None.
     verbose : bool, optional
         If True, enables verbose output during training. Default is False.
     device : str, optional
@@ -151,8 +149,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         weight_decay=0.0,
         head_layers=1, head_hidden_dim=None,
         return_loss=False,
-        neptune_run=None,
-        neptune_location='model_loss',
+        logging=None,
         verbose=False,
         device='cpu', # for compatibility with other models, uses cuda if available
         **kwargs
@@ -198,8 +195,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         self.lr_scale = lr_scale
         self.lr_half_life = lr_half_life
         self.weight_decay = weight_decay
-        self.neptune_location = neptune_location
-        self.neptune_run = neptune_run
+        self.logging = logging if logging is not None else {}
         self.return_loss = return_loss
         self.verbose = verbose
         self.class_weights = None
@@ -235,10 +231,11 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         else:
             self.lr = lr
 
-        if self.neptune_run:
-            self.neptune_run[f'{neptune_location}/num_params'].append(sum([p.numel() for p in self.parameters()]))
-            self.neptune_run[f'{neptune_location}/lr'].append(self.lr)
-            self.neptune_run[f'{neptune_location}/vocab_size'].append(vocab_size)
+        if self.logging is not None:
+            num_params = sum([p.numel() for p in self.parameters()])
+            self.logging['num_params'] = num_params
+            self.logging['lr'] = self.lr
+            self.logging['vocab_size'] = vocab_size
 
     def forward(self, x):
         """
@@ -327,6 +324,9 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
             lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
                 optimizer, gamma=gamma,
             )
+        if self.logging is not None:
+            self.logging['batch_loss'] = []
+            self.logging['epoch_loss'] = []
 
         with tqdm(
             total=len(loader),
@@ -340,8 +340,8 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
                     out = self(batch)
                     y = batch.y.unsqueeze(1)
                     loss = self.head.loss(y=y, pred=out)
-                    if self.neptune_run is not None:
-                        self.neptune_run[f'{self.neptune_location}/batch_loss'].append(loss.item())
+                    if self.logging is not None:
+                        self.logging['batch_loss'].append(loss.item())
                     loss.backward()
                     optimizer.step()
                     losses[i, j] = loss.item()
@@ -352,9 +352,9 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
                 if i != self.epochs - 1:
                     pbar.reset()
                 
-                if self.neptune_run:
+                if self.logging is not None:
                     epoch_mean_loss = losses[i].mean()
-                    self.neptune_run[f'{self.neptune_location}/epoch_loss'].append(epoch_mean_loss)
+                    self.logging['epoch_loss'].append(epoch_mean_loss)
             
             if self.return_loss:
                 return losses
