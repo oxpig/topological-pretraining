@@ -3,7 +3,7 @@ process: benchmark
 benchmark: all
 featurizer: PreTrainedFeaturizer
 extra_transform_kwargs: {}
-neptune: True
+logging: True
 verbose: True
 featurizer_kwargs:
     transform_kwargs:
