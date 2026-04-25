@@ -1,5 +1,6 @@
 import numpy as np
 from _src.nn import GIN, RegressionHead, BinaryHead
+from _src.logging import Logger
 from sklearn.base import BaseEstimator
 from sklearn.utils.class_weight import compute_class_weight
 
@@ -33,8 +34,8 @@ class GraphDatasetFromList(torch.utils.data.Dataset):
 
 class SklearnGIN(torch.nn.Module, BaseEstimator):
     """
-    A sklearn wrapper for the GIN model for molecular graphs using PyTorch Geometric.
-    This class allows the GIN model to be used in a sklearn-like fashion, including
+    A scikit-learn-like wrapper for the GIN model for molecular graphs using PyTorch Geometric.
+    This class allows the GIN model to be used in a scikit-learn-like fashion, including
     methods for fitting, predicting, and transforming data.
 
     GIN model for molecular graphs using PyTorch Geometric, compatible with sklearn.
@@ -106,8 +107,12 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         The hidden dimension of the prediction head. If None, it defaults to `hidden_dim`.
     return_loss : bool, optional
         If True, the `fit` method returns the training losses. Default is False.
-    logging : dict, optional
-        A dictionary to store logging information such as losses and hyperparameters. Default is None.
+    logging : Logger, optional
+        A logger instance to store logging information such as losses and hyperparameters. Default is None.
+    name : str, optional
+        The name of the model for logging purposes. 
+        Allows for reusing the same logging dictionary across different model instances. 
+        Default is 'model_loss'.
     verbose : bool, optional
         If True, enables verbose output during training. Default is False.
     device : str, optional
@@ -150,6 +155,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         head_layers=1, head_hidden_dim=None,
         return_loss=False,
         logging=None,
+        name='model_loss',
         verbose=False,
         device='cpu', # for compatibility with other models, uses cuda if available
         **kwargs
@@ -195,7 +201,8 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         self.lr_scale = lr_scale
         self.lr_half_life = lr_half_life
         self.weight_decay = weight_decay
-        self.logging = logging if logging is not None else {}
+        self.logging = logging if logging is not None else Logger()
+        self.name = name
         self.return_loss = return_loss
         self.verbose = verbose
         self.class_weights = None
@@ -233,9 +240,10 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
 
         if self.logging is not None:
             num_params = sum([p.numel() for p in self.parameters()])
-            self.logging['num_params'] = num_params
-            self.logging['lr'] = self.lr
-            self.logging['vocab_size'] = vocab_size
+            self.logging[f'{self.name}/num_params'] = num_params
+            self.logging[f'{self.name}/lr'] = self.lr
+            self.logging[f'{self.name}/vocab_size'] = vocab_size
+            self.logging.save()
 
     def forward(self, x):
         """
@@ -325,8 +333,8 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
                 optimizer, gamma=gamma,
             )
         if self.logging is not None:
-            self.logging['batch_loss'] = []
-            self.logging['epoch_loss'] = []
+            self.logging[f'{self.name}/batch_loss'] = []
+            self.logging[f'{self.name}/epoch_loss'] = []
 
         with tqdm(
             total=len(loader),
@@ -341,7 +349,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
                     y = batch.y.unsqueeze(1)
                     loss = self.head.loss(y=y, pred=out)
                     if self.logging is not None:
-                        self.logging['batch_loss'].append(loss.item())
+                        self.logging[f'{self.name}/batch_loss'].append(loss.item())
                     loss.backward()
                     optimizer.step()
                     losses[i, j] = loss.item()
@@ -354,7 +362,8 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
                 
                 if self.logging is not None:
                     epoch_mean_loss = losses[i].mean()
-                    self.logging['epoch_loss'].append(epoch_mean_loss)
+                    self.logging[f'{self.name}/epoch_loss'].append(epoch_mean_loss)
+                    self.logging.save()
             
             if self.return_loss:
                 return losses

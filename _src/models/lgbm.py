@@ -1,7 +1,6 @@
 from lightgbm import LGBMClassifier, LGBMRegressor, LGBMModel
 from sklearn.base import BaseEstimator
 
-
 class LGBM(BaseEstimator):
     """
     LightGBM model wrapper for classification and regression tasks.
@@ -14,6 +13,8 @@ class LGBM(BaseEstimator):
         Random seed for reproducibility. Default is 42.
     logging : dict, optional
         For compatibility with sklearn_gin logging.
+    name : str, optional
+        For compatibility with sklearn_gin logging.
     device : str, optional
         Device to use for training. Can be 'cpu' or 'gpu'. Default is 'cpu'.
     proba_as_pred : bool, optional
@@ -24,6 +25,7 @@ class LGBM(BaseEstimator):
     def __init__(
         self, task, seed=42,
         logging=None,
+        name='model_loss',
         device='cpu',
         proba_as_pred=True,
         **kwargs
@@ -37,6 +39,7 @@ class LGBM(BaseEstimator):
         
         self.task = task
         self.logging = None
+        self.name = name
         self.proba_as_pred = proba_as_pred
         if device == 'cuda':
             device = 'gpu'
