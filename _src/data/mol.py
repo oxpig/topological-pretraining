@@ -14,9 +14,6 @@ from rdkit import RDLogger
 from tqdm import tqdm
 import warnings
 
-"""
-TODO: change print statements to logging
-"""
 
 RDLogger.DisableLog('rdApp.*')
 default_atom_colors = {
