@@ -7,6 +7,7 @@ from _src.data.datasets import GraphDataset
 from _src.data.loader import DataLoader
 
 from _src.nn.pred_head import (BinaryHead, RegressionHead, MultiClassHead, MultiTaskLoss)
+from _src.logging import Logger
 
 from copy import deepcopy
 from pathlib import Path
@@ -71,8 +72,9 @@ def pretrain(config: dict):
             containing target-specific parameters.
         - splits: list[str], optional
             A list of splits to use for training. If empty, all data will be used for pretraining.
-        - neptune_run: optional
-            A Neptune run object for logging. If None, no logging will be done.
+        - logging: bool, optional
+            Whether to use logging for the pretraining run. Defaults to False.
+            If True, a Logger object will be created and saved to the logging directory.
         - seed: int
             The random seed for reproducibility. Defaults to 42.
         - model: str
@@ -96,13 +98,19 @@ def pretrain(config: dict):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     batch_size: int = config['batch_size']
     epochs: int = config['epochs']
-    # learning_rate: float = config['learning_rate']
     warmup_epochs: int = config.get('warmup_epochs', 0)
     lr_decay_half_life: int = config.get('lr_decay_half_life', 5)
     weight_decay: float = config.get('weight_decay', 0.0)
     targets: dict = config['targets']
     splits: list[str] = config.get('splits', [])
-    neptune_run = config.get('neptune_run')
+    logging = config.get('logging', False)
+    if logging:
+        logging = Logger(
+            path=Path(results_path) / name / f'{experiment_name}_pretrain_logging.npz'
+        )
+        logging['config'] = config
+        logging.save()
+
     seed = config['seed']
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -118,7 +126,7 @@ def pretrain(config: dict):
     print(f'\n##################################################\n') if verbose else None
     print(f'Pretraining run {name}') if verbose else None
     print(f'Featurizer: {featurizer_class}') if verbose else None
-    print(f'Model: {config['model']}') if verbose else None
+    print(f'Model: {config["model"]}') if verbose else None
     print(f'Data: {pretrain_data}') if verbose else None
     print(f'Splits: {splits}') if verbose else None
     print(f'Batch size: {batch_size}') if verbose else None
@@ -151,7 +159,7 @@ def pretrain(config: dict):
     else:
         mols = df.rdkit_mols
 
-    # prepare raw graphs
+    # prepare and save raw graphs
     raw_dataset = GraphDataset(
         root=root,
         featurizer=featurizer,
@@ -159,13 +167,14 @@ def pretrain(config: dict):
         fit_featurizer=False,
         verbose=verbose,
     )
-    del raw_dataset
+    del raw_dataset # free up memory
     torch.cuda.empty_cache()
     save_path = results_path / experiment_name
     save_path.mkdir(parents=True, exist_ok=True)
     print(f'Looping through splits: {splits}') if verbose else None
     for split in splits:
-        assert split in df.columns, f'{split} not found in dataframe.'
+        if split not in df.columns:
+                raise ValueError(f'Split {split} not found in dataframe columns.')
         if len(splits) > 1:
             file_name = f'{name}_{split.replace(".","")}.pt'
         else:
@@ -174,12 +183,13 @@ def pretrain(config: dict):
             print(f'Model {file_name} already exists, skipping.') if verbose else None
             continue
         idx = df[split]
+        # load the dataset for this split
         pretrain_dataset = GraphDataset(
             root=root, split=(split, idx), featurizer=featurizer,
             targets=targets, run_id=name, fit_featurizer=True,
             verbose=verbose
         )
-
+        # prepare the dataloader for this split
         pretrain_loader = DataLoader(
             pretrain_dataset, batch_size=batch_size, shuffle=True
         )
@@ -245,15 +255,17 @@ def pretrain(config: dict):
         print(f'Model: {model}') if verbose else None
         num_params = sum(p.numel() for p in model.parameters())
         print(f'Number of parameters: {num_params}') if verbose else None
-        if neptune_run:
-            neptune_run['model/num_params'] = num_params
-            neptune_run['model/num_heads'] = len(targets_key)
-            neptune_run['model/summary'] = str(model)
+        if logging is not None:
+            logging['model/num_params'] = num_params
+            logging['model/num_heads'] = len(targets_key)
+            logging['model/summary'] = str(model)
+            logging.save()
         model = model.to(device)
         model.train()
         lr = num_params ** -0.5
-        if neptune_run:
-            neptune_run[f'{split}/lr'] = lr
+        if logging is not None:
+            logging[f'{split}/lr'] = lr
+            logging.save()
         optimizer = torch.optim.Adam(
             model.parameters(), lr=lr, weight_decay=weight_decay
         )
@@ -320,8 +332,11 @@ def pretrain(config: dict):
                     else:
                         raise ValueError('Invalid target level.')
                     if score_now is not None:
-                        if neptune_run is not None:
-                            neptune_run[f'{split}/batch_{target_name}_score'].append(score_now.item())
+                        if logging is not None:
+                            score_path = f'{split}/batch_{target_name}_score'
+                            if score_path not in logging:
+                                logging[score_path] = []
+                            logging[score_path].append(score_now.item())
                         scores[i] = score_now.item()
                         epoch_scores[i] += score_now.item()
 
@@ -329,8 +344,10 @@ def pretrain(config: dict):
                 loss.backward()
                 optimizer.step()
                 epoch_loss += loss.item()
-                if neptune_run is not None:
-                    neptune_run[f'{split}/batch_loss'].append(loss.item())
+                if logging is not None:
+                    if f'{split}/batch_loss' not in logging:
+                        logging[f'{split}/batch_loss'] = []
+                    logging[f'{split}/batch_loss'].append(loss.item())
                 
                 pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch Score: {last_score.item():.4f}')
                 pbar.update(1)
@@ -340,12 +357,16 @@ def pretrain(config: dict):
             average_scores = epoch_scores / len(pretrain_loader)
             pbar.set_description(f'Epoch {epoch+1}/{epochs} | Epoch Loss: {average_loss:.4f} | Last Batch Loss: {loss.item():.4f} | Last Batch Score: {last_score.item():.4f}')
             pbar.close()
-            if neptune_run is not None:
-                neptune_run[f'{split}/epoch_average_loss'].append(average_loss)
+            if logging is not None:
+                if f'{split}/epoch_average_loss' not in logging:
+                    logging[f'{split}/epoch_average_loss'] = []
+                logging[f'{split}/epoch_average_loss'].append(average_loss)
                 for i, target_name in enumerate(targets_key):
                     score_now = average_scores[i].item()
-                    neptune_run[f'{split}/{target_name}_epoch_average_score'].append(score_now)
-
+                    if f'{split}/{target_name}_epoch_average_score' not in logging:
+                        logging[f'{split}/{target_name}_epoch_average_score'] = []
+                    logging[f'{split}/{target_name}_epoch_average_score'].append(score_now)
+                logging.save()
             if (epoch + 1) % 15 == 0:
                 model_dict = {
                     'featurizer': pretrain_dataset.featurizer.to_dict(),
@@ -416,13 +437,12 @@ def pretrain_autoencoder(config: dict):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     batch_size: int = config['batch_size']
     epochs: int = config['epochs']
-    # learning_rate: float = config['learning_rate']
     warmup_epochs: int = config.get('warmup_epochs', 0)
     lr_decay_half_life: int = config.get('lr_decay_half_life', 5)
     weight_decay: float = config.get('weight_decay', 0.0)
 
     splits: list[str] = config.get('splits', [])
-    neptune_run = config.get('neptune_run')
+    logging = config.get('logging', False)
     seed = config['seed']
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -526,14 +546,14 @@ def pretrain_autoencoder(config: dict):
         print(f'Model: {model}') if verbose else None
         num_params = sum(p.numel() for p in model.parameters())
         print(f'Number of parameters: {num_params}') if verbose else None
-        if neptune_run:
-            neptune_run['model/num_params'] = num_params
-            neptune_run['model/summary'] = str(model)
+        if logging is not None:
+            logging['model/num_params'] = num_params
+            logging['model/summary'] = str(model)
         model = model.to(device)
         model.train()
         lr = num_params ** -0.5
-        if neptune_run:
-            neptune_run[f'{split}/lr'] = lr
+        if logging is not None:
+            logging[f'{split}/lr'] = lr
         optimizer = torch.optim.Adam(
             model.parameters(), lr=lr, weight_decay=weight_decay
         )
@@ -567,8 +587,10 @@ def pretrain_autoencoder(config: dict):
                 pred_vals = np.where(pred_vals > 0.5, 1, 0)
                 if batch_num % 100 == 0:
                     score = model.decoder.score(y=batch, pred=pred)
-                    if neptune_run is not None:
-                        neptune_run[f'{split}/batch_score'].append(score.item())
+                    if logging is not None:
+                        if f'{split}/batch_score' not in logging:
+                            logging[f'{split}/batch_score'] = []
+                        logging[f'{split}/batch_score'].append(score.item())
                     last_score = score.item()
                     epoch_scores.append(last_score)
                 loss = model.decoder.loss(y=batch, pred=pred)
@@ -576,8 +598,10 @@ def pretrain_autoencoder(config: dict):
                 optimizer.step()
                 scheduler.step()
                 epoch_loss += loss.item()
-                if neptune_run is not None:
-                    neptune_run[f'{split}/batch_loss'].append(loss.item())
+                if logging is not None:
+                    if f'{split}/batch_loss' not in logging:
+                        logging[f'{split}/batch_loss'] = []
+                    logging[f'{split}/batch_loss'].append(loss.item())
                 pbar.set_description(f'Epoch {epoch+1}/{epochs} | Batch Loss: {loss.item():.4f} | Batch Score: {last_score:.4f} | ')
                 pbar.update(1)
             average_loss = epoch_loss / len(loader)
@@ -585,10 +609,15 @@ def pretrain_autoencoder(config: dict):
             pbar.set_description(f'Epoch {epoch+1}/{epochs} | Epoch Loss: {average_loss:.4f} | Epoch Score: {average_score:.4f}')
             pbar.close()
 
-            if neptune_run is not None:
-                neptune_run[f'{split}/epoch_average_loss'].append(average_loss)
-                neptune_run[f'{split}/epoch_average_score'].append(average_score)
-            
+            if logging is not None:
+                if f'{split}/epoch_average_loss' not in logging:
+                    logging[f'{split}/epoch_average_loss'] = []
+                if f'{split}/epoch_average_score' not in logging:
+                    logging[f'{split}/epoch_average_score'] = []
+                logging[f'{split}/epoch_average_loss'].append(average_loss)
+                logging[f'{split}/epoch_average_score'].append(average_score)
+                logging.save()
+
             if (epoch + 1) % 15 == 0:
                 model_dict = {
                     'featurizer': featurizer.to_dict(),
