@@ -1,22 +1,23 @@
 from _src.models import get_model
 from _src.data.utils import load_dataset
 from _src.data.datasets import BaseDataFrame, MolDataset
+from _src.models import LGBM
+from _src.logging import Logger
 
 from copy import deepcopy
-
-from _src.models import LGBM
-
 import numpy as np
 from pathlib import Path
+from typing import Callable, Literal, Optional
+import yaml
+
+import optuna
 from sklearn.feature_selection import (
     mutual_info_regression, mutual_info_classif
 )
 from sklearn.metrics import mean_absolute_error, roc_auc_score
+from sklearn.base import BaseEstimator
 import torch
 from tqdm import tqdm
-from typing import Callable, Literal
-import optuna
-import yaml
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -27,11 +28,11 @@ Script for benchmarking models on various datasets.
 class HyperOpt:
 
     """
-    Hyperparameter optimization class using Optuna.
+    Hyperparameter optimization of scratch GIN and lightGBMs using Optuna on benchmark datasets.
 
     Parameters
     ----------
-    model : callable
+    model : BaseEstimator
         The model to optimize.
     model_kwargs : dict
         The keyword arguments for the model, i.e., fixed hyperparameters.
@@ -53,10 +54,11 @@ class HyperOpt:
         The size of the validation set. Only used if `splits` is not provided.
     verbose : bool
         Whether to print verbose output.
-    neptune_run : neptune.Run, optional
-        The Neptune run object to log the hyperparameter tuning results.
+    logging : Logger
+        A logger instance to store logging information such as losses and hyperparameters. Default is None.
+        Functions like a dictionary with additional saving and loading methods.
     name : str
-        The name of the hyperparameter tuning run. Used for logging in Neptune.
+        The name of the hyperparameter tuning run. Used for logging.
     seed : int
         The random seed to use for reproducibility.
     data_clusters : np.ndarray, optional
@@ -68,16 +70,16 @@ class HyperOpt:
     """
     trial_count = 0
     def __init__(
-        self, model, model_kwargs: dict,
+        self, model: BaseEstimator, model_kwargs: dict,
         task: str, hyperparameters: dict, dataset: MolDataset,
         splits: list, scorer: Callable,
         direction: str = 'minimize', val_size: float = 0.2,
-        verbose: bool = False, neptune_run = None, name: str = 'name',
+        verbose: bool = False, logging: Optional[Logger] = None, name: str = 'name',
         seed: int = 42, data_clusters: np.ndarray = None, average: Literal['mean', 'median'] = 'mean'
     ):
         self.seed = seed
         self.model = model
-        self.neptune_run = neptune_run
+        self.logging = logging
         self.name = name
         self.model_kwargs = model_kwargs
         self.model_kwargs['verbose'] = -1
@@ -136,12 +138,17 @@ class HyperOpt:
             params[key] = p
 
         params.update(self.model_kwargs)
-        if self.neptune_run is not None:
+        if self.logging is not None:
             for key, value in params.items():
-                self.neptune_run[f'{self.name}/tuning_parameters/{key}'].append(value)
+                path_name = f'{self.name}/tuning_parameters/{key}'
+                if path_name not in self.logging:
+                    self.logging[path_name] = []
+                self.logging[path_name].append(value)
+            self.logging.save()
 
         filler = np.inf if self.direction == 'minimize' else -np.inf
         out = np.full((len(self.splits,)), filler)
+
         for idx, (train_idx, val_idx) in enumerate(self.splits):
             self.dataset.reset(train_idx, val_idx)
             train_X, train_y = self.dataset.train
@@ -149,25 +156,27 @@ class HyperOpt:
             if self.model.__name__ == 'SklearnGIN':
                 params['vocab_size'] = self.dataset.featurizer.vocab_size
                 params['input_dim'] = train_X[0].x.size(1)
-                params['neptune_location'] = f'{self.name}/trials'
-                params['neptune_run'] = self.neptune_run
+                params['name'] = f'{self.name}/trials'
+                params['logging'] = self.logging
             model = self.model(seed=self.seed, task=self.task, **params)
             model.fit(train_X, train_y)
             test_pred = model.predict(val_X)
 
             out[idx] = self.scorer(val_y, test_pred)
-            if self.neptune_run is not None:
-                self.neptune_run[f'{self.name}/tuning_scores'].append(out[idx])
-                self.neptune_run[f'{self.name}/trial_num_for_scores'].append(self.trial_count)
+            if self.logging is not None:
+                self.logging[f'{self.name}/tuning_scores'].append(out[idx])
+                self.logging[f'{self.name}/trial_num_for_scores'].append(self.trial_count)
+       
         if self.average == 'mean':
             out_score = out.mean()
         elif self.average == 'median':
             out_score = np.median(out)
         else:
             raise ValueError('Invalid average. Must be one of "mean" or "median".')
-        if self.neptune_run is not None:
-            self.neptune_run[f'{self.name}/tuning_averages'].append(out_score)
-            
+        if self.logging is not None:
+            self.logging[f'{self.name}/tuning_averages'].append(out_score)
+            self.logging.save()
+
         self.trial_count += 1
         return out_score
     
@@ -219,9 +228,7 @@ def benchmark(config: dict):
                 The keyword arguments for the featurizer.
     """
     # Setup configuration
-    neptune_run = config.pop('neptune_run')
-    if neptune_run is not None:
-        neptune_run['config'] = config
+    to_log = config.pop('logging')
     name: str = config['name']
     data_path: str = config['data']
     results_path: str = config['results']
@@ -286,6 +293,14 @@ def benchmark(config: dict):
     # loop over benchmark datasets
     pbar = tqdm(total=len(benchmark_data), desc='Benchmarking', disable=not verbose)
     for benchmark in benchmark_data:
+        if to_log is not None:
+            logging = Logger()
+            logging['config'] = config
+            logging.path = Path(results_path) / name / f'{benchmark}_logging.npz'
+            logging.path.parent.mkdir(parents=True, exist_ok=True)
+            logging.save()
+        else:
+            logging = None
         hyperparameters_running = deepcopy(hyperparameters)
         model_kwargs = {**base_model_kwargs}
         print(f'\n##################################################\n') if verbose else None
@@ -341,12 +356,12 @@ def benchmark(config: dict):
             direction = 'maximize'
 
 
-        if neptune_run is not None:
-            neptune_run[f'{benchmark}/num_splits'] = num_splits
-            neptune_run[f'{benchmark}/task'] = df.task
-            neptune_run[f'{benchmark}/scorer'] = str(scorer)
-            neptune_run[f'{benchmark}/direction'] = direction
-            neptune_run[f'{benchmark}/hp_average'] = df.hyperopt_average
+        if logging is not None:
+            logging[f'num_splits'] = num_splits
+            logging[f'task'] = df.task
+            logging[f'scorer'] = str(scorer)
+            logging[f'direction'] = direction
+            logging[f'hp_average'] = df.hyperopt_average
             
         out_path = Path(results_path) / name
         out_path.mkdir(parents=True, exist_ok=True)
@@ -370,7 +385,9 @@ def benchmark(config: dict):
                 
         if out[-1, -1] == 1:
             print('All splits complete.') if verbose else None
-            if neptune_run is not None:
+            if logging is not None:
+                logging[f'train_score'] = []
+                logging[f'test_score'] = []
                 print('Calculating scores.') if verbose else None
                 for idx, (train, test) in enumerate(splits):
                     train_y = df.y[train]
@@ -379,19 +396,21 @@ def benchmark(config: dict):
                     test_pred = out[idx, test]
                     train_score = scorer(train_y, train_pred)
                     test_score = scorer(test_y, test_pred)
-                    neptune_run[f'{benchmark}/train_score'].append(train_score)
-                    neptune_run[f'{benchmark}/test_score'].append(test_score)
-                print('Scores calculated and logged to neptune.') if verbose else None
+                    logging[f'train_score'].append(train_score)
+                    logging[f'test_score'].append(test_score)
+                print('Scores calculated and logged.') if verbose else None
             print('Skipping to next benchmark.') if verbose else None
+
             if config['model'] == 'SklearnGIN':
-                
                 if (out_path / f'{benchmark.lower()}_lgbm_preds.npz').exists():
                     try:
                         lgbm_out = np.load(out_path / f'{benchmark.lower()}_lgbm_preds.npz')['arr_0']
                     except:
                         pass
                 if lgbm_out[-1, -1] == 1:
-                    if neptune_run is not None:
+                    if logging is not None:
+                        logging[f'lgbm_train_score'] = []
+                        logging[f'lgbm_test_score'] = []
                         for idx, (train, test) in enumerate(splits):
                             train_y = df.y[train]
                             test_y = df.y[test]
@@ -399,8 +418,8 @@ def benchmark(config: dict):
                             test_pred = lgbm_out[idx, test]
                             train_score = scorer(train_y, train_pred)
                             test_score = scorer(test_y, test_pred)
-                            neptune_run[f'{benchmark}/lgbm_train_score'].append(train_score)
-                            neptune_run[f'{benchmark}/lgbm_test_score'].append(test_score)
+                            logging[f'lgbm_train_score'].append(train_score)
+                            logging[f'lgbm_test_score'].append(test_score)
                 
             pbar.update(1)
             continue
@@ -454,7 +473,7 @@ def benchmark(config: dict):
                     model=model_class, model_kwargs=model_kwargs, task=df.task,
                     hyperparameters=hyperparameters_running, dataset=dataset,
                     splits=hyperopt_splits, scorer=scorer, direction=direction,
-                    verbose=verbose, neptune_run=neptune_run, name=benchmark,
+                    verbose=verbose, logging=logging, name=f'{benchmark}_hyperopt',
                     seed=seed, average=df.hyperopt_average
                 )
                 best_params, best_trial_num = opt.run(trials=trials)
@@ -468,21 +487,25 @@ def benchmark(config: dict):
 
             else:
                 print('Using default hyperparameters.') if verbose else None
-        if neptune_run is not None:
-            neptune_run[f'{benchmark}/model_kwargs'] = model_kwargs
-            neptune_run[f'{benchmark}/best_trial'] = best_trial_num
+        if logging is not None:
+            logging[f'model_kwargs'] = model_kwargs
+            logging[f'best_trial'] = best_trial_num
+            logging.save()
         kbar = tqdm(total=num_splits, desc=f'Benchmark: {benchmark} | Splits', disable=not verbose)
         for idx, (train, test) in enumerate(splits):
             if idx in complete:
-                if neptune_run is not None:
+                # If the split is already complete, skip to the next split. This allows for resuming from checkpoints.
+                logging[f'train_score'] = []
+                logging[f'test_score'] = []
+                if logging is not None:
                     train_y = df.y[train]
                     test_y = df.y[test]
                     train_pred = out[idx, train]
                     test_pred = out[idx, test]
                     train_score = scorer(train_y, train_pred)
                     test_score = scorer(test_y, test_pred)
-                    neptune_run[f'{benchmark}/train_score'].append(train_score)
-                    neptune_run[f'{benchmark}/test_score'].append(test_score)
+                    logging[f'train_score'].append(train_score)
+                    logging[f'test_score'].append(test_score)
                 kbar.update(1)
                 continue
             print('\n') if verbose == 2 else None
@@ -505,16 +528,11 @@ def benchmark(config: dict):
             print(f'Fitting model...') if verbose else None
             model = model_class(
                 seed=seed, task=df.task,
-                neptune_run=neptune_run,
-                neptune_location=f'{benchmark}',
+                logging=logging,
                 **model_kwargs
             )
             
-            from datetime import datetime
-            start = datetime.now()
             model.fit(train_X, train_y)
-            end = datetime.now()
-            print(f'Time taken to fit: {end - start}') if verbose else None
             print(f'Getting predictions...') if verbose else None
             train_pred = model.predict(train_X)
             out[idx, train] = train_pred
@@ -534,16 +552,17 @@ def benchmark(config: dict):
                 lgbm_test_pred = lgbm_model.predict(test_embeddings)
                 lgbm_out[idx, test] = lgbm_test_pred
 
-            if neptune_run is not None:
+            if logging is not None:
                 test_score = scorer(df.y[test], test_pred)
                 train_score = scorer(df.y[train], train_pred)
-                neptune_run[f'{benchmark}/train_score'].append(train_score)
-                neptune_run[f'{benchmark}/test_score'].append(test_score)
+                logging[f'train_score'].append(train_score)
+                logging[f'test_score'].append(test_score)
                 if config['model'] == 'SklearnGIN':
                     lgbm_test_score = scorer(df.y[test], lgbm_test_pred)
                     lgbm_train_score = scorer(df.y[train], lgbm_train_pred)
-                    neptune_run[f'{benchmark}/lgbm_train_score'].append(lgbm_train_score)
-                    neptune_run[f'{benchmark}/lgbm_test_score'].append(lgbm_test_score)
+                    logging[f'lgbm_train_score'].append(lgbm_train_score)
+                    logging[f'lgbm_test_score'].append(lgbm_test_score)
+                logging.save()
 
             np.savez_compressed(out_path / f'{benchmark.lower()}_preds.npz', out)
             if config['model'] == 'SklearnGIN':
