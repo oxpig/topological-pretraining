@@ -46,11 +46,6 @@ def main():
     config['data'] = Path(args.data)
     config['results'] = Path(args.output)
 
-    if config.get('logging', False):
-        config['logging'] = {}
-    else:
-        config['logging'] = None
-
     config['seed'] = config.get('seed', 42)
 
     if 'verbose' not in config:
