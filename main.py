@@ -2,19 +2,13 @@ import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 import argparse
-from copy import deepcopy
-import neptune
 from pathlib import Path
 import yaml
-from _src import benchmark, preprocess, evaluate, pretrain
+from _src import benchmark, preprocess, pretrain
 
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
-
-NEPTUNE_API_TOKEN = os.getenv("NEPTUNE_API_TOKEN")
-NEPTUNE_PROJECT = os.getenv("NEPTUNE_PROJECT")
 
 parser = argparse.ArgumentParser(description='Topological Pretraining')
 parser.add_argument('--config', '-C', type=str, required=True, help='Path to the config file')
@@ -52,17 +46,10 @@ def main():
     config['data'] = Path(args.data)
     config['results'] = Path(args.output)
 
-    if NEPTUNE_PROJECT is not None and config.get('neptune', False):
-        neptune_run = neptune.init_run(
-            project=NEPTUNE_PROJECT,
-            api_token=NEPTUNE_API_TOKEN,
-            name=f'{process}_{config['name']}',
-        )
-        neptune_run['config'] = deepcopy(config)
-        config['neptune_run'] = neptune_run
-
+    if config.get('logging', False):
+        config['logging'] = {}
     else:
-        config['neptune_run'] = None
+        config['logging'] = None
 
     config['seed'] = config.get('seed', 42)
 
@@ -74,8 +61,6 @@ def main():
         pretrain.pretrain(config=config)
     elif process == 'benchmark':
         benchmark.benchmark(config=config)
-    elif process == 'evaluate':
-        evaluate.evaluate(config=config)
     elif process == 'pretrain_autoencoder':
         pretrain.pretrain_autoencoder(config=config)
     else:
