@@ -1,9 +1,5 @@
-from .bace import BACE
-from .bbbp import BBBP
-from .clintox import ClinTox
 from .esol import ESOL
 from .freesolv import FreeSolv
-from .hiv import HIV
 from .lipo import Lipo
 from .molecule_net import MoleculeNet
 from .muv import (
@@ -14,7 +10,6 @@ from .muv import (
     MUV810, MUV832, MUV846,
     MUV852, MUV858, MUV859,
 )
-from .sider import SIDER
 from .tox21 import (
     Tox21, NR_AR, NR_AR_LBD,
     NR_AhR, NR_Aromatase, NR_ER,
@@ -22,6 +17,5 @@ from .tox21 import (
     SR_ATAD5, SR_HSE, SR_MMP,
     SR_p53
 )
-from .toxcast import ToxCast
 
 

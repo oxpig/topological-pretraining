@@ -4,8 +4,6 @@ from pathlib import Path
 from rdkit import Chem
 import numpy as np
 
-# TODO: Add docstrings
-
 class Tox21(BaseDataFrame):
     url = 'https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/tox21.csv.gz'
 
