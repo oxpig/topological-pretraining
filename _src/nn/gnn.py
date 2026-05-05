@@ -246,7 +246,8 @@ class BaseGNN(torch.nn.Module):
         elif self.graph_pool_type == 'max':
             return pyg.nn.pool.global_max_pool(final_state, batch,)
         elif self.graph_pool_type == 'global_node':
-            assert global_idx is not None, 'Global node index must be provided for global node pooling.'
+            if global_idx is None:
+                 raise ValueError('Global node index must be provided for global node pooling.')
             return final_state[global_idx]
         else:
             raise ValueError(

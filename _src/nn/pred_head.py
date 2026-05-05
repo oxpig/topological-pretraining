@@ -222,10 +222,16 @@ class BinaryHead(PredHead):
             return
         if class_weights.dim() == 2:
             class_weights = class_weights.unsqueeze(1)
-        assert class_weights.dim() == 3, 'Class weights must be a 3D tensor.'
-        assert class_weights.size(0) == 2, 'Class weights must have a value for each class at dim 0, 0 and 1.'
-        assert class_weights.size(1) == 1, 'Class weights must have a dimension at dim 1 of length 1 for repeats.'
-        assert class_weights.size(-1) == self.output_dim, 'Class weights must have a values for each task at dim 2.'
+        if class_weights.dim() != 3:
+                raise ValueError('Class weights must have 2 or 3 dimensions.\
+                If 2 dimensions are provided, they will be unsqueezed to add a dimension for repeats.'
+            )
+        if class_weights.size(0) != 2:
+            raise ValueError('Class weights must have a value for each class at dim 0, 0 and 1.')
+        if class_weights.size(1) != 1:
+            raise ValueError('Class weights must have a dimension at dim 1 of length 1 for repeats.')
+        if class_weights.size(-1) != self.output_dim:
+            raise ValueError('Class weights must have a values for each task at dim 2.')
         self.class_weights = class_weights
 
     @property
@@ -365,7 +371,8 @@ class MultiClassHead(PredHead):
             If None, no class weights will be set. Defaults to None.
         """
         if class_weights is not None:
-            assert len(class_weights) == self.output_dim, 'Class weights must have the same length as the output dimension.'
+            if len(class_weights) != self.output_dim:
+                raise ValueError('Class weights must have the same length as the output dimension.')
             self.class_weights = torch.tensor(class_weights)
         else:
             self.class_weights = torch.ones(size=(self.output_dim,))
@@ -395,6 +402,7 @@ class MultiTaskLoss(torch.nn.Module):
         self.sigmas = torch.nn.Parameter(torch.zeros(self.num_heads))
 
     def forward(self, losses: torch.Tensor):
-        assert losses.size(0) == self.num_heads, 'Number of losses must match the number of heads.'
+        if losses.size(0) != self.num_heads:
+             raise ValueError('Number of losses must match the number of heads.')
         losses = ((1 / (self.is_regression * self.sigmas**2)) * losses + torch.log(self.sigmas))
         return losses.sum()

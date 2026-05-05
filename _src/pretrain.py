@@ -492,7 +492,8 @@ def pretrain_autoencoder(config: dict):
 
     print(f'Looping through splits: {splits}') if verbose else None
     for split in splits:
-        assert split in df.columns, f'{split} not found in dataframe.'
+        if split not in df.columns:
+            raise ValueError(f'{split} not found in dataframe.')
         if len(splits) > 1:
             file_name = f'{name}_{split}.pt'
         else:

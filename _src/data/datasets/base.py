@@ -56,7 +56,8 @@ class BaseDataFrame(pd.DataFrame):
         
         elif csv is None or not os.path.exists(csv):
             # Download the csv file
-            assert url is not None, 'URL must be provided if CSV does not exist'
+            if url is None:
+                raise ValueError('URL must be provided if CSV does not exist')
             print(f'Downloading csv from url...') if verbose else None
             df = pd.read_csv(url)
         else:

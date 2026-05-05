@@ -140,7 +140,10 @@ class MolDataset:
                 raise ValueError(f'Invalid extra transform name: {name}')
             extra_transform = extra_transform_classes[name]
             if name == 'select_k_best':
-                assert 'score_func' in vals, 'score_func must be provided for SelectKBest'
+                if "score_func" not in vals:
+                    raise ValueError('score_func must be provided for SelectKBest.\
+                    See https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.SelectKBest'
+                )
             _extra_transform.append((name, extra_transform(**vals)))
         if len(_extra_transform) > 0:
             self._extra_transform = Pipeline(_extra_transform)

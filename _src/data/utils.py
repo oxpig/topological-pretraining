@@ -49,8 +49,6 @@ def load_dataset(
         "MUV859", "SIDER", "Tox21",
         "ToxCast", "QMugs"
     ]
-    # assert name in available_datasets, f'Invalid dataset name. \
-    #     Must be one of {available_datasets}.'
     print(f'Loading {name}...') if verbose else None
     return dataset_classes[name](
         root=root, compression=compression, verbose=verbose,
@@ -96,8 +94,10 @@ def numpy_to_rdkit(array: np.ndarray):
     out: DataStructs.ExplicitBitVect
         The RDKit explicit bit vector.
     """
-    assert array.ndim == 1, 'Array must be 1D.'
-    assert ((array[0]==0) | (array[0]==1)).all(), 'Array must be binary.'
+    if array.ndim != 1:
+        raise ValueError('Array must be 1D.')
+    if not ((array == 0) | (array == 1)).all():
+        raise ValueError('Array must be binary.')
     out = DataStructs.ExplicitBitVect(len(array))
     indexes = np.where(array)[0].tolist()
     out.SetBitsFromList(indexes)

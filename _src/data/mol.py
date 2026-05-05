@@ -801,7 +801,8 @@ class Standardizer:
                     print(f'None provide at: {idx}') if verb else None
                     out.append(None)
                     continue
-                assert isinstance(m, Chem.Mol), 'Input must be an RDKit molecule.'
+                if not isinstance(m, Chem.Mol):
+                    raise ValueError('Input must be an RDKit molecule.')
                 m = self.standardize(m)
                 out.append(m)
                 self.pbar.update()
@@ -1033,7 +1034,8 @@ class FPOps:
         -------
             np.ndarray: Cluster assignments for each fingerprint.
         """
-        assert threshold >= 0 and threshold <= 1, 'Threshold must be between 0 and 1.'
+        if not (threshold >= 0 and threshold <= 1):
+             raise ValueError('Threshold must be between 0 and 1.')
         distances = 1 - FPOps.pairwise_tanimoto(fps, verbose=verbose)
         distances = distances[np.tril_indices(len(distances), -1)]
         print('Calculating clusters...') if verbose else None

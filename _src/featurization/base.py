@@ -353,7 +353,8 @@ class BaseGraph:
                 'or PyTorch Geometric Data objects.'
             )
         batch = pyg.data.Batch.from_data_list(mols)
-        assert torch.all(batch.raw), 'Data must be raw graphs.'
+        if not torch.all(batch.raw):
+            raise ValueError('All graphs must be raw graphs for resetting node types.')
         x = batch.x
         unique_nodes, counts = torch.unique(x, return_counts=True)
         unique_nodes = unique_nodes[torch.argsort(counts, descending=True)]
@@ -510,7 +511,11 @@ class BaseGraph:
         if isinstance(X, Chem.Mol|pyg.data.Data|None):
             return self.transform(X)
         
-        assert all(isinstance(m, Chem.Mol|pyg.data.Data|None) for m in X)
+        if not all(isinstance(m, Chem.Mol|pyg.data.Data|None) for m in X):
+            raise ValueError(
+                'All elements of the input list must be either RDKit molecules, '
+                'PyTorch Geometric Data objects, or None.'
+            )
 
         out = []
         pbar = tqdm(total=len(X), desc='Generating graphs', disable=not self.verbose)
