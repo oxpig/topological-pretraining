@@ -12,7 +12,7 @@ from sklearn.model_selection._validation import _aggregate_score_dicts
 import torch_geometric as pyg
 import torch
 
-from _src.featurization.pretrained import PreTrainedGNN
+from topological_pretraining.featurization.pretrained import PreTrainedGNN
 
 # graph batching
 def batch_graphs(graphs: list[pyg.data.Data], batch_size: int|None = None):

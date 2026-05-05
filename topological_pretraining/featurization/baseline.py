@@ -1,5 +1,5 @@
-from _src.data.mol import MorganGenerator, SortAndSlice, MolDesc
-from _src.featurization.base import BaseFeaturizer
+from topological_pretraining.data.mol import MorganGenerator, SortAndSlice, MolDesc
+from topological_pretraining.featurization.base import BaseFeaturizer
 
 import numpy as np
 from rdkit import Chem
@@ -41,7 +41,7 @@ class ECFP(BaseFeaturizer):
     transform_kwargs : dict
         Keyword arguments for the MorganGenerator transformation function.
         This can include parameters such as `fpsize` to specify the size of the fingerprint.
-        See `MorganGenerator` in `_src/data/mol.py` for more details.
+        See `MorganGenerator` in `topological_pretraining/data/mol.py` for more details.
     verbose : bool, optional
         If True, the featurizer will print additional information during processing.
     """
@@ -70,7 +70,7 @@ class FCFP(ECFP):
     transform_kwargs : dict
         Keyword arguments for the MorganGenerator transformation function.
         This can include parameters such as `fpsize` to specify the size of the fingerprint.
-        See `MorganGenerator` in `_src/data/mol.py` for more details.
+        See `MorganGenerator` in `topological_pretraining/data/mol.py` for more details.
     verbose : bool, optional
         If True, the featurizer will print additional information during processing.
     """
@@ -95,7 +95,7 @@ class SNS(BaseFeaturizer):
         Keyword arguments for the SortAndSlice transformation function.
         This can include parameters such as the `morgan_kwargs` parameter used to pass additional 
         parameters to the MorganGenerator and `fpsize` to specify the size of the fingerprint.
-        See `SortAndSlice` in `_src/data/mol.py` for more details.
+        See `SortAndSlice` in `topological_pretraining/data/mol.py` for more details.
     verbose : bool, optional
     """
     is_fitted_ = False

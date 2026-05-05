@@ -1,6 +1,6 @@
 from __future__ import annotations
-from _src.featurization import load_featurizer
-from _src.featurization.targets import Targets
+from topological_pretraining.featurization import load_featurizer
+from topological_pretraining.featurization.targets import Targets
 
 from pathlib import Path
 import torch_geometric as pyg
@@ -14,7 +14,7 @@ from typing import Optional, TYPE_CHECKING
 import warnings
 
 if TYPE_CHECKING:
-    from _src.featurization import GraphFeaturizer
+    from topological_pretraining.featurization import GraphFeaturizer
     
 
 class PreFilter:
@@ -83,7 +83,7 @@ class GraphDataset(pyg.data.InMemoryDataset):
         Path to store or retrieve molecular dataset.
     featurizer : GraphFeaturizer
         Featurizer that converts molecules into PyTorch Geometric Data objects.
-        See `_src/featurizers.py` for definition
+        See `topological_pretraining/featurizers.py` for definition
     molecules : Optional[List[rdkit.Chem.Mol]]
         A list of RDKit molecules.
     split : Optional[tuple[str, torch.Tensor]]

@@ -1,7 +1,7 @@
 import torch
 import torch_geometric as pyg
 from typing import Any, List
-from _src.data.datasets import GraphDataset
+from topological_pretraining.data.datasets import GraphDataset
 
 class Collater(pyg.loader.dataloader.Collater):
     """

@@ -5,9 +5,9 @@ from sklearn.model_selection import GroupKFold, StratifiedGroupKFold
 from rdkit import DataStructs
 from tqdm import tqdm
 
-from _src.data.datasets import BaseDataFrame
-from _src.data.utils import load_dataset
-from _src.data.mol import FPOps, Standardizer, MorganGenerator
+from topological_pretraining.data.datasets import BaseDataFrame
+from topological_pretraining.data.utils import load_dataset
+from topological_pretraining.data.mol import FPOps, Standardizer, MorganGenerator
 
 """
 Script for preprocessing data for pretraining models.

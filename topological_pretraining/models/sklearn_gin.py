@@ -1,6 +1,6 @@
 import numpy as np
-from _src.nn import GIN, RegressionHead, BinaryHead
-from _src.logging import Logger
+from topological_pretraining.nn import GIN, RegressionHead, BinaryHead
+from topological_pretraining.logging import Logger
 from sklearn.base import BaseEstimator
 from sklearn.utils.class_weight import compute_class_weight
 

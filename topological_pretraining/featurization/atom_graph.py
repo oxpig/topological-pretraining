@@ -4,8 +4,8 @@ import torch_geometric as pyg
 import numpy as np
 from rdkit import Chem
 
-from _src.featurization.base import BaseGraph, GraphFeaturizer
-from _src.data.encoder import OneHotEncoder
+from topological_pretraining.featurization.base import BaseGraph, GraphFeaturizer
+from topological_pretraining.data.encoder import OneHotEncoder
 
 import torch
 import torch_geometric as pyg

@@ -1,11 +1,11 @@
-from _src.featurization import (
+from topological_pretraining.featurization import (
     BaseFeaturizer,
     ECFP, FCFP, PDV, SNS,
     AtomGraphFeaturizer, MorganGraphFeaturizer,
     AtomFeatureFeaturizer,
     PreTrainedFeaturizer
 )
-from _src.data.feature_selection import CoCorr, SelectAll
+from topological_pretraining.data.feature_selection import CoCorr, SelectAll
 
 from pathlib import Path
 import numpy as np

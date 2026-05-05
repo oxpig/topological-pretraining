@@ -1,13 +1,13 @@
-from _src.nn import get_nn
-from _src.nn.autoencoder import AutoEncoder
-from _src.featurization import get_featurizer
-from _src.data.utils import load_dataset
-from _src.data.datasets import BaseDataFrame
-from _src.data.datasets import GraphDataset
-from _src.data.loader import DataLoader
+from topological_pretraining.nn import get_nn
+from topological_pretraining.nn.autoencoder import AutoEncoder
+from topological_pretraining.featurization import get_featurizer
+from topological_pretraining.data.utils import load_dataset
+from topological_pretraining.data.datasets import BaseDataFrame
+from topological_pretraining.data.datasets import GraphDataset
+from topological_pretraining.data.loader import DataLoader
 
-from _src.nn.pred_head import (BinaryHead, RegressionHead, MultiClassHead, MultiTaskLoss)
-from _src.logging import Logger
+from topological_pretraining.nn.pred_head import (BinaryHead, RegressionHead, MultiClassHead, MultiTaskLoss)
+from topological_pretraining.logging import Logger
 
 from copy import deepcopy
 from pathlib import Path

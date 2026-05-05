@@ -1,5 +1,5 @@
-from _src.nn.mlp import MLP
-from _src.nn.pred_head import BinaryHead, MultiClassHead, RegressionHead
+from topological_pretraining.nn.mlp import MLP
+from topological_pretraining.nn.pred_head import BinaryHead, MultiClassHead, RegressionHead
 
 import torch
 

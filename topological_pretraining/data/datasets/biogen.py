@@ -38,9 +38,9 @@ class Biogen(BaseDataFrame):
         Whether to compress DataFrame when saving.
     verbose : bool
         Boolean for verbosity. Default is `True`.
-    standardizer : _src.data.mol.Standardizer
+    standardizer : topological_pretraining.data.mol.Standardizer
         An object for standardizing dataset molecules.
-        See `_src.data.mol.Standardizer` for default.
+        See `topological_pretraining.data.mol.Standardizer` for default.
 
     Attributes:
     -----------
@@ -118,9 +118,9 @@ class Biogen_Subset(Biogen, BaseDataFrame):
         Whether to compress DataFrame when saving.
     verbose : bool
         Boolean for verbosity. Default is `True`.
-    standardizer : _src.data.mol.Standardizer
+    standardizer : topological_pretraining.data.mol.Standardizer
         An object for standardizing dataset molecules.
-        See `_src.data.mol.Standardizer` for default.
+        See `topological_pretraining.data.mol.Standardizer` for default.
     """
     def __init__(
         self, root: str|None = None, compression: bool = True,

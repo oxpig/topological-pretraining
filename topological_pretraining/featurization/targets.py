@@ -1,5 +1,5 @@
-from _src.featurization import PDV, SNS, ECFP, FCFP
-from _src.featurization import read_from_dict 
+from topological_pretraining.featurization import PDV, SNS, ECFP, FCFP
+from topological_pretraining.featurization import read_from_dict 
 
 from copy import deepcopy
 from rdkit import Chem

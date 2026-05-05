@@ -1,6 +1,6 @@
 from __future__ import annotations
-from _src.data.datasets import __dict__ as dataset_classes
-from _src.data.mol import Standardizer
+from topological_pretraining.data.datasets import __dict__ as dataset_classes
+from topological_pretraining.data.mol import Standardizer
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from _src.data.datasets import BaseDataFrame
+    from topological_pretraining.data.datasets import BaseDataFrame
 
 def load_dataset(
     name: str,

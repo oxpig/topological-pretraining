@@ -1,8 +1,8 @@
-from _src.models import get_model
-from _src.data.utils import load_dataset
-from _src.data.datasets import BaseDataFrame, MolDataset
-from _src.models import LGBM
-from _src.logging import Logger
+from topological_pretraining.models import get_model
+from topological_pretraining.data.utils import load_dataset
+from topological_pretraining.data.datasets import BaseDataFrame, MolDataset
+from topological_pretraining.models import LGBM
+from topological_pretraining.logging import Logger
 
 from copy import deepcopy
 import numpy as np
