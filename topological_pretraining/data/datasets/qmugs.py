@@ -1,8 +1,10 @@
-from .base import BaseDataFrame
-from ..mol import Standardizer
 from pathlib import Path
+
 import pandas as pd
-from tqdm import tqdm
+
+from ..mol import Standardizer
+from .base import BaseDataFrame
+
 
 class QMugs(BaseDataFrame):
     """
@@ -24,7 +26,7 @@ class QMugs(BaseDataFrame):
     compression: bool
         Whether to compress the dataset or not.
         Default is True.
-    
+
     Attributes
     ----------
     root: str
@@ -36,40 +38,47 @@ class QMugs(BaseDataFrame):
     url = "https://libdrive.ethz.ch/index.php/s/X5vOBNSITAG5vzM/download?path=%2F&files=summary.csv"
 
     def __init__(
-        self, root: str|None = None, compression: bool = True,
-        verbose: bool = True, standardizer: Standardizer = Standardizer()
+        self,
+        root: str | None = None,
+        compression: bool = True,
+        verbose: bool = True,
+        standardizer: Standardizer = Standardizer(),
     ):
         """
         Initialize the QMugs dataset.
         """
         # Set the suffix and compression
-        suffix = 'csv.gz' if compression else 'csv'
+        suffix = "csv.gz" if compression else "csv"
 
         # Set the path to the csv file
-        csv = Path(root) / f'qmugs.{suffix}'
+        csv = Path(root) / f"qmugs.{suffix}"
         # Initialize the BaseDataFrame
-        super(QMugs, self).__init__(
-            csv=csv, url=self.url, compression=compression,
-            verbose=verbose, standardizer=standardizer
+        super().__init__(
+            csv=csv,
+            url=self.url,
+            compression=compression,
+            verbose=verbose,
+            standardizer=standardizer,
         )
 
         # obtain canonical smiles from CHEMBL v.27
-        if 'SMILES' not in self.columns:
+        if "SMILES" not in self.columns:
             # Drop all columns except 'chembl_id' and 'smiles'
             self.drop(
-                self.columns.difference(['chembl_id', 'smiles']),
-                axis=1, inplace=True
+                self.columns.difference(["chembl_id", "smiles"]), axis=1, inplace=True
             )
-            
+
             # Keep only one conformer row for each molecule
-            self.drop_duplicates(subset='chembl_id', inplace=True)
+            self.drop_duplicates(subset="chembl_id", inplace=True)
 
             # Download CHEMBL v.27 chemreps file
             chembl_url = "https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_27/chembl_27_chemreps.txt.gz"
-            chemble_v27 = pd.read_csv(chembl_url, sep='\t')
+            chemble_v27 = pd.read_csv(chembl_url, sep="\t")
 
             # Map CHEMBL IDs to canonical SMILES
-            self['SMILES'] = self['chembl_id'].map(chemble_v27.set_index('chembl_id')['canonical_smiles'])
+            self["SMILES"] = self["chembl_id"].map(
+                chemble_v27.set_index("chembl_id")["canonical_smiles"]
+            )
 
             # Drop rows where canonical SMILES are duplicates.
             # This is to account for cases where multiple CHEMBL IDs map to the same
@@ -79,14 +88,11 @@ class QMugs(BaseDataFrame):
             # molecule and not in the other; type of stereochemistry is not specified,
             # hence why the molecules are the same.
             # 32 molecules are removed by this step.
-            self.drop_duplicates(subset='SMILES', inplace=True)
+            self.drop_duplicates(subset="SMILES", inplace=True)
             self.drop(
-                self.columns.difference(['chembl_id', 'SMILES']),
-                axis=1, inplace=True
+                self.columns.difference(["chembl_id", "SMILES"]), axis=1, inplace=True
             )
             self.mol_standardize_check()
             # Reset the index and save the dataset
             self.reset_index(drop=True, inplace=True)
             self.save()
-
-    

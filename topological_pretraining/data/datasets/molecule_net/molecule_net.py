@@ -4,7 +4,6 @@ from .lipo import Lipo
 from .muv import MUV
 from .tox21 import Tox21
 
-from pathlib import Path
 
 class MoleculeNet:
     """
@@ -13,7 +12,7 @@ class MoleculeNet:
     (https://arxiv.org/abs/1703.00564)
 
     Details on reasons for inclusion and exclusion of particular datasets from MoleculeNet
-    in this study are below, along with cautionary notes on the included datasets. 
+    in this study are below, along with cautionary notes on the included datasets.
 
     See: https://practicalcheminformatics.blogspot.com/2023/08/we-need-better-benchmarks-for-machine.html
     Excluded datasets:
@@ -58,15 +57,16 @@ class MoleculeNet:
     -   ESOL. Dataset range is larger than is typical for drug discovery. Can get around this by
         also evaluating on a subset of the test set only within a specific range.
     """
+
     def __init__(self, root: str, compression: bool = True):
         self.root = root
-        self.suffix = 'csv.gz' if compression else 'csv'
+        self.suffix = "csv.gz" if compression else "csv"
         self.compression = compression
 
     @property
     def ESOL(self):
         return ESOL(root=self.root, compression=self.compression)
-    
+
     @property
     def FreeSolv(self):
         return FreeSolv(root=self.root, compression=self.compression)
@@ -74,7 +74,7 @@ class MoleculeNet:
     @property
     def Lipo(self):
         return Lipo(root=self.root, compression=self.compression)
-    
+
     @property
     def MUV(self):
         return MUV(root=self.root, compression=self.compression)

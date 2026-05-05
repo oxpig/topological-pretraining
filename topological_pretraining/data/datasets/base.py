@@ -1,11 +1,12 @@
-import numpy as np
 import os
-import pandas as pd
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 from rdkit import Chem
-from typing import Callable
 
 from ..mol import Standardizer
+
 
 class BaseDataFrame(pd.DataFrame):
     """
@@ -31,16 +32,18 @@ class BaseDataFrame(pd.DataFrame):
     compression: bool
         Whether the saved csv is compressed or not.
     """
+
     # hold molecules in memory if no path given
     _rdkit_mols = None
+
     def __init__(
         self,
-        data: pd.DataFrame|None = None,
-        csv: str|None = None,
-        url: str|None = None,
+        data: pd.DataFrame | None = None,
+        csv: str | None = None,
+        url: str | None = None,
         compression: bool = True,
         verbose: bool = False,
-        standardizer: Standardizer|dict = Standardizer(),
+        standardizer: Standardizer | dict = Standardizer(),
     ):
 
         if isinstance(standardizer, dict):
@@ -48,32 +51,29 @@ class BaseDataFrame(pd.DataFrame):
         standardizer.verbose = verbose
         # Check if csv or url is provided
         if csv is None and url is None and data is None:
-            raise ValueError('Either csv, url, or data must be provided')
-        
+            raise ValueError("Either csv, url, or data must be provided")
+
         if data is not None:
-            print('Setting input data as DataFrame.') if verbose else None
+            print("Setting input data as DataFrame.") if verbose else None
             df = data
-        
+
         elif csv is None or not os.path.exists(csv):
             # Download the csv file
             if url is None:
-                raise ValueError('URL must be provided if CSV does not exist')
-            print(f'Downloading csv from url...') if verbose else None
+                raise ValueError("URL must be provided if CSV does not exist")
+            print("Downloading csv from url...") if verbose else None
             df = pd.read_csv(url)
         else:
-            print(f'Reading csv from path...') if verbose else None
+            print("Reading csv from path...") if verbose else None
             df = pd.read_csv(csv)
 
         if csv is not None and not os.path.exists(csv):
             # Save the csv file
-            print(f'Saving csv to path...') if verbose else None
-            df.to_csv(
-                csv, index=False, compression='infer' if compression else None
-            )
-        
+            print("Saving csv to path...") if verbose else None
+            df.to_csv(csv, index=False, compression="infer" if compression else None)
 
         # Initialize the DataFrame
-        super(BaseDataFrame, self).__init__(data=df)
+        super().__init__(data=df)
         # Set the csv, url, and compression
         self.csv = csv
         self.url = url
@@ -90,8 +90,8 @@ class BaseDataFrame(pd.DataFrame):
             Dataset name
         """
         return self.__class__.__name__
-    
-    def save(self, csv: str|None = None, compression: bool|None = None):
+
+    def save(self, csv: str | None = None, compression: bool | None = None):
         """
         Save the dataset to a csv file.
 
@@ -108,9 +108,7 @@ class BaseDataFrame(pd.DataFrame):
             self.csv = csv
         if self.csv is not None:
             self.to_csv(
-                self.csv,
-                index=False,
-                compression='infer' if self.compression else None
+                self.csv, index=False, compression="infer" if self.compression else None
             )
 
     @property
@@ -119,12 +117,12 @@ class BaseDataFrame(pd.DataFrame):
         Get the task of the dataset as string, e.g., 'regression'.
         """
         raise NotImplementedError
-    
+
     @property
     def rdkit_mols(self):
         """
         Get dataset molecules.
-        Loaded from disk if a path exists, otherwise DataFrame SMILES are converted into RDKit 
+        Loaded from disk if a path exists, otherwise DataFrame SMILES are converted into RDKit
         molecules and standardardized.
 
         By default, sanitization does not occur unless specified in the Standardizer.
@@ -133,7 +131,7 @@ class BaseDataFrame(pd.DataFrame):
         -------
         list[rdkit.Chem.Mol | None]
             A list of rdkit molecule objects.
-        
+
         Raises:
         ------
         ValueError
@@ -141,36 +139,40 @@ class BaseDataFrame(pd.DataFrame):
         """
         if self.mols_path is not None and self.mols_path.exists():
             mols = np.load(file=self.mols_path, allow_pickle=True)
-            mols = mols['arr_0']
+            mols = mols["arr_0"]
             return mols
-    
+
         elif self._rdkit_mols is not None:
             return self._rdkit_mols
 
-        elif 'SMILES' in self.columns:
-            print('Running standardization check of molecules') if self.verbose else None
-            mols = self['SMILES'].values
+        elif "SMILES" in self.columns:
+            print(
+                "Running standardization check of molecules"
+            ) if self.verbose else None
+            mols = self["SMILES"].values
             mols = [Chem.MolFromSmiles(m, sanitize=False) for m in mols]
             mols = self.standardizer(mols)
-            
+
             if self.mols_path is not None:
                 np.savez_compressed(self.mols_path, mols)
             else:
                 self._rdkit_mols = mols
             return mols
         else:
-            raise ValueError('SMILES column not found in the dataset and no saved molecules')
-    
+            raise ValueError(
+                "SMILES column not found in the dataset and no saved molecules"
+            )
+
     def mol_standardize_check(self):
         """
         Adds `rdkit_pass` column of booleans to the DataFrame to indicate whether SMILES pass
         standardization.
         """
-        if 'rdkit_pass' in self.columns:
+        if "rdkit_pass" in self.columns:
             return
         mols = self.rdkit_mols
-        out = np.where(np.array(mols) == None, False, True)
-        self['rdkit_pass'] = out
+        out = np.where(np.array(mols) is None, False, True)
+        self["rdkit_pass"] = out
         self.save()
 
     @property
@@ -189,7 +191,9 @@ class BaseDataFrame(pd.DataFrame):
             return None
         else:
             mols_path = Path(self.csv)
-            mols_path = mols_path.parent / f'{mols_path.stem.split(".")[0]}_molecules.npz'
+            mols_path = (
+                mols_path.parent / f"{mols_path.stem.split('.')[0]}_molecules.npz"
+            )
             return mols_path
 
     @property
@@ -206,13 +210,13 @@ class BaseDataFrame(pd.DataFrame):
         numpy.ndarray
             Test indexes.
         """
-        columns = [col for col in self.columns if 'split' in col]
-        columns = list(sorted(columns, key=lambda x: int(x.split('_')[1])))
+        columns = [col for col in self.columns if "split" in col]
+        columns = list(sorted(columns, key=lambda x: int(x.split("_")[1])))
         for col in columns:
-            if 'split' in col:
+            if "split" in col:
                 col = self.loc[:, col]
-                train = col[col == 'Train'].index.to_numpy()
-                test = col[col == 'Test'].index.to_numpy()
+                train = col[col == "Train"].index.to_numpy()
+                test = col[col == "Test"].index.to_numpy()
                 yield train, test
 
     @property
@@ -225,7 +229,7 @@ class BaseDataFrame(pd.DataFrame):
         int
             The total number of columns containing `split` in their name.
         """
-        return len([col for col in self.columns if 'split' in col])
+        return len([col for col in self.columns if "split" in col])
 
     @property
     def hyperopt_average(self):
@@ -236,8 +240,8 @@ class BaseDataFrame(pd.DataFrame):
         -------
         str
         """
-        return 'mean'
-    
+        return "mean"
+
     @property
     def splits_to_exclude_for_metrics(self):
         """
@@ -250,10 +254,10 @@ class BaseDataFrame(pd.DataFrame):
         numpy.ndarray
             Array of split indices to exclude.
         """
-        split_cols = [col for col in self.columns if 'split' in col]
+        split_cols = [col for col in self.columns if "split" in col]
         exclude = []
         for col in split_cols:
             if self.y[self[col] == "Test"].nunique() == 1:
-                exclude.append(int(col.split('_')[1]))
+                exclude.append(int(col.split("_")[1]))
 
         return np.array(exclude)

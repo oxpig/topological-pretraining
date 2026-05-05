@@ -1,31 +1,36 @@
-from ..base import BaseDataFrame
-from ...mol import Standardizer
 from pathlib import Path
 
+from ...mol import Standardizer
+from ..base import BaseDataFrame
+
+
 class FreeSolv(BaseDataFrame):
-    url = 'https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/SAMPL.csv'
+    url = "https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/SAMPL.csv"
 
     def __init__(
-        self, root: str|None = None, compression: bool = True,
-        verbose: bool = True, standardizer: Standardizer = Standardizer(),
+        self,
+        root: str | None = None,
+        compression: bool = True,
+        verbose: bool = True,
+        standardizer: Standardizer = Standardizer(),
     ):
-        suffix = 'csv.gz' if compression else 'csv'
-        csv = Path(root) / f'freesolv.{suffix}' if root else None
-        super(FreeSolv, self).__init__(
-            csv=csv, url=self.url, compression=compression, verbose=verbose, standardizer=standardizer
+        suffix = "csv.gz" if compression else "csv"
+        csv = Path(root) / f"freesolv.{suffix}" if root else None
+        super().__init__(
+            csv=csv,
+            url=self.url,
+            compression=compression,
+            verbose=verbose,
+            standardizer=standardizer,
         )
-        if 'SMILES' not in self.columns:
-            self.rename(
-                columns={'smiles': 'SMILES', 'expt': 'y'},
-                inplace=True
-            )
+        if "SMILES" not in self.columns:
+            self.rename(columns={"smiles": "SMILES", "expt": "y"}, inplace=True)
             self.drop(
-                self.columns.difference(['SMILES', 'y', 'calc']),
-                axis=1, inplace=True
+                self.columns.difference(["SMILES", "y", "calc"]), axis=1, inplace=True
             )
             self.mol_standardize_check()
             self.save()
 
     @property
     def task(self):
-        return 'regression'
+        return "regression"

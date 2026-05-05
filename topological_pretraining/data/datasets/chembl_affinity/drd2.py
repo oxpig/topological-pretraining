@@ -1,33 +1,39 @@
-from ..base import BaseDataFrame
-from ...mol import Standardizer
-
 from pathlib import Path
+
 import numpy as np
+
+from ...mol import Standardizer
+from ..base import BaseDataFrame
+
 
 class DRD2(BaseDataFrame):
     """
     Dataset of binding affinities of small molecules with Dopamine Receptor D2 (DRD2).
-    Data from ChEMBL, curated by Dablander, M. et al. (2023) 
+    Data from ChEMBL, curated by Dablander, M. et al. (2023)
     (https://doi.org/10.1186/s13321-023-00708-w)
     """
 
-    url = 'https://raw.githubusercontent.com/MarkusFerdinandDablander/QSAR-activity-cliff-experiments/refs/heads/main/data/chembl_dopamine_d2/molecule_data_clean.csv'
+    url = "https://raw.githubusercontent.com/MarkusFerdinandDablander/QSAR-activity-cliff-experiments/refs/heads/main/data/chembl_dopamine_d2/molecule_data_clean.csv"
 
     def __init__(
-        self, root: str|None = None, compression: bool = True,
-        verbose: bool = False, standardizer: Standardizer = Standardizer()
+        self,
+        root: str | None = None,
+        compression: bool = True,
+        verbose: bool = False,
+        standardizer: Standardizer = Standardizer(),
     ):
-        suffix = 'csv.gz' if compression else 'csv'
-        csv = Path(root) / f'drd2.{suffix}' if root else None
-        super(DRD2, self).__init__(
-            csv=csv, url=self.url, compression=compression,
-            verbose=verbose, standardizer=standardizer
+        suffix = "csv.gz" if compression else "csv"
+        csv = Path(root) / f"drd2.{suffix}" if root else None
+        super().__init__(
+            csv=csv,
+            url=self.url,
+            compression=compression,
+            verbose=verbose,
+            standardizer=standardizer,
         )
-        if 'y' not in self.columns:
+        if "y" not in self.columns:
             self.rename(
-                columns={
-                    'Ki [nM]': 'y'
-                },
+                columns={"Ki [nM]": "y"},
                 inplace=True,
             )
             self.y = self.y.apply(lambda x: -np.log10(x) + 9)
@@ -36,4 +42,4 @@ class DRD2(BaseDataFrame):
 
     @property
     def task(self):
-        return 'regression'
+        return "regression"
