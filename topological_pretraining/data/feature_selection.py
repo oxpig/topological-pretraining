@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 
+
 class CoCorr(BaseEstimator, TransformerMixin):
     """
     Fetaure selection based on collinearity.
@@ -19,8 +20,9 @@ class CoCorr(BaseEstimator, TransformerMixin):
     to_keep : list
         The indices of the features to keep.
     """
+
     def __init__(self, threshold: float = 0.9):
-        super(CoCorr, self).__init__()
+        super().__init__()
         self.threshold = threshold
         self.to_keep = []
 
@@ -61,12 +63,14 @@ class CoCorr(BaseEstimator, TransformerMixin):
         """
         return X[:, self.to_keep]
 
-    
+
 class SelectAll(BaseEstimator, TransformerMixin):
     """
     Dummy class to select all features.
     """
+
     named_steps = {}
+
     def fit(self, X: np.ndarray, y: np.ndarray = None):
         return self
 

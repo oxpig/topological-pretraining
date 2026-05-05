@@ -1,7 +1,8 @@
+from typing import Any
+
 import numpy as np
 from sklearn.base import BaseEstimator
 
-from typing import Any
 
 class OneHotEncoder(BaseEstimator):
     """
@@ -11,14 +12,15 @@ class OneHotEncoder(BaseEstimator):
     ----------
     categories: list
         The categories to encode.
-    
+
     Attributes
     ----------
     categories_: list
         The categories used for encoding.
     """
-    def __init__(self, categories: list|None = None):
-        super(OneHotEncoder, self).__init__()
+
+    def __init__(self, categories: list | None = None):
+        super().__init__()
         self.encoder = {}
         self.decoder = {}
         if categories is not None:
@@ -42,16 +44,17 @@ class OneHotEncoder(BaseEstimator):
         for i, j in enumerate(X):
             self.encoder[j] = i
             self.decoder[i] = j
-        self.encoder['UNK'] = len(X)
-        self.decoder[len(X)] = 'UNK'
+        self.encoder["UNK"] = len(X)
+        self.decoder[len(X)] = "UNK"
 
-    def transform(self, X: list[Any]|Any):
+    def transform(self, X: list[Any] | Any):
         if not isinstance(X, list):
             X = [X]
         out = np.zeros((len(X), len(self.encoder)), dtype=int)
         for i, j in enumerate(X):
-            out[i, self.encoder.get(j, self.encoder['UNK'])] = 1
+            out[i, self.encoder.get(j, self.encoder["UNK"])] = 1
         return out
+
     def inverse_transform(self, X):
         out = []
         for i in X:

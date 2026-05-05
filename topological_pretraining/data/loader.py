@@ -1,7 +1,10 @@
+from typing import Any
+
 import torch
 import torch_geometric as pyg
-from typing import Any, List
+
 from topological_pretraining.data.datasets import GraphDataset
+
 
 class Collater(pyg.loader.dataloader.Collater):
     """
@@ -13,30 +16,33 @@ class Collater(pyg.loader.dataloader.Collater):
     Used for the global node embedding in the GraphDataset;
     hyperparameter option for graph pooling type.
     """
-    def __call__(self, batch: List[Any]) -> Any:
-        batch = super(Collater, self).__call__(batch)
-        if 'global_idx' in batch:
+
+    def __call__(self, batch: list[Any]) -> Any:
+        batch = super().__call__(batch)
+        if "global_idx" in batch:
             batch.global_idx[0] -= 1
             batch.global_idx += 1
             batch.global_idx = batch.global_idx.cumsum(0)
         return batch
-    
+
+
 class DataLoader(torch.utils.data.DataLoader):
     """
     DataLoader for the GraphDataset. Same as the default PyG DataLoader,
     but uses the custom Collater for handling global graph nodes.
     """
+
     def __init__(
         self,
         dataset: GraphDataset,
         batch_size: int = 1,
         shuffle: bool = False,
-        follow_batch: List[str]|None = None,
-        exclude_keys: List[str]|None = None,
+        follow_batch: list[str] | None = None,
+        exclude_keys: list[str] | None = None,
         **kwargs,
     ):
         # Remove for PyTorch Lightning:
-        kwargs.pop('collate_fn', None)
+        kwargs.pop("collate_fn", None)
 
         # Save for PyTorch Lightning < 1.6:
         self.follow_batch = follow_batch

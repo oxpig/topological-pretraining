@@ -1,28 +1,30 @@
 import numpy as np
-from rdkit import Chem
+from rdkit import Chem, DataStructs, RDLogger
 from rdkit.Chem import Draw
-from rdkit.Chem.rdFingerprintGenerator import (
-    AdditionalOutput, AtomInvariantsGenerator, BondInvariantsGenerator,
-    GetMorganGenerator
-)
 from rdkit.Chem.MolStandardize import rdMolStandardize
-from rdkit.ML.Descriptors.MoleculeDescriptors import MolecularDescriptorCalculator
-from rdkit import DataStructs
+from rdkit.Chem.rdFingerprintGenerator import (
+    AdditionalOutput,
+    GetMorganGenerator,
+)
 from rdkit.ML.Cluster import Butina
-from rdkit import RDLogger
+from rdkit.ML.Descriptors.MoleculeDescriptors import MolecularDescriptorCalculator
 from tqdm import tqdm
-import warnings
 
-
-RDLogger.DisableLog('rdApp.*')
+RDLogger.DisableLog("rdApp.*")
 default_atom_colors = {
-    'C': (0.7490196078431373, 0.7490196078431373, 0.7490196078431373),
-    'N': (0.0, 0.0, 1.0), 'O': (1.0, 0.0, 0.0), 'F': (0.0, 1.0, 0.0),
-    'Cl': (0.0, 1.0, 1.0), 'Br': (1.0, 0.0, 1.0), 'I': (1.0, 1.0, 0.0),
-    'S': (1.0, 0.6470588235294118, 0.0),
-    'P': (0.5019607843137255, 0.0, 0.5019607843137255), 
-    'H': (1.0, 1.0, 1.0)
+    "C": (0.7490196078431373, 0.7490196078431373, 0.7490196078431373),
+    "N": (0.0, 0.0, 1.0),
+    "O": (1.0, 0.0, 0.0),
+    "F": (0.0, 1.0, 0.0),
+    "Cl": (0.0, 1.0, 1.0),
+    "Br": (1.0, 0.0, 1.0),
+    "I": (1.0, 1.0, 0.0),
+    "S": (1.0, 0.6470588235294118, 0.0),
+    "P": (0.5019607843137255, 0.0, 0.5019607843137255),
+    "H": (1.0, 1.0, 1.0),
 }
+
+
 class MorganGenerator:
     """
     Python wrapper for Morgan fingerprint generator.
@@ -56,6 +58,7 @@ class MorganGenerator:
     verbose : bool, optional
         Whether to print progress. Default is False.
     """
+
     def __init__(
         self,
         radius: int = 2,
@@ -65,12 +68,12 @@ class MorganGenerator:
         bond_types: bool = True,
         non_zero_inv: bool = False,
         rings: bool = True,
-        count_bounds = None,
-        atom_inv = None,
-        bond_inv = None,
+        count_bounds=None,
+        atom_inv=None,
+        bond_inv=None,
         redundant_envs: bool = False,
         asarray: bool = True,
-        verbose: bool = False
+        verbose: bool = False,
     ):
         self.generator = GetMorganGenerator(
             radius=radius,
@@ -83,15 +86,14 @@ class MorganGenerator:
             fpSize=fpsize,
             atomInvariantsGenerator=atom_inv,
             bondInvariantsGenerator=bond_inv,
-            includeRedundantEnvironments=redundant_envs
+            includeRedundantEnvironments=redundant_envs,
         )
         self.asarray = asarray
         self.verbose = verbose
 
-
     def __call__(
-            self, mol: Chem.Mol|list[Chem.Mol]
-        ) -> DataStructs.ExplicitBitVect|np.ndarray:
+        self, mol: Chem.Mol | list[Chem.Mol]
+    ) -> DataStructs.ExplicitBitVect | np.ndarray:
         """
         Generate dense, folded Morgan fingerprints for a molecule or a list of molecules.
 
@@ -113,11 +115,14 @@ class MorganGenerator:
         verbosity = self.verbose if len(mol) > 1 else False
         out = []
         self.pbar = tqdm(
-            total=len(mol), disable=not verbosity,
-            desc='Generating fingerprints'
+            total=len(mol), disable=not verbosity, desc="Generating fingerprints"
         )
         for idx, m in enumerate(mol):
-            m = self.dense(m, array=self.asarray) if m is not None else np.full(self.fpsize, np.nan)
+            m = (
+                self.dense(m, array=self.asarray)
+                if m is not None
+                else np.full(self.fpsize, np.nan)
+            )
             out.append(m)
             self.pbar.update()
         self.pbar.close()
@@ -128,7 +133,7 @@ class MorganGenerator:
 
     def dense(
         self, mol: Chem.Mol, array: bool = False
-    ) -> DataStructs.ExplicitBitVect|np.ndarray:
+    ) -> DataStructs.ExplicitBitVect | np.ndarray:
         """
         Generate a dense Morgan fingerprint for a molecule.
 
@@ -148,7 +153,7 @@ class MorganGenerator:
             return self.generator.GetFingerprintAsNumPy(mol)
         else:
             return self.generator.GetFingerprint(mol)
-              
+
     def sparse(self, mol: Chem.Mol) -> DataStructs.ExplicitBitVect:
         """
         Generate a sparse Morgan fingerprint for a molecule.
@@ -164,7 +169,7 @@ class MorganGenerator:
             The sparse Morgan fingerprint.
         """
         return self.generator.GetSparseFingerprint(mol)
-    
+
     def bitinfo(self, mol: Chem.Mol) -> dict:
         """
         Get hashed identifiers mapped to atom indices and radii.
@@ -184,8 +189,11 @@ class MorganGenerator:
         ao.AllocateBitInfoMap()
         self.generator.GetSparseFingerprint(mol, additionalOutput=ao)
         return ao.GetBitInfoMap()
-    
-    def environments(self, mol: Chem.Mol, ) -> dict:
+
+    def environments(
+        self,
+        mol: Chem.Mol,
+    ) -> dict:
         """
         Get array of hashed substructure identifiers mapped to atom indices and radii.
 
@@ -193,7 +201,7 @@ class MorganGenerator:
         ----------
         mol : rdkit.Chem.rdchem.Mol
             The molecule.
-        
+
         Returns:
         -------
         np.ndarray
@@ -204,9 +212,9 @@ class MorganGenerator:
         bitmap = self.bitinfo(mol)
         out = np.zeros((mol.GetNumAtoms(), self.radius + 1))
         for bit, info in bitmap.items():
-            for (atom, r) in info:
+            for atom, r in info:
                 out[atom, r] = bit
-        
+
         inci = get_incidence(mol, radius=self.radius)
 
         # Fill in missing environments for atoms with duplicate environments.
@@ -214,9 +222,9 @@ class MorganGenerator:
         # assigns duplicate environments with different central atoms with different identifiers.
         missing_envs = np.vstack(np.where(out == 0)).T
         if len(missing_envs) > 0:
-            for (atom, radius) in missing_envs:
+            for atom, radius in missing_envs:
                 env = inci[radius, atom, :]
-                radii, atoms = np.where((np.all(inci == env, axis=-1)))
+                radii, atoms = np.where(np.all(inci == env, axis=-1))
                 env_matches = out[(atoms, radii)]
                 env_matches = env_matches[np.where(env_matches != 0)]
                 out[atom, radius] = env_matches[0] if len(env_matches) > 0 else 0
@@ -227,14 +235,14 @@ class MorganGenerator:
     def radius(self) -> int:
         """
         Get the maximum circular radius of the Morgan fingerprint generator.
-        
+
         Returns:
         -------
         int
             The maximum circular radius of the Morgan fingerprint generator.
         """
         return self.generator.GetOptions().radius
-    
+
     @radius.setter
     def radius(self, value: int):
         """
@@ -258,7 +266,7 @@ class MorganGenerator:
             The dense fingerprint size output by the Morgan fingerprint generator.
         """
         return self.generator.GetOptions().fpSize
-    
+
     @fpsize.setter
     def fpsize(self, value: int):
         """
@@ -282,7 +290,7 @@ class MorganGenerator:
             True if chirality is included, False otherwise.
         """
         return self.generator.GetOptions().includeChirality
-    
+
     @chirality.setter
     def chirality(self, value: bool):
         """
@@ -306,7 +314,7 @@ class MorganGenerator:
             True if redundant environments are included, False otherwise.
         """
         return self.generator.GetOptions().includeRedundantEnvironments
-    
+
     @redundant_envs.setter
     def redundant_envs(self, value: bool):
         """
@@ -330,7 +338,7 @@ class MorganGenerator:
             True if count simulation is used, False otherwise.
         """
         return self.generator.GetOptions().countSimulation
-    
+
     @counts.setter
     def counts(self, value: bool):
         """
@@ -342,6 +350,7 @@ class MorganGenerator:
             True to use count simulation, False to not use it.
         """
         self.generator.GetOptions().countSimulation = value
+
 
 class SortAndSlice:
     """
@@ -384,6 +393,7 @@ class SortAndSlice:
     >>> sas = SortAndSlice(molecules, generator, fpsize=128)
     >>> encoded_moleculess = sas(molecules)
     """
+
     def __init__(
         self,
         generator: MorganGenerator,
@@ -391,8 +401,8 @@ class SortAndSlice:
         fpsize: int = None,
         save_img: bool = False,
         central_atom_colors: dict = default_atom_colors,
-        ring_color: tuple[float] = (1,1,1),
-        aromatic_color: tuple[float] = (1,1,1),
+        ring_color: tuple[float] = (1, 1, 1),
+        aromatic_color: tuple[float] = (1, 1, 1),
         extra_color: tuple[float] = (0.6, 0.6, 0.6),
         verbose: bool = False,
     ):
@@ -420,7 +430,7 @@ class SortAndSlice:
         Parameters:
         ----------
         mol : Chem.Mol|np.ndarray
-            RDKit molecule or an array of pre-computed environments with shape 
+            RDKit molecule or an array of pre-computed environments with shape
             (number of atoms, max radius).
         """
         if mol is None:
@@ -432,50 +442,52 @@ class SortAndSlice:
             radius = self.generator.radius
             envs = self.generator.environments(mol)
         else:
-            raise ValueError('Input must be a RDKit molecule or an envs array.')
+            raise ValueError("Input must be a RDKit molecule or an envs array.")
 
-        if self.save_img: 
+        if self.save_img:
             bit_info = self.generator.bitinfo(mol)
-        else: 
+        else:
             bit_info = None
 
         starter = {r: 0 for r in range(radius + 1)}
-        starter['num_mols'] = 0
-        starter['count'] = 0
+        starter["num_mols"] = 0
+        starter["count"] = 0
         done = {}
         for r in range(radius + 1):
-            identifiers, counts = np.unique(envs[:,r], return_counts=True)
+            identifiers, counts = np.unique(envs[:, r], return_counts=True)
             for j in range(len(identifiers)):
                 id = int(identifiers[j])
                 count = int(counts[j])
                 value = self.identifiers.get(id, starter.copy())
-                value['count'] += count
+                value["count"] += count
                 value[r] += count
                 if id not in done:
-                    value['num_mols'] += 1
+                    value["num_mols"] += 1
                     if self.save_img:
-                        atom = mol.GetAtomWithIdx(
-                            bit_info[id][0][0]
-                        )
-                        value['central_atom'] = atom.GetSymbol()
-                        value['img'] = Draw.DrawMorganBit(
-                            mol, bitId=id, bitInfo=bit_info,
+                        atom = mol.GetAtomWithIdx(bit_info[id][0][0])
+                        value["central_atom"] = atom.GetSymbol()
+                        value["img"] = Draw.DrawMorganBit(
+                            mol,
+                            bitId=id,
+                            bitInfo=bit_info,
                             extraColor=self.extra_color,
-                            centerColor=self.atom_colors.get(value['central_atom'], (1,1,1)),
-                            aromaticColor=self.aromatic_color, 
+                            centerColor=self.atom_colors.get(
+                                value["central_atom"], (1, 1, 1)
+                            ),
+                            aromaticColor=self.aromatic_color,
                             ringColor=self.ring_color,
                         )
-                        
+
                         value["aromatic"] = atom.GetIsAromatic()
                         value["ring"] = atom.IsInRing()
-                        
+
                     done[id] = True
                 self.identifiers[id] = value
 
-    def update(self, molecules: list[Chem.Mol|np.ndarray]):
+    def update(self, molecules: list[Chem.Mol | np.ndarray]):
         """
         Adds indentifiers from a list of molecules.
-        
+
         Parameters:
         ----------
         molecules : list[Chem.Mol]
@@ -486,14 +498,18 @@ class SortAndSlice:
         identifiers : dict[str, int]
             Dictionary of identifiers and their counts.
         """
-        self.pbar = tqdm(total=len(molecules), desc='Collecting identifiers', disable=not self.verbose)
+        self.pbar = tqdm(
+            total=len(molecules),
+            desc="Collecting identifiers",
+            disable=not self.verbose,
+        )
         for mol in molecules:
             self.append(mol)
             self.pbar.update(1)
         self.pbar.close()
         self.pbar = None
 
-    def sort(self, key_order = ('num_mols', 'count')):
+    def sort(self, key_order=("num_mols", "count")):
         """
         Sorts the identifiers by the number of molecules they appear in and their total count.
 
@@ -502,14 +518,18 @@ class SortAndSlice:
         key_order : tuple[str, str]
             Tuple of keys to sort by. Default is ('num_mols', 'count').
             The first key is the primary sort key, the second is the secondary sort key.
-            `num_mols` is the number of molecules the identifier appears in, 
+            `num_mols` is the number of molecules the identifier appears in,
             and `count` is the total count of the identifier.
-        """                
-        self.identifiers = dict(sorted(
-            self.identifiers.items(), key=lambda x: (x[1][key_order[0]], x[1][key_order[1]]), reverse=True,
-        ))
+        """
+        self.identifiers = dict(
+            sorted(
+                self.identifiers.items(),
+                key=lambda x: (x[1][key_order[0]], x[1][key_order[1]]),
+                reverse=True,
+            )
+        )
 
-    def slice(self, fpsize: int|None = None):
+    def slice(self, fpsize: int | None = None):
         """
         Slices substructure identifiers to a specific length enumerates them.
         Sets the encoder attribute to the enumerated identifiers.
@@ -529,7 +549,7 @@ class SortAndSlice:
                 self.fpsize = len(self.identifiers)
             fpsize = self.fpsize
         if self.verbose:
-            print(f'Attempting to set bit length of encoder to a max of {fpsize}.')
+            print(f"Attempting to set bit length of encoder to a max of {fpsize}.")
         encoder = {}
         decoder = {}
         count = 0
@@ -545,13 +565,13 @@ class SortAndSlice:
         if len(encoder) < fpsize:
             if self.verbose:
                 print(
-                    f'Fewer observed substructures than fpsize.\nEncoder is only {len(encoder)} bits long.'
+                    f"Fewer observed substructures than fpsize.\nEncoder is only {len(encoder)} bits long."
                 )
 
         if self.verbose:
-            print(f'Encoder set to {len(encoder)} bits.')
+            print(f"Encoder set to {len(encoder)} bits.")
 
-    def encode(self, mol: Chem.Mol|np.ndarray) -> np.ndarray:
+    def encode(self, mol: Chem.Mol | np.ndarray) -> np.ndarray:
         """
         Encodes a molecule into a binary sort and slice vector.
 
@@ -572,13 +592,13 @@ class SortAndSlice:
         elif isinstance(mol, Chem.Mol):
             bitmap = self.generator.bitinfo(mol)
         else:
-            raise ValueError('Input must be a RDKit molecule or an envs array.')
+            raise ValueError("Input must be a RDKit molecule or an envs array.")
         for identifier in bitmap:
             if identifier in self.encoder:
                 out[self.encoder[identifier]] = 1
         return out
 
-    def __call__(self, molecules: list[Chem.Mol]|Chem.Mol) -> np.ndarray:
+    def __call__(self, molecules: list[Chem.Mol] | Chem.Mol) -> np.ndarray:
         """
         Encodes a list of molecules into a binary sort and slice matrix.
 
@@ -596,15 +616,15 @@ class SortAndSlice:
         if molecules is None:
             return None
         if self.encoder is None:
-            print('No encoder found, updating identifiers and slicing.') if self.verbose else None
+            print(
+                "No encoder found, updating identifiers and slicing."
+            ) if self.verbose else None
             self.update(molecules)
             self.slice()
         if isinstance(molecules, Chem.Mol):
             molecules = [molecules]
         self.pbar = tqdm(
-            total=len(molecules),
-            desc='Encoding molecules',
-            disable=not self.verbose
+            total=len(molecules), desc="Encoding molecules", disable=not self.verbose
         )
         out = np.zeros((len(molecules), len(self.encoder)))
         for i, mol in enumerate(molecules):
@@ -613,22 +633,22 @@ class SortAndSlice:
         self.pbar.close()
         self.pbar = None
         return out
-    
+
     def __repr__(self) -> str:
-        return f'SortAndSlice(num_envs={len(self.identifiers)}, fpsize={len(self.encoder)})'
-    
+        return f"SortAndSlice(num_envs={len(self.identifiers)}, fpsize={len(self.encoder)})"
+
     def __str__(self) -> str:
         return self.__repr__()
-    
+
     def __getitem__(self, item):
         return self.identifiers[item]
-    
+
     def get(self, key, default=None):
         return self.identifiers.get(key, default)
-    
+
     def items(self):
         return self.identifiers.items()
-    
+
     def keys(self) -> list:
         """
         Returns:
@@ -637,7 +657,7 @@ class SortAndSlice:
             Substructure identifiers.
         """
         return self.identifiers.keys()
-    
+
     def values(self) -> list:
         """
         Returns:
@@ -646,13 +666,14 @@ class SortAndSlice:
             Identifier values, which are dictionaries containing counts and other properties.
         """
         return self.identifiers.values()
-    
+
     def clear(self):
         """
         Resets the identifiers and encoder attributes to empty dictionaries.
         """
         self.identifiers = {}
         self.encoder = None
+
 
 class MolDesc:
     def __init__(self, descriptors: list[str], verbose: bool = False, **kwargs):
@@ -666,13 +687,13 @@ class MolDesc:
     def __len__(self):
         return len(self.generator.GetDescriptorNames())
 
-    def __call__(self, X: Chem.Mol|list[Chem.Mol]) -> np.ndarray:
+    def __call__(self, X: Chem.Mol | list[Chem.Mol]) -> np.ndarray:
         if isinstance(X, Chem.Mol):
             X = [X]
         out = np.full((len(X), len(self)), np.nan)
 
         self.pbar = tqdm(
-            total=len(X), desc='Calculating Descriptors', disable=not self.verbose
+            total=len(X), desc="Calculating Descriptors", disable=not self.verbose
         )
         for idx, mol in enumerate(X):
             if isinstance(mol, Chem.Mol):
@@ -681,6 +702,7 @@ class MolDesc:
         self.pbar.close()
         self.pbar = None
         return out
+
 
 class Standardizer:
     """
@@ -713,6 +735,7 @@ class Standardizer:
         >>> standardizer = Standardizer()
         >>> mol = standardizer(mol)
     """
+
     def __init__(
         self,
         sanitize: bool = True,
@@ -723,7 +746,7 @@ class Standardizer:
         canonical_tautomer: bool = True,
         keep_chirality: bool = True,
         verbose: bool = False,
-        break_at_none: bool = False
+        break_at_none: bool = False,
     ):
         self.sanitize = sanitize
         self.cleanup = cleanup
@@ -747,7 +770,7 @@ class Standardizer:
         -------
             Chem.Mol: Standardized RDKit molecule.
         """
-        print('Running standardizer') if self.verbose else None
+        print("Running standardizer") if self.verbose else None
         try:
             mol.UpdatePropertyCache()
             if self.sanitize:
@@ -758,23 +781,23 @@ class Standardizer:
 
             if self.fragment_parent:
                 mol = self.run_fragment_parent(mol)
-            
+
             if self.neutralize:
                 mol = self.run_neutralize(mol)
 
             if self.reionize:
                 self.run_reionize(mol)
-            
+
             if self.canonical_tautomer:
                 mol = self.run_canonical_tautomer(mol)
-            
+
             mol.UpdatePropertyCache()
             return mol
         except Exception as e:
-            print(f'Error standardizing molecule: {e}')
+            print(f"Error standardizing molecule: {e}")
             return None
-        
-    def __call__(self, mol: Chem.Mol|list[Chem.Mol]) -> Chem.Mol:
+
+    def __call__(self, mol: Chem.Mol | list[Chem.Mol]) -> Chem.Mol:
         """
         Standardizes a molecule.
 
@@ -786,26 +809,26 @@ class Standardizer:
         -------
             Chem.Mol: Standardized RDKit molecule.
         """
-        print(f'Standardizer: {self}') if self.verbose else None
+        print(f"Standardizer: {self}") if self.verbose else None
         if isinstance(mol, Chem.Mol):
             return self.standardize(mol)
         elif isinstance(mol, list):
             verb = self.verbose
             self.verbose = False
             out = []
-            self.pbar = tqdm(mol, disable=not verb, desc='Standardizing molecules')
+            self.pbar = tqdm(mol, disable=not verb, desc="Standardizing molecules")
             for idx, m in enumerate(mol):
                 if m is None:
-                    print(f'None provide at: {idx}') if verb else None
+                    print(f"None provide at: {idx}") if verb else None
                     out.append(None)
                     continue
                 if not isinstance(m, Chem.Mol):
-                    raise ValueError('Input must be an RDKit molecule.')
+                    raise ValueError("Input must be an RDKit molecule.")
                 m = self.standardize(m)
                 out.append(m)
                 self.pbar.update()
                 if self.break_at_none and m is None:
-                    print(f'Failed at: {idx}') if verb else None
+                    print(f"Failed at: {idx}") if verb else None
                     break
             self.pbar.close()
             self.pbar = None
@@ -813,25 +836,25 @@ class Standardizer:
             return out
         else:
             raise ValueError(
-                'Input must be a RDKit molecule or a list of RDKit molecules.'
+                "Input must be a RDKit molecule or a list of RDKit molecules."
             )
-        
+
     @property
     def settings(self):
         return {
-            'sanitize': self.sanitize,
-            'cleanup': self.cleanup,
-            'fragment_parent': self.fragment_parent,
-            'neutralize': self.neutralize,
-            'reionize': self.reionize,
-            'canonical_tautomer': self.canonical_tautomer,
-            'tautomer_keep_chirality': self.tautomer_keep_chirality
+            "sanitize": self.sanitize,
+            "cleanup": self.cleanup,
+            "fragment_parent": self.fragment_parent,
+            "neutralize": self.neutralize,
+            "reionize": self.reionize,
+            "canonical_tautomer": self.canonical_tautomer,
+            "tautomer_keep_chirality": self.tautomer_keep_chirality,
         }
-    
+
     def __repr__(self):
-        settings = [f'{k}={v}' for k, v in self.settings.items()]
-        settings = ', '.join(settings)
-        return f'Standardizer({settings})'
+        settings = [f"{k}={v}" for k, v in self.settings.items()]
+        settings = ", ".join(settings)
+        return f"Standardizer({settings})"
 
     def run_sanitize(self, mol: Chem.Mol) -> Chem.Mol:
         """
@@ -880,7 +903,7 @@ class Standardizer:
         """
         uncharger = rdMolStandardize.Uncharger()
         return uncharger.uncharge(mol)
-    
+
     def run_canonical_tautomer(self, mol: Chem.Mol) -> Chem.Mol:
         """
         Canonicalizes tautomers.
@@ -924,15 +947,18 @@ class Standardizer:
             "canonical_tautomer": self.canonical_tautomer,
             "keep_chirality": self.tautomer_keep_chirality,
             "verbose": self.verbose,
-            "break_at_none": self.break_at_none
+            "break_at_none": self.break_at_none,
         }
+
 
 class FPOps:
     """
     Functions that operate on Morgan fingerprints.
     """
 
-    def tanimoto(fp1: DataStructs.ExplicitBitVect, fp2: DataStructs.ExplicitBitVect) -> float:
+    def tanimoto(
+        fp1: DataStructs.ExplicitBitVect, fp2: DataStructs.ExplicitBitVect
+    ) -> float:
         """
         Calculates the Tanimoto similarity between two fingerprints.
 
@@ -946,10 +972,9 @@ class FPOps:
             float: Tanimoto similarity.
         """
         return DataStructs.TanimotoSimilarity(fp1, fp2)
-    
+
     def bulk_tanimoto(
-        fp: DataStructs.ExplicitBitVect,
-        fp_list: list[DataStructs.ExplicitBitVect]
+        fp: DataStructs.ExplicitBitVect, fp_list: list[DataStructs.ExplicitBitVect]
     ):
         """
         Calculates the Tanimoto similarity between a fingerprint and a list of
@@ -966,7 +991,7 @@ class FPOps:
             fingerprints.
         """
         return DataStructs.BulkTanimotoSimilarity(fp, fp_list)
-    
+
     def list_tanimoto(
         fps1: list[DataStructs.ExplicitBitVect],
         fps2: list[DataStructs.ExplicitBitVect],
@@ -987,10 +1012,9 @@ class FPOps:
         for i, fp1 in enumerate(fps1):
             similarities[i] = DataStructs.BulkTanimotoSimilarity(fp1, fps2)
         return similarities
-    
+
     def pairwise_tanimoto(
-        fps: list[DataStructs.ExplicitBitVect],
-        verbose: bool = False
+        fps: list[DataStructs.ExplicitBitVect], verbose: bool = False
     ):
         """
         Calculates the pairwise Tanimoto similarity within a list of fingerprints.
@@ -998,15 +1022,16 @@ class FPOps:
         Parameters:
         ----------
             fps (list[DataStructs.ExplicitBitVect],): List of fingerprints.
-        
+
         Returns:
         -------
             np.ndarray: Pairwise Tanimoto similarities. Dims = len(fps) x len(fps).
         """
         similarities = np.zeros((len(fps), len(fps)))
         pbar = tqdm(
-            total=len(fps), disable=not verbose,
-            desc='Calculating Tanimoto similarities'
+            total=len(fps),
+            disable=not verbose,
+            desc="Calculating Tanimoto similarities",
         )
         for i in range(len(fps)):
             sims = DataStructs.BulkTanimotoSimilarity(fps[i], fps[:i])
@@ -1014,7 +1039,7 @@ class FPOps:
             pbar.update(1)
         pbar.close()
         return similarities
-    
+
     def butina(
         fps: list[DataStructs.ExplicitBitVect],
         threshold: float = 0.65,
@@ -1033,19 +1058,22 @@ class FPOps:
             np.ndarray: Cluster assignments for each fingerprint.
         """
         if not (threshold >= 0 and threshold <= 1):
-             raise ValueError('Threshold must be between 0 and 1.')
+            raise ValueError("Threshold must be between 0 and 1.")
         distances = 1 - FPOps.pairwise_tanimoto(fps, verbose=verbose)
         distances = distances[np.tril_indices(len(distances), -1)]
-        print('Calculating clusters...') if verbose else None
-        clusters = Butina.ClusterData(distances, distThresh=threshold, isDistData=True, nPts=len(fps))
-        
+        print("Calculating clusters...") if verbose else None
+        clusters = Butina.ClusterData(
+            distances, distThresh=threshold, isDistData=True, nPts=len(fps)
+        )
+
         molecule_clusters = np.zeros(len(fps), dtype=int)
         for i, cluster in enumerate(clusters):
             for j in cluster:
                 molecule_clusters[j] = i
 
         return molecule_clusters
-    
+
+
 def get_incidence(mol: Chem.Mol, radius: int = 2) -> np.ndarray:
     """
     Get the incidence array of a molecule.
@@ -1055,7 +1083,7 @@ def get_incidence(mol: Chem.Mol, radius: int = 2) -> np.ndarray:
     ----------
         mol (Chem.Mol): RDKit molecule.
         radius (int): Radius of the incidence array.
-    
+
     Returns:
     -------
         np.ndarray: Incidence array. Dims = radius x num_atoms x num_atoms.
@@ -1082,9 +1110,7 @@ def get_incidence(mol: Chem.Mol, radius: int = 2) -> np.ndarray:
         pow_adj = np.linalg.matrix_power(adjacency, r)
         to_add = pow_adj + to_add
         inc = np.concatenate([inc, np.expand_dims(to_add, axis=0)], axis=0)
-        if r == radius:
-            break
-        elif radius == -1 and np.all(to_add > 0):
+        if r == radius or radius == -1 and np.all(to_add > 0):
             break
         else:
             r += 1
@@ -1092,4 +1118,3 @@ def get_incidence(mol: Chem.Mol, radius: int = 2) -> np.ndarray:
 
     inc = np.where(inc > 0, 1, 0)
     return inc
-
