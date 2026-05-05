@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "topological-pretraining"
+version = "1.0.0"
+requires-python = "==3.12.*"
+description = "Python code for experiments on pre-training graph isomorphism networks with ECFPs to improve QSAR prediction."
+readme = "README.md"
+license = { text = "BSD-3-Clause" }
+authors = [{ name = "Sam Money-Kyrle" }]
+classifiers = [
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: BSD License",
+  "Private :: Do Not Upload",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Chemistry",
+]
+urls = { Repository = "https://github.com/oxpig/topological-pretraining" }
+dependencies = [
+  "rdkit==2024.09.3",
+  "pyyaml",
+  "scikit-learn==1.6.0",
+  "tqdm",
+  "python-dotenv",
+  "optuna==4.2.1",
+  "torch==2.5.1",
+  "torcheval==0.0.7",
+  "torch_geometric==2.6.1",
+  "lightgbm==4.6.0"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["topological_pretraining"]
