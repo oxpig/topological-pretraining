@@ -1,5 +1,4 @@
 import numpy as np
-from matplotlib import colors as mpl_colors
 from rdkit import Chem
 from rdkit.Chem import Draw
 from rdkit.Chem.rdFingerprintGenerator import (
@@ -17,14 +16,13 @@ import warnings
 
 RDLogger.DisableLog('rdApp.*')
 default_atom_colors = {
-    'C': '#BFBFBF', 'N': '#0000FF', 'O': '#FF0000',
-    'F': '#00FF00', 'Cl': '#00FFFF', 'Br': '#FF00FF',
-    'I': '#FFFF00', 'S': '#FFA500', 'P': '#800080',
+    'C': (0.7490196078431373, 0.7490196078431373, 0.7490196078431373),
+    'N': (0.0, 0.0, 1.0), 'O': (1.0, 0.0, 0.0), 'F': (0.0, 1.0, 0.0),
+    'Cl': (0.0, 1.0, 1.0), 'Br': (1.0, 0.0, 1.0), 'I': (1.0, 1.0, 0.0),
+    'S': (1.0, 0.6470588235294118, 0.0),
+    'P': (0.5019607843137255, 0.0, 0.5019607843137255), 
+    'H': (1.0, 1.0, 1.0)
 }
-for atom, color in default_atom_colors.items():
-    default_atom_colors[atom] = mpl_colors.to_rgb(color)
-default_atom_colors['H'] = (1,1,1)
-
 class MorganGenerator:
     """
     Python wrapper for Morgan fingerprint generator.
