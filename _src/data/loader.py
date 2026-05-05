@@ -10,6 +10,8 @@ class Collater(pyg.loader.dataloader.Collater):
 
     The global index is a tensor that contains the indexes for the
     global node embeddings for each graph in the batch.
+    Used for the global node embedding in the GraphDataset;
+    hyperparameter option for graph pooling type.
     """
     def __call__(self, batch: List[Any]) -> Any:
         batch = super(Collater, self).__call__(batch)
