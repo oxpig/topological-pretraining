@@ -473,6 +473,40 @@ class PreTrainedFeaturizer(BaseFeaturizer):
     is_fitted_ = True
     precomputed = True
 
+    def __init__(
+        self,
+        path: str | None = None,
+        params: dict | None = None,
+        asarray: bool = True,
+        device: str = None,
+        **kwargs,
+    ):
+        model_arch = (
+            torch.load(path, weights_only=True, map_location="cpu")
+            .get("main", {})
+            .get("cls", "")
+        )
+        gnn = "gin" in model_arch.lower()
+        transform_kwargs = {
+            "path": path,
+            "params": params,
+            "asarray": asarray,
+            "device": device,
+            "gnn": gnn,
+            **kwargs,
+        }
+        super().__init__(transform_kwargs=transform_kwargs)
+
+    @property
+    def _html_repr(self):
+        return f"<div><h3>PreTrainedFeaturizer</h3><p>Model architecture: {self.transform.model_cls}</p></div>"
+
+    def __repr__(self):
+        return f"PreTrainedFeaturizer(\ntransform={self.transform}\n)"
+
+    def get_params(self, deep=True):
+        return self.transform_kwargs
+
     def _transform_base(self, **kwargs):
         """
         Set the transformation function for the featurizer.
