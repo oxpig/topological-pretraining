@@ -1,29 +1,30 @@
-from joblib import Parallel, delayed
-import numpy as np
 import traceback
-from typing import Union
 
+import numpy as np
+import torch
+import torch_geometric as pyg
+from joblib import Parallel, delayed
 from sklearn.inspection._permutation_importance import (
-    _create_importances_bunch, _weights_scorer
+    _create_importances_bunch,
+    _weights_scorer,
 )
 from sklearn.metrics import check_scoring
 from sklearn.metrics._scorer import _MultimetricScorer
 from sklearn.model_selection._validation import _aggregate_score_dicts
-import torch_geometric as pyg
-import torch
 
 from topological_pretraining.featurization.pretrained import PreTrainedGNN
 
+
 # graph batching
-def batch_graphs(graphs: list[pyg.data.Data], batch_size: int|None = None):
+def batch_graphs(graphs: list[pyg.data.Data], batch_size: int | None = None):
     """
     Batches a list of PyTorch Geometric Data objects into a single batch.
-    
+
     Parameters:
     ----------
     graphs : list[pyg.data.Data]
         A list of PyTorch Geometric Data objects representing individual graphs.
-        
+
     Returns:
     -------
     pyg.data.Batch
@@ -31,7 +32,7 @@ def batch_graphs(graphs: list[pyg.data.Data], batch_size: int|None = None):
     """
     if batch_size is not None:
         batches = [
-            pyg.data.Batch.from_data_list(graphs[i:i + batch_size]) 
+            pyg.data.Batch.from_data_list(graphs[i : i + batch_size])
             for i in range(0, len(graphs), batch_size)
         ]
         return batches
@@ -55,6 +56,7 @@ def get_permutations(dim, repeats=5, random_state=42):
         out[i] = torch.randperm(dim, generator=generator)
     return out
 
+
 # permute embeddings occurrences of a token
 def permute_graph(graph, token_idx, random_idx, perm_type="dist", seed=42):
     """
@@ -71,7 +73,7 @@ def permute_graph(graph, token_idx, random_idx, perm_type="dist", seed=42):
     perm_type : str, optional
         The type of permutation to apply. Options are "single" for single token permutation
         and "dist" for distributed permutation across multiple tokens (default is "dist").
-        The "single" type permutes at max one token at a time per graph, 
+        The "single" type permutes at max one token at a time per graph,
         while "dist" permutes across all tokens by distributing the random indices over the graph.
 
     Returns:
@@ -79,7 +81,7 @@ def permute_graph(graph, token_idx, random_idx, perm_type="dist", seed=42):
     pyg.data.Data
         A new graph data object with the permuted embeddings for the specified token.
     """
-    token_mask = (graph.tokens == token_idx)
+    token_mask = graph.tokens == token_idx
     token_indices = torch.nonzero(token_mask, as_tuple=False)
 
     if token_indices.dim() > 0 and token_indices.size(0) > 0:
@@ -93,7 +95,7 @@ def permute_graph(graph, token_idx, random_idx, perm_type="dist", seed=42):
 def _apply_single_permutation(graph, token_indices, random_idx, seed=42):
     """
     Applies a single permutation to the embeddings of a randomly selected token.
-    
+
     Parameters:
     ----------
     graph : pyg.data.Data
@@ -135,13 +137,17 @@ def _apply_distributed_permutation(graph, token_indices, random_idx, seed=42):
     """
     generator = torch.Generator().manual_seed(seed)
     n_chunks = len(token_indices)
-    token_indices = token_indices[torch.randperm(token_indices.size(0), generator=generator)]
+    token_indices = token_indices[
+        torch.randperm(token_indices.size(0), generator=generator)
+    ]
     random_idx_chunks = _chunk_random_indices(random_idx, n_chunks)
 
     start = 0
     for i in range(len(token_indices)):
         chunk = random_idx_chunks[i]
-        graph.x[*token_indices[i], start:start + len(chunk)] = graph.x[*token_indices[i], chunk]
+        graph.x[*token_indices[i], start : start + len(chunk)] = graph.x[
+            *token_indices[i], chunk
+        ]
         start += len(chunk)
 
 
@@ -177,7 +183,9 @@ def _chunk_random_indices(random_idx, n_chunks):
         elif len(random_idx_chunks) < n_chunks:
             continue
         num_to_merge = len(random_idx_chunks) - n_chunks
-        new_chunks = [random_idx_chunks[i] for i in range(len(random_idx_chunks) - num_to_merge)]
+        new_chunks = [
+            random_idx_chunks[i] for i in range(len(random_idx_chunks) - num_to_merge)
+        ]
         to_merge = [new_chunks[-1]] + list(random_idx_chunks[-num_to_merge:])
         new_chunks[-1] = torch.cat(to_merge)
         random_idx_chunks = tuple(new_chunks)
@@ -189,26 +197,28 @@ def _chunk_random_indices(random_idx, n_chunks):
 
     return random_idx_chunks
 
+
 # check whether token appears in list of graphs
 def check_token_presence(graph_list, token_idx):
     batch = batch_graphs(graph_list)
-    if 'tokens' in batch:
+    if "tokens" in batch:
         return torch.any(batch.tokens == token_idx)
     else:
         return torch.any(batch.x == token_idx)
 
+
 def calculate_token_scores(
     estimator,
-    gnn : PreTrainedGNN,
-    X : list[pyg.data.Data],
-    y : np.ndarray,
-    token_idx : int,
-    n_repeats : int,
-    baseline_score : float | dict,
-    random_state : int = 42,
-    scorer : Union[str, callable] = "",
-    perm_type : str = "dist",
-    batch_size : int = 256,
+    gnn: PreTrainedGNN,
+    X: list[pyg.data.Data],
+    y: np.ndarray,
+    token_idx: int,
+    n_repeats: int,
+    baseline_score: float | dict,
+    random_state: int = 42,
+    scorer: str | callable = "",
+    perm_type: str = "dist",
+    batch_size: int = 256,
 ):
     """
     Calculates the importance scores for a specific token by permuting its embeddings
@@ -248,7 +258,7 @@ def calculate_token_scores(
         Importance scores for the token.
     """
 
-    try: 
+    try:
         if check_token_presence(X, token_idx):
             dim = X[0].x.size(-1)
             random_indexes = get_permutations(
@@ -271,7 +281,7 @@ def calculate_token_scores(
                 else:
                     X_permuted = X_permuted.to(gnn.device)
                     embeddings = gnn(X_permuted)
-                
+
                 scores.append(
                     _weights_scorer(
                         scorer,
@@ -283,7 +293,7 @@ def calculate_token_scores(
                 )
                 del X_permuted, embeddings
                 torch.cuda.empty_cache()
-                
+
             if isinstance(scores[0], dict):
                 scores = _aggregate_score_dicts(scores)
             else:
@@ -292,26 +302,32 @@ def calculate_token_scores(
         else:
             # put baseline scores when token not used
             if isinstance(scorer, _MultimetricScorer):
-                scores = {sco: np.full(n_repeats, baseline_score[sco]) for sco in scorer._scorers}
-            else: 
+                scores = {
+                    sco: np.full(n_repeats, baseline_score[sco])
+                    for sco in scorer._scorers
+                }
+            else:
                 scores = np.full((n_repeats), baseline_score)
-        
+
         return scores
     except Exception as e:
-        msg = f"Failed at {token_idx}. \nError: {e}\nTraceback: {traceback.format_exc()}"
+        msg = (
+            f"Failed at {token_idx}. \nError: {e}\nTraceback: {traceback.format_exc()}"
+        )
         raise Exception(msg)
+
 
 def token_importance(
     estimator,
     gnn: PreTrainedGNN,
-    X : list[pyg.data.Data],
-    y : np.ndarray,
-    n_repeats : int = 5,
-    random_state : int = 42,
-    scorer : Union[str, callable] = None,
-    n_jobs = -1,
-    sample_weight = None,
-    perm_type = "dist",
+    X: list[pyg.data.Data],
+    y: np.ndarray,
+    n_repeats: int = 5,
+    random_state: int = 42,
+    scorer: str | callable = None,
+    n_jobs=-1,
+    sample_weight=None,
+    perm_type="dist",
     batch_size: int = 256,
 ):
     """
@@ -320,7 +336,7 @@ def token_importance(
 
     Based on `sklearn.inspection.permutation_importance`.
 
-    
+
     Parameters:
     ----------
     estimator : object
