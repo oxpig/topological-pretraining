@@ -295,7 +295,7 @@ class AtomFeatureGraph(BaseGraph):
         ]
 
 
-class AtomFeatureFeaturizer(GraphFeaturizer):
+class AtomFeatureGraphFeaturizer(GraphFeaturizer):
     """
     Featurizer for AtomFeatureGraph.
     """

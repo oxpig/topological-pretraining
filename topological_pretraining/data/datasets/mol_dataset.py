@@ -17,7 +17,7 @@ from topological_pretraining.featurization import (
     FCFP,
     PDV,
     SNS,
-    AtomFeatureFeaturizer,
+    AtomFeatureGraphFeaturizer,
     AtomGraphFeaturizer,
     BaseFeaturizer,
     MorganGraphFeaturizer,
@@ -32,7 +32,7 @@ featurizers_dict = {
     "AtomGraphFeaturizer": AtomGraphFeaturizer,
     "MorganGraphFeaturizer": MorganGraphFeaturizer,
     "PreTrainedFeaturizer": PreTrainedFeaturizer,
-    "AtomFeatureFeaturizer": AtomFeatureFeaturizer,
+    "AtomFeatureGraphFeaturizer": AtomFeatureGraphFeaturizer,
 }
 
 extra_transform_classes = {

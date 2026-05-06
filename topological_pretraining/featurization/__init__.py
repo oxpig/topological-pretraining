@@ -1,5 +1,5 @@
 from ._get_featurizer import get_featurizer
-from .atom_graph import AtomFeatureFeaturizer, AtomGraphFeaturizer
+from .atom_graph import AtomFeatureGraphFeaturizer, AtomGraphFeaturizer
 from .base import BaseFeaturizer, GraphFeaturizer
 from .baseline import ECFP, FCFP, PDV, SNS
 from .morgan_graph import MorganGraphFeaturizer
@@ -9,7 +9,7 @@ from .load_featurizers import load_featurizer, read_from_dict
 __all__ = [
     "BaseFeaturizer",
     "GraphFeaturizer",
-    "AtomFeatureFeaturizer",
+    "AtomFeatureGraphFeaturizer",
     "AtomGraphFeaturizer",
     "ECFP",
     "FCFP",

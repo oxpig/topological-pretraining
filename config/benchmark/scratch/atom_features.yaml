@@ -2,7 +2,7 @@ experiment: scratch_atom_features
 model: SklearnGIN
 logging: true
 process: benchmark
-featurizer: AtomFeatureFeaturizer
+featurizer: AtomFeatureGraphFeaturizer
 featurizer_kwargs:
   transform_kwargs: {}
 verbose: true
