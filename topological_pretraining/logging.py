@@ -1,7 +1,7 @@
-from typing import Optional, Dict, Any
 import numpy as np
 
-class Logger(Dict):
+
+class Logger(dict):
     """
     A simple logging class that extends a dictionary for saving and loading hyperparameters and scores.
 
@@ -24,26 +24,31 @@ class Logger(Dict):
     load()
         Loads the log from disk if a path is provided.
     """
-    def __init__(self, path: Optional[str] = None, *args, **kwargs):
+
+    def __init__(self, path: str | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.path = path
 
     def save(self):
         if self.path is not None:
-            if self.path.endswith('.npy'):
+            if self.path.endswith(".npy"):
                 np.save(self.path, self)
-            elif self.path.endswith('.npz'):
+            elif self.path.endswith(".npz"):
                 np.savez_compressed(self.path, **self)
             else:
-                raise ValueError("Unsupported file format. Please use '.npy' or '.npz'.")
+                raise ValueError(
+                    "Unsupported file format. Please use '.npy' or '.npz'."
+                )
 
     def load(self):
         if self.path is not None:
-            if self.path.endswith('.npy'):
+            if self.path.endswith(".npy"):
                 loaded = np.load(self.path, allow_pickle=True).item()
-            elif self.path.endswith('.npz'):
+            elif self.path.endswith(".npz"):
                 loaded = np.load(self.path, allow_pickle=True)
                 loaded = {key: loaded[key] for key in loaded.files}
             else:
-                raise ValueError("Unsupported file format. Please use '.npy' or '.npz'.")
+                raise ValueError(
+                    "Unsupported file format. Please use '.npy' or '.npz'."
+                )
             self.update(loaded)
