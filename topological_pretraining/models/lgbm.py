@@ -1,10 +1,11 @@
-from lightgbm import LGBMClassifier, LGBMRegressor, LGBMModel
+from lightgbm import LGBMClassifier, LGBMRegressor
 from sklearn.base import BaseEstimator
+
 
 class LGBM(BaseEstimator):
     """
     LightGBM model wrapper for classification and regression tasks.
-    
+
     Parameters:
     ----------
     task : Literal['classification', 'regression']
@@ -22,31 +23,33 @@ class LGBM(BaseEstimator):
     **kwargs : Any
         Additional keyword arguments for the LightGBM model.
     """
+
     def __init__(
-        self, task, seed=42,
+        self,
+        task,
+        seed=42,
         logging=None,
-        name='model_loss',
-        device='cpu',
+        name="model_loss",
+        device="cpu",
         proba_as_pred=True,
-        **kwargs
+        **kwargs,
     ):
-        if task == 'classification':
-            if 'is_unbalance' not in kwargs:
-                kwargs['is_unbalance'] = True
+        if task == "classification":
+            if "is_unbalance" not in kwargs:
+                kwargs["is_unbalance"] = True
             self.model = LGBMClassifier(random_state=seed, **kwargs)
-        elif task == 'regression':
+        elif task == "regression":
             self.model = LGBMRegressor(random_state=seed, **kwargs)
-        
+
         self.task = task
         self.logging = None
         self.name = name
         self.proba_as_pred = proba_as_pred
-        if device == 'cuda':
-            device = 'gpu'
+        if device == "cuda":
+            device = "gpu"
         self.kwargs = kwargs
-        self.kwargs['device'] = device
+        self.kwargs["device"] = device
 
-    
     def transform(self, X):
         """
         Transform the input data using the LightGBM model.
@@ -95,14 +98,14 @@ class LGBM(BaseEstimator):
             Predicted values. If task is 'classification' and proba_as_pred is True,
             returns probabilities; otherwise, returns class labels or regression values.
         """
-        if self.task == 'classification' and self.proba_as_pred:
+        if self.task == "classification" and self.proba_as_pred:
             # to make sure outputs are the same format as regression
             # want to store predictions as probabilities; more versatile when looking at metrics
             return self.model.predict_proba(X)[:, 1]
-        
+
         else:
             return self.model.predict(X)
-        
+
     def predict_proba(self, X):
         """
         Predict probabilities using the fitted LightGBM model.
@@ -122,11 +125,13 @@ class LGBM(BaseEstimator):
         ValueError
             If the task is not 'classification'.
         """
-        if self.task == 'classification':
+        if self.task == "classification":
             return self.model.predict_proba(X)
-        
+
         else:
-            raise ValueError("predict_proba is only available for classification tasks.")
+            raise ValueError(
+                "predict_proba is only available for classification tasks."
+            )
 
     def predict_class(self, X):
         """
@@ -147,12 +152,14 @@ class LGBM(BaseEstimator):
         ValueError
             If the task is not 'classification'.
         """
-        if self.task == 'classification':
+        if self.task == "classification":
             return self.model.predict(X)
-        
+
         else:
-            raise ValueError("class_predict is only available for classification tasks.")
-        
+            raise ValueError(
+                "class_predict is only available for classification tasks."
+            )
+
     def get_feature_importance(self):
         """
         Get GINI feature importances from the fitted LightGBM model.
@@ -181,7 +188,7 @@ class LGBM(BaseEstimator):
             A dictionary containing the sklearn tags for the model.
         """
         return self.model.__sklearn_tags__()
-    
+
     def __getattr__(self, attr):
         """
         Get attributes from the underlying LightGBM model.
@@ -193,10 +200,8 @@ class LGBM(BaseEstimator):
         """
         return self.model.__getattribute__(attr)
 
-        
     def __repr__(self):
         """
         Returns a string representation of the LGBM model.
         """
         return f"LGBM(task={self.task}, kwargs={self.kwargs})"
-    

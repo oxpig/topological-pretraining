@@ -1,14 +1,16 @@
-import numpy as np
-from topological_pretraining.nn import GIN, RegressionHead, BinaryHead
-from topological_pretraining.logging import Logger
-from sklearn.base import BaseEstimator
-from sklearn.utils.class_weight import compute_class_weight
+from collections.abc import Callable
+from typing import Literal
 
+import numpy as np
 import torch
 import torch_geometric as pyg
-
+from sklearn.base import BaseEstimator
+from sklearn.utils.class_weight import compute_class_weight
 from tqdm import tqdm
-from typing import Callable, Literal
+
+from topological_pretraining.logging import Logger
+from topological_pretraining.nn import GIN, BinaryHead, RegressionHead
+
 
 class GraphDatasetFromList(torch.utils.data.Dataset):
     """
@@ -21,6 +23,7 @@ class GraphDatasetFromList(torch.utils.data.Dataset):
     y : np.ndarray
         Target values for the graphs, should match the length of `data`.
     """
+
     def __init__(self, data: list[pyg.data.Data], y: np.ndarray):
         for i, d in enumerate(data):
             d.y = y[i]
@@ -31,6 +34,7 @@ class GraphDatasetFromList(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.data)
+
 
 class SklearnGIN(torch.nn.Module, BaseEstimator):
     """
@@ -64,7 +68,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         The activation function to use in the GIN model. Default is 'relu'.
     layer_pool_type : slice|int|Literal['last', 'sum', 'mean', max', 'concat'], optional
         The type of pooling to apply at the layer level. Default is 'concat'.
-        `last` uses the last layer output, `sum` sums all layer outputs, 
+        `last` uses the last layer output, `sum` sums all layer outputs,
         `mean` averages all layer outputs, `max` takes the maximum of all layer outputs,
         and `concat` concatenates all layer outputs.
     graph_pool_type : Literal[None, 'sum', 'mean', 'max', 'global_node'], optional
@@ -110,8 +114,8 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
     logging : Logger, optional
         A logger instance to store logging information such as losses and hyperparameters. Default is None.
     name : str, optional
-        The name of the model for logging purposes. 
-        Allows for reusing the same logging dictionary across different model instances. 
+        The name of the model for logging purposes.
+        Allows for reusing the same logging dictionary across different model instances.
         Default is 'model_loss'.
     verbose : bool, optional
         If True, enables verbose output during training. Default is False.
@@ -120,77 +124,93 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
     **kwargs : Any
         Additional keyword arguments for the GIN model.
     """
+
     def __init__(
-        self, input_dim: int, hidden_dim: int,
-        task: Literal['classification', 'regression'],
+        self,
+        input_dim: int,
+        hidden_dim: int,
+        task: Literal["classification", "regression"],
         vocab_size: int = None,
         node_embedding_dim: int = None,
         gnn_layers: int = 1,
-        dropout: float = 0.0, batch_norm: bool = False,
-        act: str = 'relu',
-        layer_pool_type: slice|int|Literal[
-            'last', 'sum', 'mean',
-            'max', 'concat'
-        ] = 'concat',
-        graph_pool_type: Literal[
-            None, 'sum', 'mean',
-            'max', 'global_node'
-        ] = 'max',
+        dropout: float = 0.0,
+        batch_norm: bool = False,
+        act: str = "relu",
+        layer_pool_type: slice
+        | int
+        | Literal["last", "sum", "mean", "max", "concat"] = "concat",
+        graph_pool_type: Literal[None, "sum", "mean", "max", "global_node"] = "max",
         train_eps: bool = True,
         eps: float = 0.0,
         mlp_layers: int = 1,
-        weight_init: Callable|Literal[
-            'standard', 'xavier_uniform', 'xavier_normal',
-            'normal', 'zeros', 'ones',
-        ] = 'standard',
-        bias_init: Callable|Literal[
-            'standard', 'xavier_uniform', 'xavier_normal',
-            'normal', 'zeros', 'ones',
-        ] = 'standard',
+        weight_init: Callable
+        | Literal[
+            "standard",
+            "xavier_uniform",
+            "xavier_normal",
+            "normal",
+            "zeros",
+            "ones",
+        ] = "standard",
+        bias_init: Callable
+        | Literal[
+            "standard",
+            "xavier_uniform",
+            "xavier_normal",
+            "normal",
+            "zeros",
+            "ones",
+        ] = "standard",
         share_weights: bool = False,
-        epochs=50, batch_size=32,
+        epochs=50,
+        batch_size=32,
         lr=None,
-        lr_scale=1.0, lr_half_life=None,
+        lr_scale=1.0,
+        lr_half_life=None,
         weight_decay=0.0,
-        head_layers=1, head_hidden_dim=None,
+        head_layers=1,
+        head_hidden_dim=None,
         return_loss=False,
         logging=None,
-        name='model_loss',
+        name="model_loss",
         verbose=False,
-        device='cpu', # for compatibility with other models, uses cuda if available
-        **kwargs
+        device="cpu",  # for compatibility with other models, uses cuda if available
+        **kwargs,
     ):
-        super(SklearnGIN, self).__init__()
+        super().__init__()
         gnn_kwargs = {
-            'train_eps': train_eps,
-            'eps': eps,
-            'num_layers': mlp_layers,
-            'weight_init': weight_init,
-            'bias_init': bias_init,
+            "train_eps": train_eps,
+            "eps": eps,
+            "num_layers": mlp_layers,
+            "weight_init": weight_init,
+            "bias_init": bias_init,
         }
         self.gnn = GIN(
-            input_dim=input_dim, hidden_dim=hidden_dim,
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
             node_embedding=(vocab_size, node_embedding_dim),
             num_layers=gnn_layers,
-            dropout=dropout, batch_norm=batch_norm, act=act,
+            dropout=dropout,
+            batch_norm=batch_norm,
+            act=act,
             layer_pool_type=layer_pool_type,
             graph_pool_type=graph_pool_type,
             share_weights=share_weights,
             gnn_kwargs=gnn_kwargs,
-            **kwargs
+            **kwargs,
         )
-        self.input_dim=input_dim
-        self.hidden_dim=hidden_dim
-        self.node_embedding_dim=node_embedding_dim
-        self.vocab_size=vocab_size
-        self.gnn_layers=gnn_layers
-        self.dropout=dropout
-        self.batch_norm=batch_norm
-        self.act=act
-        self.layer_pool_type=layer_pool_type
-        self.graph_pool_type=graph_pool_type
-        self.share_weights=share_weights
-        self.gnn_kwargs=gnn_kwargs
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.node_embedding_dim = node_embedding_dim
+        self.vocab_size = vocab_size
+        self.gnn_layers = gnn_layers
+        self.dropout = dropout
+        self.batch_norm = batch_norm
+        self.act = act
+        self.layer_pool_type = layer_pool_type
+        self.graph_pool_type = graph_pool_type
+        self.share_weights = share_weights
+        self.gnn_kwargs = gnn_kwargs
 
         self.task = task
         self.head_layers = head_layers
@@ -207,42 +227,50 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         self.verbose = verbose
         self.class_weights = None
 
-        if task == 'classification':
+        if task == "classification":
             self.loss_fn = torch.nn.BCELoss()
             self.head = BinaryHead(
                 input_dim=self.gnn.out_shape,
-                hidden_dim=head_hidden_dim if head_hidden_dim != None else hidden_dim,
+                hidden_dim=head_hidden_dim
+                if head_hidden_dim is not None
+                else hidden_dim,
                 output_dim=1,
                 num_layers=head_layers,
                 act=act,
-                dropout=dropout, batch_norm=batch_norm,
+                dropout=dropout,
+                batch_norm=batch_norm,
             )
-            
-        elif task == 'regression':
+
+        elif task == "regression":
             self.loss_fn = torch.nn.MSELoss()
             self.head = RegressionHead(
                 input_dim=self.gnn.out_shape,
-                hidden_dim=head_hidden_dim if head_hidden_dim != None else hidden_dim,
+                hidden_dim=head_hidden_dim
+                if head_hidden_dim is not None
+                else hidden_dim,
                 output_dim=1,
                 num_layers=head_layers,
                 act=act,
-                dropout=dropout, batch_norm=batch_norm,
+                dropout=dropout,
+                batch_norm=batch_norm,
             )
         else:
-            raise ValueError('Invalid target type')
-        
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            raise ValueError("Invalid target type")
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.to(self.device)
         if lr is None:
-            self.lr = self.lr_scale*sum([p.numel() for p in self.parameters()]) **-0.5
+            self.lr = (
+                self.lr_scale * sum([p.numel() for p in self.parameters()]) ** -0.5
+            )
         else:
             self.lr = lr
 
         if self.logging is not None:
             num_params = sum([p.numel() for p in self.parameters()])
-            self.logging[f'{self.name}/num_params'] = num_params
-            self.logging[f'{self.name}/lr'] = self.lr
-            self.logging[f'{self.name}/vocab_size'] = vocab_size
+            self.logging[f"{self.name}/num_params"] = num_params
+            self.logging[f"{self.name}/lr"] = self.lr
+            self.logging[f"{self.name}/vocab_size"] = vocab_size
             self.logging.save()
 
     def forward(self, x):
@@ -254,15 +282,15 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         x : pyg.data.Data | pyg.data.Batch
             Input data for the GIN model, should be a PyTorch Geometric Data object
             or a batch of Data objects.
-        
+
         Returns:
         -------
         torch.Tensor
             The output of the prediction head after processing the GIN model output.
         """
-        x = self.gnn(**x)['global_state']
+        x = self.gnn(**x)["global_state"]
         return self.head(x)
-    
+
     def embed(self, X: list[pyg.data.Data]):
         """
         Get the graph embeddings from the GIN model for a list of graphs.
@@ -277,7 +305,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         np.ndarray
             The graph embeddings, shape is (num_graphs, out_shape).
             `out_shape` is the output shape of the GIN model.
-        
+
         This method processes each graph in the list, passing it through the GIN model
         to obtain the global state (embedding) of each graph. The embeddings are then
         collected and returned as a NumPy array.
@@ -288,7 +316,7 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         for i, graph in enumerate(data):
             graph = graph.to(self.device)
             graph = graph.to(self.device)
-            out = self.gnn(**graph)['global_state']
+            out = self.gnn(**graph)["global_state"]
             preds[i] = out.detach().cpu().numpy()
         return preds
 
@@ -309,20 +337,24 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
             If `return_loss` is True, returns the training losses as a 2D NumPy array
             with shape (epochs, num_batches). Otherwise, returns None.
         """
-        if self.task == 'classification':
+        if self.task == "classification":
             self.class_weights = self.cal_class_weights(y)
             self.head.set_class_weight(self.class_weights)
-    
+
         self.train()
         optimizer = torch.optim.Adam(
             self.parameters(), lr=self.lr, weight_decay=self.weight_decay
         )
         data = GraphDatasetFromList(X, y)
         # use drop_last=True if the last batch contains only one sample
-        if len(data) % self.batch_size == 1: drop_last = True
-        else: drop_last = False
+        if len(data) % self.batch_size == 1:
+            drop_last = True
+        else:
+            drop_last = False
         loader = pyg.loader.DataLoader(
-            data, batch_size=self.batch_size, shuffle=True,
+            data,
+            batch_size=self.batch_size,
+            shuffle=True,
             drop_last=drop_last,
         )
         losses = np.zeros((self.epochs, len(loader)))
@@ -330,16 +362,17 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         if self.lr_half_life is not None:
             gamma = 0.5 ** (1 / (self.lr_half_life * len(loader)))
             lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-                optimizer, gamma=gamma,
+                optimizer,
+                gamma=gamma,
             )
         if self.logging is not None:
-            self.logging[f'{self.name}/batch_loss'] = []
-            self.logging[f'{self.name}/epoch_loss'] = []
+            self.logging[f"{self.name}/batch_loss"] = []
+            self.logging[f"{self.name}/epoch_loss"] = []
 
         with tqdm(
             total=len(loader),
             disable=not self.verbose,
-            desc=f'Epoch 1/{self.epochs} | Batch loss: {np.nan}',
+            desc=f"Epoch 1/{self.epochs} | Batch loss: {np.nan}",
         ) as pbar:
             for i in range(self.epochs):
                 for j, batch in enumerate(loader):
@@ -349,22 +382,24 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
                     y = batch.y.unsqueeze(1)
                     loss = self.head.loss(y=y, pred=out)
                     if self.logging is not None:
-                        self.logging[f'{self.name}/batch_loss'].append(loss.item())
+                        self.logging[f"{self.name}/batch_loss"].append(loss.item())
                     loss.backward()
                     optimizer.step()
                     losses[i, j] = loss.item()
                     if lr_scheduler:
                         lr_scheduler.step()
-                    pbar.set_description(f'Epoch {i+1}/{self.epochs} | Batch loss: {loss.item()}')
+                    pbar.set_description(
+                        f"Epoch {i + 1}/{self.epochs} | Batch loss: {loss.item()}"
+                    )
                     pbar.update()
                 if i != self.epochs - 1:
                     pbar.reset()
-                
+
                 if self.logging is not None:
                     epoch_mean_loss = losses[i].mean()
-                    self.logging[f'{self.name}/epoch_loss'].append(epoch_mean_loss)
+                    self.logging[f"{self.name}/epoch_loss"].append(epoch_mean_loss)
                     self.logging.save()
-            
+
             if self.return_loss:
                 return losses
 
@@ -387,7 +422,9 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
         self.eval()
         data = GraphDatasetFromList(X, np.zeros(len(X)))
         loader = pyg.loader.DataLoader(
-            data, batch_size=self.batch_size, shuffle=False,
+            data,
+            batch_size=self.batch_size,
+            shuffle=False,
         )
         preds = []
         for batch in loader:
@@ -413,10 +450,9 @@ class SklearnGIN(torch.nn.Module, BaseEstimator):
             A tensor containing the class weights, shape is (num_classes, 1).
             The class weights are calculated to balance the classes in the dataset.
         """
-        weights = compute_class_weight(y=y, classes=np.unique(y), class_weight='balanced')
+        weights = compute_class_weight(
+            y=y, classes=np.unique(y), class_weight="balanced"
+        )
         weights = torch.tensor(weights, dtype=torch.float32).to(self.device)
         weights = weights.unsqueeze(-1).unsqueeze(-1)
         return weights
-
-
-
