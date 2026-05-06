@@ -1,10 +1,13 @@
 import numpy as np
-from rdkit import Chem
 import torch
 import torch_geometric as pyg
-from tqdm import tqdm
-from typing import Optional
+from rdkit import Chem
 from sklearn.base import BaseEstimator, TransformerMixin
+from tqdm import tqdm
+
+
+def base_transform(X):
+    return X
 
 
 class BaseFeaturizer(BaseEstimator, TransformerMixin):
@@ -23,7 +26,8 @@ class BaseFeaturizer(BaseEstimator, TransformerMixin):
         Whether the featurizer is already fitted. If None, it defaults to False.
         This is used for featurizers that do not require fitting, such as ECFP fingerprints.
     """
-    transform = lambda x: x
+
+    transform = base_transform
     fixed_transform_kwargs = {}
     precomputed = False
     is_fitted_ = False
@@ -34,14 +38,14 @@ class BaseFeaturizer(BaseEstimator, TransformerMixin):
         verbose: bool = False,
         is_fitted_: bool = None,
     ):
-        super(BaseFeaturizer, self).__init__()
+        super().__init__()
         self.verbose = verbose
         if is_fitted_ is not None:
             self.is_fitted_ = is_fitted_
         transform_kwargs.update(self.fixed_transform_kwargs)
         self.set_transform(kwargs=transform_kwargs)
 
-    def __call__(self, X: Chem.Mol|list[Chem.Mol]) -> np.ndarray:
+    def __call__(self, X: Chem.Mol | list[Chem.Mol]) -> np.ndarray:
         """
         Apply the featurizer to the input data.
 
@@ -49,19 +53,18 @@ class BaseFeaturizer(BaseEstimator, TransformerMixin):
         ----------
         X : Chem.Mol or list[Chem.Mol]
             The input data to be tokenized. Can be a single RDKit molecule or a list of molecules.
-            
+
         Returns:
         -------
         np.ndarray
             The tokenized representation of the input data.
         """
         if not self.is_fitted_:
-            raise ValueError('Featurizer must be fit before calling.')
+            raise ValueError("Featurizer must be fit before calling.")
         X = self.transform(X)
         return X
-    
-    
-    def save_transform(self, X: Chem.Mol|list[Chem.Mol], path: str):
+
+    def save_transform(self, X: Chem.Mol | list[Chem.Mol], path: str):
         """
         Transform and save the data to a file.
 
@@ -86,7 +89,6 @@ class BaseFeaturizer(BaseEstimator, TransformerMixin):
         """
         self.transform_kwargs = kwargs
         self.transform = self._transform_base(**kwargs)
-        
 
     def _transform_base(self, **kwargs):
         """
@@ -95,7 +97,7 @@ class BaseFeaturizer(BaseEstimator, TransformerMixin):
         """
         raise NotImplementedError
 
-    def fit(self, mols: Chem.Mol, y: Optional[np.ndarray] = None) -> None:
+    def fit(self, mols: Chem.Mol, y: np.ndarray | None = None) -> None:
         """
         Fit the featurizer to the input data.
 
@@ -107,7 +109,7 @@ class BaseFeaturizer(BaseEstimator, TransformerMixin):
         y : Optional[np.ndarray], optional
             Optional target values. Not used in this base class, but can be used in subclasses
             for supervised learning tasks. Defaults to None.
-        
+
         Returns:
         -------
         BaseFeaturizer
@@ -122,7 +124,7 @@ class BaseFeaturizer(BaseEstimator, TransformerMixin):
         Get the name of the featurizer.
         """
         return self.__class__.__name__
-    
+
     def to_dict(self) -> dict:
         """
         Convert the featurizer to a dictionary representation.
@@ -135,11 +137,11 @@ class BaseFeaturizer(BaseEstimator, TransformerMixin):
             A dictionary containing the featurizer's name, fitted status, and transformation parameters.
         """
         return {
-            'name': self.name,
-            'is_fitted_': self.is_fitted_,
-            'transform_kwargs': self.transform_kwargs,
+            "name": self.name,
+            "is_fitted_": self.is_fitted_,
+            "transform_kwargs": self.transform_kwargs,
         }
-    
+
     def save(self, path: str, params_only: bool = False):
         """
         Save the featurizer to a file. Uses PyTorch's `torch.save` method.
@@ -176,7 +178,7 @@ class BaseFeaturizer(BaseEstimator, TransformerMixin):
             Ensures that new splits don't include atoms not in the training data.
         """
         raise NotImplementedError
-    
+
     def encode(self, X):
         """
         Encode raw data.
@@ -195,7 +197,7 @@ class BaseFeaturizer(BaseEstimator, TransformerMixin):
             Ensures that new splits don't include atoms not in the training data.
         """
         raise NotImplementedError
-    
+
     def save_raw(self, X: Chem.Mol, path: str):
         """
         Save the raw data to a file.
@@ -215,7 +217,7 @@ class BaseFeaturizer(BaseEstimator, TransformerMixin):
         Define the `__sklearn_is_fitted__` method to check if the featurizer is fitted.
         """
         return self.is_fitted_
-    
+
     def preprocess(self, mols: list[Chem.Mol]):
         """
         Optionally implement a preprocessing step for the data.
@@ -231,6 +233,7 @@ class BaseFeaturizer(BaseEstimator, TransformerMixin):
             A list of preprocessed RDKit molecule objects.
         """
         return mols
+
 
 class BaseGraph:
     """
@@ -254,17 +257,22 @@ class BaseGraph:
     global_token : bool, optional
         If True, adds a global token to the graph. Defaults to False.
     """
+
     edge_types = {
         1.0: 0,
         2.0: 1,
         1.5: 2,
         3.0: 3,
     }
-    node_types: dict = {'UNK': 0}
+    node_types: dict = {"UNK": 0}
 
     def __init__(
-        self, node_types: dict = None, edge_types: dict = None,
-        max_vocab_size: int = None, verbose: bool = False, global_token: bool = False
+        self,
+        node_types: dict = None,
+        edge_types: dict = None,
+        max_vocab_size: int = None,
+        verbose: bool = False,
+        global_token: bool = False,
     ):
         self.node_types = node_types or self.node_types
         self.edge_types = edge_types or self.edge_types
@@ -291,12 +299,8 @@ class BaseGraph:
             Each row corresponds to an edge and contains the bond type as an integer index.
         """
         num_edges = mol.GetNumBonds()
-        edge_index = torch.full(
-            (2, num_edges*2), fill_value=-1, dtype=torch.long
-        )
-        edge_attr = torch.full(
-            (num_edges*2, 1), fill_value=-1, dtype=torch.int
-        )
+        edge_index = torch.full((2, num_edges * 2), fill_value=-1, dtype=torch.long)
+        edge_attr = torch.full((num_edges * 2, 1), fill_value=-1, dtype=torch.int)
         # loop over bonds and set edge index and edge attributes
         for bond in mol.GetBonds():
             # get start and end atom indices
@@ -310,20 +314,20 @@ class BaseGraph:
             # set reverse edge index
             edge_index[0, bond.GetIdx() + num_edges] = end
             edge_index[1, bond.GetIdx() + num_edges] = start
-            
+
             # set bond types
             edge_attr[bond.GetIdx()] = bond_type
             edge_attr[bond.GetIdx() + num_edges] = bond_type
 
         return edge_index, edge_attr
-    
+
     def get_nodes(self, mol: Chem.Mol):
         """
         Get the raw node descriptor for an atom.
         """
         raise NotImplementedError
-    
-    def reset(self, mols: list[Chem.Mol|pyg.data.Data]):
+
+    def reset(self, mols: list[Chem.Mol | pyg.data.Data]):
         """
         Reset the node types.
 
@@ -349,24 +353,24 @@ class BaseGraph:
             pass
         else:
             raise ValueError(
-                'All molecules must be of the same type, either RDKit molecules '\
-                'or PyTorch Geometric Data objects.'
+                "All molecules must be of the same type, either RDKit molecules "
+                "or PyTorch Geometric Data objects."
             )
         batch = pyg.data.Batch.from_data_list(mols)
         if not torch.all(batch.raw):
-            raise ValueError('All graphs must be raw graphs for resetting node types.')
+            raise ValueError("All graphs must be raw graphs for resetting node types.")
         x = batch.x
         unique_nodes, counts = torch.unique(x, return_counts=True)
         unique_nodes = unique_nodes[torch.argsort(counts, descending=True)]
-    
+
         for node in unique_nodes:
             node_types[node.item()] = len(node_types)
 
-        node_types['UNK'] = len(node_types)
+        node_types["UNK"] = len(node_types)
         if self.global_token:
             num_tokens_per_node = x.size(1)
             for i in range(num_tokens_per_node):
-                node_types[f'GLOBAL_{i}'] = len(node_types)
+                node_types[f"GLOBAL_{i}"] = len(node_types)
         self.node_types = node_types
 
     def add_global_token(self, graph: pyg.data.Data):
@@ -384,17 +388,19 @@ class BaseGraph:
             The graph data with the global token added.
         """
         if self.global_token:
-            if 'x' not in graph:
-                raise ValueError('Graph does not contain node features.')
+            if "x" not in graph:
+                raise ValueError("Graph does not contain node features.")
             if graph.raw:
-                raise ValueError('Graph must be encoded.')
+                raise ValueError("Graph must be encoded.")
             graph = graph.clone()
             num_tokens_per_node = graph.x.size(1)
             global_token = torch.empty(1, num_tokens_per_node, dtype=torch.long)
             for i in range(num_tokens_per_node):
-                global_token[0, i] = self.node_types[f'GLOBAL_{i}']
+                global_token[0, i] = self.node_types[f"GLOBAL_{i}"]
 
-            global_edges = torch.full((2, graph.num_nodes), fill_value=-1, dtype=torch.long)
+            global_edges = torch.full(
+                (2, graph.num_nodes), fill_value=-1, dtype=torch.long
+            )
             for i in range(graph.num_nodes):
                 global_edges[0, i] = i
                 global_edges[1, i] = graph.num_nodes
@@ -402,24 +408,25 @@ class BaseGraph:
             graph.x = torch.cat([graph.x, global_token], dim=0)
             graph.edge_index = torch.cat([graph.edge_index, global_edges], dim=1)
             graph.global_idx = graph.x.size(0) - 1
-            
+
         return graph
-    
+
     @property
     def empty_graph(self):
         raise NotImplementedError(
             "empty_graph must be implemented in subclasses. \
-            Method for handling None inputs.")
-        
+            Method for handling None inputs."
+        )
+
     def raw(self, mol: Chem.Mol):
         """
         Generate the raw graph data for a molecule.
-        
+
         Parameters
         ----------
         mol : Chem.Mol
             The molecule to generate the graph for.
-            
+
         Returns
         -------
         pyg.data.Data
@@ -427,36 +434,39 @@ class BaseGraph:
         """
         if mol is None:
             return self.empty_graph
-        
+
         x = self.get_nodes(mol)
         # initialize edge index and edge attributes
         edge_index, edge_attr = self.get_edges(mol)
 
         return pyg.data.Data(
-            x=x, edge_index=edge_index, edge_attr=edge_attr,
-            raw=True, empty=torch.tensor([False]),
+            x=x,
+            edge_index=edge_index,
+            edge_attr=edge_attr,
+            raw=True,
+            empty=torch.tensor([False]),
         )
-    
+
     def encode(self, graph: pyg.data.Data):
         """
         Tokenize a raw graph.
-        
+
         Parameters
         ----------
         graph : pyg.data.Data
             The raw graph data. (output of `BaseGraph.raw`)
-        
+
         Returns
         -------
         pyg.data.Data
             The encode graph data.
         """
         if not graph.raw:
-            raise ValueError('Graph must be raw.')
-        if 'x' not in graph:
+            raise ValueError("Graph must be raw.")
+        if "x" not in graph:
             return graph
         graph = graph.clone()
-        unk = self.node_types['UNK']
+        unk = self.node_types["UNK"]
         for i in range(graph.x.size(0)):
             for j in range(graph.x.size(1)):
                 graph.x[i, j] = self.node_types.get(int(graph.x[i, j]), unk)
@@ -466,7 +476,7 @@ class BaseGraph:
 
         return graph
 
-    def transform(self, mol: Chem.Mol|pyg.data.Data):
+    def transform(self, mol: Chem.Mol | pyg.data.Data):
         """
         Make a graph from a molecule.
 
@@ -474,7 +484,7 @@ class BaseGraph:
         ----------
         mol : Chem.Mol
             RDKit molecule object.
-        
+
         Returns
         -------
         pyg.data.Data
@@ -485,11 +495,10 @@ class BaseGraph:
         else:
             graph = self.raw(mol)
             return self.encode(graph)
-    
+
     def __call__(
-            self,
-            X: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data]
-        ) -> pyg.data.Data|list[pyg.data.Data]:
+        self, X: Chem.Mol | pyg.data.Data | list[Chem.Mol | pyg.data.Data]
+    ) -> pyg.data.Data | list[pyg.data.Data]:
         """
         Apply the transformation to a single molecule or a list of molecules.
 
@@ -497,28 +506,28 @@ class BaseGraph:
         ----------
         X : Chem.Mol or pyg.data.Data or list[Chem.Mol|pyg
             data.Data]
-            The input data to be transformed. Can be a single RDKit molecule, 
+            The input data to be transformed. Can be a single RDKit molecule,
             a PyTorch Geometric Data object, or a list of molecules or graphs.
-        
+
         Returns
         -------
         pyg.data.Data or list[pyg.data.Data]
-            The transformed graph data. If a single molecule is provided, returns a single 
+            The transformed graph data. If a single molecule is provided, returns a single
             `pyg.data.Data` object.
             If a list of molecules is provided, returns a list of `py
 
         """
-        if isinstance(X, Chem.Mol|pyg.data.Data|None):
+        if isinstance(X, Chem.Mol | pyg.data.Data | None):
             return self.transform(X)
-        
-        if not all(isinstance(m, Chem.Mol|pyg.data.Data|None) for m in X):
+
+        if not all(isinstance(m, Chem.Mol | pyg.data.Data | None) for m in X):
             raise ValueError(
-                'All elements of the input list must be either RDKit molecules, '
-                'PyTorch Geometric Data objects, or None.'
+                "All elements of the input list must be either RDKit molecules, "
+                "PyTorch Geometric Data objects, or None."
             )
 
         out = []
-        pbar = tqdm(total=len(X), desc='Generating graphs', disable=not self.verbose)
+        pbar = tqdm(total=len(X), desc="Generating graphs", disable=not self.verbose)
         for idx, mol in enumerate(X):
             out.append(self.transform(mol))
             pbar.update(1)
@@ -537,16 +546,15 @@ class GraphFeaturizer(BaseFeaturizer):
     verbose : bool
         Whether to print progress information.
     """
+
     def __init__(
         self,
         transform_kwargs: dict = {},
         verbose: bool = False,
         **kwargs,
     ):
-        super(GraphFeaturizer, self).__init__(
-            transform_kwargs=transform_kwargs, verbose=verbose
-        )
-    
+        super().__init__(transform_kwargs=transform_kwargs, verbose=verbose)
+
     def raw(self, mol: Chem.Mol):
         """
         Generate the raw graph data for a molecule.
@@ -562,7 +570,7 @@ class GraphFeaturizer(BaseFeaturizer):
             The raw graph data.
         """
         return self.transform.raw(mol)
-    
+
     def encode(self, graph: pyg.data.Data):
         """
         Encode a raw graph.
@@ -571,15 +579,15 @@ class GraphFeaturizer(BaseFeaturizer):
         ----------
         graph : pyg.data.Data
             The raw graph data. (output of `BaseGraph.raw`)
-        
+
         Returns:
         -------
         pyg.data.Data
             The encoded graph data.
         """
         return self.transform.encode(graph)
-    
-    def fit(self, mols: list[Chem.Mol|pyg.data.Data], y: None = None) -> None:
+
+    def fit(self, mols: list[Chem.Mol | pyg.data.Data], y: None = None) -> None:
         """
         Fit the featurizer to the provided molecules.
 
@@ -611,7 +619,7 @@ class GraphFeaturizer(BaseFeaturizer):
             The number of unique node types in the vocabulary.
         """
         return len(self.transform.node_types)
-    
+
     @property
     def edge_types(self):
         """
@@ -635,15 +643,15 @@ class GraphFeaturizer(BaseFeaturizer):
             A dictionary mapping node types (e.g., atomic numbers) to integer indices.
         """
         return self.transform.node_types
-    
+
     def to_dict(self):
         """
         Convert the featurizer's parameters and state to a dictionary.
         """
         params = super().to_dict()
-        params['transform_kwargs']['node_types'] = self.node_types
-        params['transform_kwargs']['edge_types'] = self.edge_types
-        params['transform_kwargs']['max_vocab_size'] = self.transform.max_vocab_size
+        params["transform_kwargs"]["node_types"] = self.node_types
+        params["transform_kwargs"]["edge_types"] = self.edge_types
+        params["transform_kwargs"]["max_vocab_size"] = self.transform.max_vocab_size
         return params
 
     def preprocess(self, mols):
@@ -654,7 +662,7 @@ class GraphFeaturizer(BaseFeaturizer):
         ----------
         mols : list[Chem.Mol]
             A list of RDKit molecule objects to be preprocessed.
-        
+
         Returns:
         -------
         list[pyg.data.Data]

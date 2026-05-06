@@ -1,11 +1,6 @@
-import networkx as nx
-import numpy as np
-from rdkit import Chem
 import torch
 import torch_geometric as pyg
-from tqdm import tqdm
-from typing import Optional
-from scipy import sparse
+from rdkit import Chem
 
 from ..data.mol import MorganGenerator, SortAndSlice
 from .base import BaseGraph, GraphFeaturizer
@@ -34,6 +29,7 @@ class MorganGraph(BaseGraph):
     sort_and_slice : SortAndSlice
         Sort and slice the hashed identifiers based on the maximum vocabulary size.
     """
+
     def __init__(
         self,
         verbose: bool = False,
@@ -41,16 +37,17 @@ class MorganGraph(BaseGraph):
         edge_types: dict = {},
         max_vocab_size: int = 2048,
         global_token: bool = False,
-        **kwargs
+        **kwargs,
     ):
-        super(MorganGraph, self).__init__(
-            node_types=node_types, edge_types=edge_types, max_vocab_size=max_vocab_size,
-            verbose=verbose, global_token=global_token
+        super().__init__(
+            node_types=node_types,
+            edge_types=edge_types,
+            max_vocab_size=max_vocab_size,
+            verbose=verbose,
+            global_token=global_token,
         )
         morgan = MorganGenerator(**kwargs)
-        self.sort_and_slice = SortAndSlice(
-            generator=morgan, verbose=verbose  
-        )
+        self.sort_and_slice = SortAndSlice(generator=morgan, verbose=verbose)
 
     @property
     def empty_graph(self):
@@ -63,17 +60,17 @@ class MorganGraph(BaseGraph):
             An empty graph with the node types set to 'UNK' and no edges.
         """
         return pyg.data.Data(
-                raw=True,
-                empty=torch.tensor([True]),
-                x=torch.full(
-                    (1, self.sort_and_slice.generator.radius + 1),
-                    fill_value=self.node_types["UNK"],
-                    dtype=torch.long
-                ),
-                edge_index=torch.empty((2, 0), dtype=torch.long),
-                edge_attr=torch.empty((0, 1), dtype=torch.long),
-            )
-    
+            raw=True,
+            empty=torch.tensor([True]),
+            x=torch.full(
+                (1, self.sort_and_slice.generator.radius + 1),
+                fill_value=self.node_types["UNK"],
+                dtype=torch.long,
+            ),
+            edge_index=torch.empty((2, 0), dtype=torch.long),
+            edge_attr=torch.empty((0, 1), dtype=torch.long),
+        )
+
     def get_nodes(self, mol: Chem.Mol) -> torch.Tensor:
         """
         Get the hashed identifiers for a molecule in a Tensor.
@@ -92,8 +89,8 @@ class MorganGraph(BaseGraph):
         envs = self.sort_and_slice.generator.environments(mol)
         x = torch.tensor(envs, dtype=torch.long)
         return x
-    
-    def reset(self, mols: list[Chem.Mol|pyg.data.Data]) -> None:
+
+    def reset(self, mols: list[Chem.Mol | pyg.data.Data]) -> None:
         """
         Reset the hashed identifiers for a new set of molecules.
         Performs sorting and slicing of the identifiers based on the maximum vocabulary size.
@@ -107,22 +104,28 @@ class MorganGraph(BaseGraph):
         if all(isinstance(m, pyg.data.Data) for m in mols):
             mols = pyg.data.Batch.from_data_list(mols)
             if not torch.all(mols.raw):
-                raise ValueError('All graphs must be raw graphs for resetting node types.')
+                raise ValueError(
+                    "All graphs must be raw graphs for resetting node types."
+                )
             envs = mols.x.numpy()
             self.sort_and_slice.append(envs)
-        elif all(isinstance(m, Chem.Mol|None) for m in mols):
+        elif all(isinstance(m, Chem.Mol | None) for m in mols):
             self.sort_and_slice.update(mols)
         else:
-            raise ValueError('Molecules must be RDKit molecule objects or PyG Data objects.')
-    
+            raise ValueError(
+                "Molecules must be RDKit molecule objects or PyG Data objects."
+            )
+
         self.sort_and_slice.sort()
         self.sort_and_slice.slice(self.max_vocab_size)
-        self.sort_and_slice.encoder['UNK'] = len(self.sort_and_slice.encoder)
+        self.sort_and_slice.encoder["UNK"] = len(self.sort_and_slice.encoder)
 
         if self.global_token:
             num_tokens_per_node = self.sort_and_slice.generator.radius + 1
             for i in range(num_tokens_per_node):
-                self.sort_and_slice.encoder[f'GLOBAL_{i}'] = len(self.sort_and_slice.encoder)
+                self.sort_and_slice.encoder[f"GLOBAL_{i}"] = len(
+                    self.sort_and_slice.encoder
+                )
         self.node_types = self.sort_and_slice.encoder
 
 

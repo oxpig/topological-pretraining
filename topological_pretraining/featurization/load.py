@@ -1,17 +1,22 @@
-from . import (
-    BaseFeaturizer,
-    AtomGraphFeaturizer, MorganGraphFeaturizer,
-    ECFP, FCFP, PDV, SNS
-)
 import torch
 
+from . import (
+    ECFP,
+    FCFP,
+    PDV,
+    SNS,
+    AtomGraphFeaturizer,
+    BaseFeaturizer,
+    MorganGraphFeaturizer,
+)
+
 all_featurizers = {
-    'AtomGraphFeaturizer': AtomGraphFeaturizer,
-    'MorganGraphFeaturizer': MorganGraphFeaturizer,
-    'ECFP': ECFP,
-    'FCFP': FCFP,
-    'PDV': PDV,
-    'SNS': SNS
+    "AtomGraphFeaturizer": AtomGraphFeaturizer,
+    "MorganGraphFeaturizer": MorganGraphFeaturizer,
+    "ECFP": ECFP,
+    "FCFP": FCFP,
+    "PDV": PDV,
+    "SNS": SNS,
 }
 
 
@@ -36,11 +41,11 @@ def read_from_dict(parameters: dict) -> BaseFeaturizer:
     ValueError
         If the 'name' key is not found in the parameters dictionary.
     """
-    if 'name' not in parameters:
-        raise ValueError('Featurizer name not found in parameters.')
-    featurizer = parameters.pop('name')
+    if "name" not in parameters:
+        raise ValueError("Featurizer name not found in parameters.")
+    featurizer = parameters.pop("name")
     featurizer = all_featurizers[featurizer](**parameters)
-    featurizer.is_fitted_ = parameters['is_fitted_']
+    featurizer.is_fitted_ = parameters["is_fitted_"]
     return featurizer
 
 

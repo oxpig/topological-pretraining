@@ -1,13 +1,14 @@
-from topological_pretraining.featurization.base import BaseFeaturizer
-from topological_pretraining.featurization.load import read_from_dict
-from topological_pretraining.nn.pred_head import PredHead
-from topological_pretraining.nn import get_nn
+from typing import Literal
 
 import numpy as np
-from rdkit import Chem
 import torch
 import torch_geometric as pyg
-from typing import Literal
+from rdkit import Chem
+
+from topological_pretraining.featurization.base import BaseFeaturizer
+from topological_pretraining.featurization.load import read_from_dict
+from topological_pretraining.nn import get_nn
+
 
 class PreTrainedModel(torch.nn.Module):
     """
@@ -21,7 +22,7 @@ class PreTrainedModel(torch.nn.Module):
     params : dict | None
         Dictionary containing the model details.
         Includes
-        - featurizer: dict 
+        - featurizer: dict
             Featurizer details. See topological_pretraining.featurization.base.BaseFeaturizer.to_dict for details.
         - main: dict
             Main model details.
@@ -40,29 +41,30 @@ class PreTrainedModel(torch.nn.Module):
         Whether to return the output as a NumPy array. Default is True.
         If False, the output will be a PyTorch tensor.
     """
+
     def __init__(
         self,
-        path: str|None = None,
-        params: dict|None = None,
+        path: str | None = None,
+        params: dict | None = None,
         device: str = None,
         asarray: bool = True,
     ):
-        super(PreTrainedModel, self).__init__()
+        super().__init__()
         self.asarray = asarray
         if device is None:
             if torch.cuda.is_available():
-                device = 'cuda'
+                device = "cuda"
             else:
-                device = 'cpu'
+                device = "cpu"
         self.device = device
         if params is not None:
             self.from_dict(params)
         elif path is not None:
             self.load(path=path)
         else:
-            raise ValueError('Either path or params must be provided.')
+            raise ValueError("Either path or params must be provided.")
         self.to_device(self.device)
-        
+
     def from_dict(self, params: dict):
         """
         Load the model from a dictionary of parameters.
@@ -72,7 +74,7 @@ class PreTrainedModel(torch.nn.Module):
         params : dict
             Dictionary containing the model details.
             Includes:
-            - featurizer: dict 
+            - featurizer: dict
                 Featurizer details. See topological_pretraining.featurization.base.BaseFeaturizer.to_dict for details.
             - main: dict
                 Main model details.
@@ -86,21 +88,21 @@ class PreTrainedModel(torch.nn.Module):
                     - kwargs: keyword arguments for the head model.
                     - state: state dictionary of the head model.
         """
-        featurizer = params.pop('featurizer')
+        featurizer = params.pop("featurizer")
         self.featurizer = read_from_dict(featurizer)
-        main_model = params.pop('main')
-        main_cls = main_model['cls']
+        main_model = params.pop("main")
+        main_cls = main_model["cls"]
         main_cls = get_nn(main_cls)
-        self.model = main_cls(**main_model['kwargs'])
-        self.model.load_state_dict(main_model['state'])
+        self.model = main_cls(**main_model["kwargs"])
+        self.model.load_state_dict(main_model["state"])
         self.model.eval()
         self.heads = torch.nn.ModuleDict()
         self.heads_kwargs = {}
-        for head in params.get('heads', {}):
-            head_cls = params['heads'][head]['cls']
+        for head in params.get("heads", {}):
+            head_cls = params["heads"][head]["cls"]
             head_cls = get_nn(head_cls)
-            head_kwargs = params['heads'][head]['kwargs']
-            head_state = params['heads'][head]['state']
+            head_kwargs = params["heads"][head]["kwargs"]
+            head_state = params["heads"][head]["state"]
             self.heads[head] = head_cls(**head_kwargs)
             self.heads[head].load_state_dict(head_state)
             self.heads[head].eval()
@@ -134,7 +136,7 @@ class PreTrainedModel(torch.nn.Module):
     def forward(self, x: Chem.Mol):
         """
         Forward pass through the model to get the embeddings.
-        
+
         Parameters:
         ----------
         x : Chem.Mol
@@ -153,10 +155,8 @@ class PreTrainedModel(torch.nn.Module):
             x = x.detach().cpu().numpy()
         torch.cuda.empty_cache()
         return x
-    
-    def get_head_preds(
-        self, x: Chem.Mol|list[Chem.Mol]
-    ):
+
+    def get_head_preds(self, x: Chem.Mol | list[Chem.Mol]):
         """
         Get predictions from the model's prediction heads.
 
@@ -178,7 +178,7 @@ class PreTrainedModel(torch.nn.Module):
             for target in self.heads:
                 preds[target] = self.heads[target](x)
             return preds
-        
+
     @property
     def model_cls(self):
         """
@@ -190,14 +190,14 @@ class PreTrainedModel(torch.nn.Module):
             The class name of the main model.
         """
         return self.model.__class__.__name__
-    
+
     @property
     def model_state_dict(self):
         """
         Get the state dict of the main model.
         """
         return self.model.state_dict()
-    
+
     def to_dict(self):
         """
         Convert the model and featurizer to a dictionary format.
@@ -208,19 +208,19 @@ class PreTrainedModel(torch.nn.Module):
             A dictionary containing the model and featurizer details.
         """
         params = {
-            'featurizer': self.featurizer.to_dict(),
-            'main': {
-                'cls': self.model_cls,
-                'kwargs': self.model_kwargs,
-                'state': self.model_state_dict,
+            "featurizer": self.featurizer.to_dict(),
+            "main": {
+                "cls": self.model_cls,
+                "kwargs": self.model_kwargs,
+                "state": self.model_state_dict,
             },
-            'heads': {}
+            "heads": {},
         }
         for target in self.heads:
-            params['heads'][target] = {
-                'state': self.heads[target].state_dict(),
-                'cls': self.heads[target].__class__.__name__,
-                'kwargs': self.heads_kwargs[target],
+            params["heads"][target] = {
+                "state": self.heads[target].state_dict(),
+                "cls": self.heads[target].__class__.__name__,
+                "kwargs": self.heads_kwargs[target],
             }
         return params
 
@@ -240,10 +240,10 @@ class PreTrainedModel(torch.nn.Module):
         torch.save(params, path)
         self.path = path
 
-    def to_device(self, device = None):
+    def to_device(self, device=None):
         """
         Move the model and featurizer to the specified device.
-        
+
         Parameters:
         ----------
         device : str | None
@@ -255,7 +255,7 @@ class PreTrainedModel(torch.nn.Module):
         else:
             self.device = device
         super().to(device)
-        
+
     def load(self, path: str):
         """
         Load the model and featurizer from a file.
@@ -267,18 +267,18 @@ class PreTrainedModel(torch.nn.Module):
             The file should contain a dictionary with the model and featurizer details.
         """
         self.path = path
-        params = torch.load(path, weights_only=True, map_location='cpu')
+        params = torch.load(path, weights_only=True, map_location="cpu")
         self.from_dict(params)
 
-    def tokenize(self, X: Chem.Mol|list[Chem.Mol]):
+    def tokenize(self, X: Chem.Mol | list[Chem.Mol]):
         """
         Tokenize the input data into a format suitable for the model.
-        
+
         Parameters:
         ----------
         X : Chem.Mol | list[Chem.Mol]
             RDKit molecule object or a list of RDKit molecule objects to be tokenized.
-            
+
         Returns:
         -------
         Any
@@ -290,6 +290,7 @@ class PreTrainedModel(torch.nn.Module):
         else:
             X = X.to(self.device)
         return X
+
 
 class PreTrainedGNN(PreTrainedModel):
     """
@@ -317,13 +318,16 @@ class PreTrainedGNN(PreTrainedModel):
         Whether to return the output as a NumPy array. Default is True.
         If False, the output will be a PyTorch tensor.
     """
+
     def __init__(
         self,
-        path: str|None = None,
-        params: dict|None = None,
-        embed_state: Literal['node', 'global', 'all'] = 'global',
-        layer_pool_type: slice|int|Literal['last', 'sum', 'mean', 'max', 'concat'] = None,
-        graph_pool_type: Literal['sum', 'mean', 'max', 'concat']|None = None,
+        path: str | None = None,
+        params: dict | None = None,
+        embed_state: Literal["node", "global", "all"] = "global",
+        layer_pool_type: slice
+        | int
+        | Literal["last", "sum", "mean", "max", "concat"] = None,
+        graph_pool_type: Literal["sum", "mean", "max", "concat"] | None = None,
         device: str = None,
         asarray: bool = True,
         **kwargs,
@@ -331,9 +335,9 @@ class PreTrainedGNN(PreTrainedModel):
         self.layer_pool_type = layer_pool_type
         self.graph_pool_type = graph_pool_type
         self.embed_state = embed_state
-        super(PreTrainedGNN, self).__init__(path=path, params=params, device=device, asarray=asarray)
+        super().__init__(path=path, params=params, device=device, asarray=asarray)
         self.to_device()
-        
+
     def from_dict(self, params: dict):
         """
         Load the GNN model from a dictionary of parameters.
@@ -361,19 +365,19 @@ class PreTrainedGNN(PreTrainedModel):
             self.model.out_shape = self.model.cal_out_shape()
         if self.graph_pool_type is not None:
             self.model.graph_pool_type = self.graph_pool_type
-    
+
     def embed(
-            self,
-            X: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data],
-            embed_state: Literal['node', 'global', 'all'] = None
-        ):
+        self,
+        X: Chem.Mol | pyg.data.Data | list[Chem.Mol | pyg.data.Data],
+        embed_state: Literal["node", "global", "all"] = None,
+    ):
         """
         Embed the input data into a tensor representation using the GNN model.
 
         Parameters:
         ----------
         X : Chem.Mol | pyg.data.Data | list[Chem.Mol | pyg.data.Data]
-            RDKit molecule object or a list of RDKit molecule objects 
+            RDKit molecule object or a list of RDKit molecule objects
             or PyTorch Geometric Data objects to be embedded.
         embed_state : Literal['node', 'global', 'all']
             State to embed. Can be 'node', 'global', or 'all'.
@@ -389,9 +393,9 @@ class PreTrainedGNN(PreTrainedModel):
         """
         if embed_state is not None:
             self.embed_state = embed_state
-        if isinstance(X, Chem.Mol|pyg.data.Data):
+        if isinstance(X, Chem.Mol | pyg.data.Data):
             X = [X]
-        if all(isinstance(x, Chem.Mol|None) for x in X):
+        if all(isinstance(x, Chem.Mol | None) for x in X):
             X = self.tokenize(X)
         out_shape = (1, self.model.out_shape)
         out = []
@@ -399,31 +403,29 @@ class PreTrainedGNN(PreTrainedModel):
             if not torch.all(graph.get("empty", False)):
                 graph = graph.to(self.device)
                 x = self.model(**graph)
-                if self.embed_state == 'node':
-                    x = x['final_state']
-                elif self.embed_state == 'global':
-                    x = x['global_state']
-                elif self.embed_state == 'all':
+                if self.embed_state == "node":
+                    x = x["final_state"]
+                elif self.embed_state == "global":
+                    x = x["global_state"]
+                elif self.embed_state == "all":
                     pass
                 else:
                     raise ValueError(
-                        f'Invalid embed_state {self.embed_state}. '\
+                        f"Invalid embed_state {self.embed_state}. "
                         f'Must be one of "node", "global", or "all".'
                     )
             else:
-                x = torch.full(
-                    size=out_shape, fill_value=torch.nan, device=self.device
-                )
-            graph.to('cpu')
+                x = torch.full(size=out_shape, fill_value=torch.nan, device=self.device)
+            graph.to("cpu")
             torch.cuda.empty_cache()
             out.append(x)
-        if self.embed_state != 'all':
+        if self.embed_state != "all":
             out = torch.vstack(out)
         return out
 
     def initial_embed(
         self,
-        X: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data],
+        X: Chem.Mol | pyg.data.Data | list[Chem.Mol | pyg.data.Data],
         keep_tokens=False,
     ):
         """
@@ -433,7 +435,7 @@ class PreTrainedGNN(PreTrainedModel):
         ----------
         X : Chem.Mol | pyg.data.Data | list[Chem.Mol | pyg.data
         Data]
-            RDKit molecule object or a list of RDKit molecule objects 
+            RDKit molecule object or a list of RDKit molecule objects
             or PyTorch Geometric Data objects to be embedded.
         keep_tokens : bool
             Whether to keep the tokens in the output. Default is False.
@@ -447,13 +449,13 @@ class PreTrainedGNN(PreTrainedModel):
             If `keep_tokens` is True, the tokens used for embedding will be included in the output.
         """
         # embedding prior to convolution
-        if isinstance(X, Chem.Mol|pyg.data.Data):
+        if isinstance(X, Chem.Mol | pyg.data.Data):
             X = [X]
-        if all(isinstance(x, Chem.Mol|None) for x in X):
+        if all(isinstance(x, Chem.Mol | None) for x in X):
             X = self.tokenize(X)
         return [self.model.embed_graph_nodes(x, keep_tokens=keep_tokens) for x in X]
-        
- 
+
+
 class PreTrainedFeaturizer(BaseFeaturizer):
     """
     Wrapper for a pre-trained model such that it can be used for featurization.
@@ -467,33 +469,34 @@ class PreTrainedFeaturizer(BaseFeaturizer):
         See topological_pretraining.featurization.pretrained.PreTrainedModel and
         topological_pretraining.featurization.pretrained.PreTrainedGNN for details.
     """
+
     is_fitted_ = True
     precomputed = True
 
     def _transform_base(self, **kwargs):
         """
         Set the transformation function for the featurizer.
-        
+
         Parameters:
         ----------
         **kwargs : dict, optional
             Additional keyword arguments for the transformation function.
-            
+
         Returns:
         -------
         PreTrainedGNN | PreTrainedModel
             An instance of PreTrainedGNN or PreTrainedModel based on the `gnn` keyword argument.
             If `gnn` is True, returns PreTrainedGNN, otherwise returns PreTrainedModel.
         """
-        if kwargs.get('gnn', False):
+        if kwargs.get("gnn", False):
             return PreTrainedGNN(**kwargs)
         else:
             return PreTrainedModel(**kwargs)
-    
+
     def to_dict(self):
         """
         Convert the featurizer to a dictionary format.
-        
+
         Returns:
         -------
         dict
@@ -503,10 +506,8 @@ class PreTrainedFeaturizer(BaseFeaturizer):
         params = super().to_dict()
         params.update(self.transform.to_dict())
         return params
-    
-    def set_embed_state(
-        self, embed_state: Literal['node', 'global', 'all']
-    ):
+
+    def set_embed_state(self, embed_state: Literal["node", "global", "all"]):
         """
         Set the embedding state for the model.
 
@@ -523,7 +524,7 @@ class PreTrainedFeaturizer(BaseFeaturizer):
         self.transform.embed_state = embed_state
         self.transform.asarray = False
 
-    def preprocess(self, X: Chem.Mol|list[Chem.Mol]):
+    def preprocess(self, X: Chem.Mol | list[Chem.Mol]):
         """
         Transform the input data into the input format for the pre-trained model.
 
@@ -542,14 +543,13 @@ class PreTrainedFeaturizer(BaseFeaturizer):
             X = [X]
         X = self.transform.tokenize(X)
         return X
-    
+
     def initial_embed(
-        self, X: Chem.Mol|pyg.data.Data|list[Chem.Mol|pyg.data.Data],
-        **kwargs
+        self, X: Chem.Mol | pyg.data.Data | list[Chem.Mol | pyg.data.Data], **kwargs
     ):
         """
         Initial embedding of the input data before convolution.
-        
+
         Parameters:
         ----------
         X : Chem.Mol | pyg.data.Data | list[Chem.Mol | pyg.data.Data]
@@ -558,22 +558,22 @@ class PreTrainedFeaturizer(BaseFeaturizer):
         **kwargs : dict
             Additional keyword arguments for the initial embedding.
             These will be passed to the model's initial embedding function.
-        
+
         Returns:
         -------
         list[Any]
             A list of tensors, each representing the initial embedding of a molecule.
             E.g., a list of PyTorch Geometric Data objects with feature vectors for each node.
         """
-        # initial input embedding 
+        # initial input embedding
         # (i.e., tokens mapping to vectors of learned parameters)
         return self.transform.initial_embed(X, **kwargs)
-    
+
     @property
     def device(self):
         """
         Get the device on which the model is loaded.
-        
+
         Returns:
         -------
         str
