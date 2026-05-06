@@ -1,18 +1,23 @@
-from topological_pretraining.nn.mlp import MLP
-from topological_pretraining.nn.pred_head import BinaryHead, MultiClassHead, RegressionHead
-
 import torch
 
+from topological_pretraining.nn.mlp import MLP
+from topological_pretraining.nn.pred_head import (
+    BinaryHead,
+    MultiClassHead,
+    RegressionHead,
+)
+
 decoders = {
-    'binary': BinaryHead,
-    'multiclass': MultiClassHead,
-    'regression': RegressionHead
+    "binary": BinaryHead,
+    "multiclass": MultiClassHead,
+    "regression": RegressionHead,
 }
+
 
 class AutoEncoder(torch.nn.Module):
     """
     AutoEncoder class for encoding and decoding data.
-    
+
     Parameters:
     ----------
     input_dim : int
@@ -36,6 +41,7 @@ class AutoEncoder(torch.nn.Module):
     class_weights : None, optional
         Class weights for the decoder. Default is None.
     """
+
     def __init__(
         self,
         input_dim: int,
@@ -45,11 +51,11 @@ class AutoEncoder(torch.nn.Module):
         decoder_layers: int = 1,
         dropout: float = 0.0,
         batch_norm: bool = False,
-        act: str = 'relu',
-        decoder_type: str = 'regression',
+        act: str = "relu",
+        decoder_type: str = "regression",
         class_weights: None = None,
     ):
-        super(AutoEncoder, self).__init__()
+        super().__init__()
         self.encoder = MLP(
             input_dim=input_dim,
             hidden_dim=hidden_dim,
@@ -87,7 +93,10 @@ class AutoEncoder(torch.nn.Module):
         """
         return self.encoder(x)
 
-    def pred(self, x,):
+    def pred(
+        self,
+        x,
+    ):
         """
         Predict the output using the AutoEncoder.
 
@@ -99,5 +108,3 @@ class AutoEncoder(torch.nn.Module):
         enc = self(x)
         pred = self.decoder(enc)
         return pred
-
-

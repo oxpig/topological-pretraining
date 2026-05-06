@@ -1,26 +1,28 @@
+from collections.abc import Callable
+
 import torch
-from typing import Callable
 
 act_fn = {
-    'relu': torch.nn.ReLU(),
-    'tanh': torch.nn.Tanh(),
-    'sigmoid': torch.nn.Sigmoid(),
-    'gelu': torch.nn.GELU(),
-    'elu': torch.nn.ELU(),
-    'swish': torch.nn.SiLU(),
-    'hardswish': torch.nn.Hardswish(),
-    'softmax': torch.nn.Softmax(dim=-1),
-    None: torch.nn.Identity()
+    "relu": torch.nn.ReLU(),
+    "tanh": torch.nn.Tanh(),
+    "sigmoid": torch.nn.Sigmoid(),
+    "gelu": torch.nn.GELU(),
+    "elu": torch.nn.ELU(),
+    "swish": torch.nn.SiLU(),
+    "hardswish": torch.nn.Hardswish(),
+    "softmax": torch.nn.Softmax(dim=-1),
+    None: torch.nn.Identity(),
 }
 
 initializers = {
-    'standard': 'standard',
-    'xavier_uniform': torch.nn.init.xavier_uniform_,
-    'xavier_normal': torch.nn.init.xavier_normal_,
-    'normal': torch.nn.init.normal_,
-    'zeros': torch.nn.init.zeros_,
-    'ones': torch.nn.init.ones_,
+    "standard": "standard",
+    "xavier_uniform": torch.nn.init.xavier_uniform_,
+    "xavier_normal": torch.nn.init.xavier_normal_,
+    "normal": torch.nn.init.normal_,
+    "zeros": torch.nn.init.zeros_,
+    "ones": torch.nn.init.ones_,
 }
+
 
 class MLP(torch.nn.Module):
     """
@@ -28,7 +30,7 @@ class MLP(torch.nn.Module):
 
     This model implements a feedforward neural network with multiple layers,
     where each layer consists of a linear transformation followed by an activation function.
-    
+
     Parameters:
     ----------
     input_dim : int
@@ -57,20 +59,21 @@ class MLP(torch.nn.Module):
         If a string, it must be one of the keys in `initializers`. Defaults to
         'standard', which uses the standard initialization method.
     """
+
     def __init__(
         self,
-        input_dim: int, 
+        input_dim: int,
         hidden_dim: int,
         output_dim: int = None,
         num_layers: int = 1,
         dropout: float = 0.0,
         batch_norm: bool = False,
-        act: str = 'relu',
+        act: str = "relu",
         final_act: str = None,
-        weight_init: str|Callable = 'standard',
-        bias_init: str|Callable = 'standard',
+        weight_init: str | Callable = "standard",
+        bias_init: str | Callable = "standard",
     ):
-        super(MLP, self).__init__()
+        super().__init__()
         if isinstance(weight_init, str):
             if weight_init not in initializers:
                 raise ValueError(
@@ -83,30 +86,37 @@ class MLP(torch.nn.Module):
                     f"Invalid bias initializer: {bias_init}. Must be callable or one of {list(initializers.keys())}."
                 )
             bias_init = initializers[bias_init]
-        
+
         self.weight_init = weight_init
         self.bias_init = bias_init
         if output_dim is None:
             output_dim = hidden_dim
         if num_layers == 1:
-            self.layers = torch.nn.ModuleList([
-                torch.nn.Linear(input_dim, output_dim)
-            ])
+            self.layers = torch.nn.ModuleList([torch.nn.Linear(input_dim, output_dim)])
 
         elif num_layers == 2:
-            self.layers = torch.nn.ModuleList([
-                torch.nn.Linear(input_dim, hidden_dim),
-                torch.nn.Linear(hidden_dim, output_dim)
-            ])
+            self.layers = torch.nn.ModuleList(
+                [
+                    torch.nn.Linear(input_dim, hidden_dim),
+                    torch.nn.Linear(hidden_dim, output_dim),
+                ]
+            )
         else:
-            self.layers = torch.nn.ModuleList([
-                torch.nn.Linear(input_dim, hidden_dim),
-                *[torch.nn.Linear(hidden_dim, hidden_dim) for _ in range(num_layers - 2)],
-                torch.nn.Linear(hidden_dim, output_dim)
-            ])
-        
+            self.layers = torch.nn.ModuleList(
+                [
+                    torch.nn.Linear(input_dim, hidden_dim),
+                    *[
+                        torch.nn.Linear(hidden_dim, hidden_dim)
+                        for _ in range(num_layers - 2)
+                    ],
+                    torch.nn.Linear(hidden_dim, output_dim),
+                ]
+            )
+
         self.dropout = torch.nn.Dropout(dropout)
-        self.batch_norm = torch.nn.BatchNorm1d(hidden_dim) if batch_norm else torch.nn.Identity()
+        self.batch_norm = (
+            torch.nn.BatchNorm1d(hidden_dim) if batch_norm else torch.nn.Identity()
+        )
         self.act = act_fn[act]
         self.final_act = act_fn[final_act]
         self.input_dim = input_dim
@@ -126,7 +136,7 @@ class MLP(torch.nn.Module):
         ----------
         x : torch.Tensor
             Input tensor of shape (batch_size, input_dim).
-        
+
         Returns:
         -------
         torch.Tensor
@@ -140,19 +150,17 @@ class MLP(torch.nn.Module):
                 x = self.batch_norm(x)
         x = self.final_act(x)
         return x
-    
+
     def reset_parameters(self) -> None:
         """
         Reset the parameters of the MLP.
         """
         for layer in self.layers:
-
             if not isinstance(layer, torch.nn.Linear):
                 continue
-            if self.weight_init == 'standard':
+            if self.weight_init == "standard":
                 layer.reset_parameters()
             else:
                 self.weight_init(layer.weight)
-            if layer.bias is not None and self.bias_init != 'standard':
+            if layer.bias is not None and self.bias_init != "standard":
                 self.bias_init(layer.bias)
-            
