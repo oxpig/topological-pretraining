@@ -143,6 +143,7 @@ class Biogen_Subset(Biogen, BaseDataFrame):
             else None
         )
         if csv is None or not csv.exists():
+            print("Loading Biogen dataset...") if verbose else None
             Biogen.__init__(
                 self,
                 root=root,
@@ -150,6 +151,7 @@ class Biogen_Subset(Biogen, BaseDataFrame):
                 verbose=verbose,
                 standardizer=standardizer,
             )
+            print(f"Creating subset {self.name}...") if verbose else None
             col = self.name.lower()
             self.rename(columns={col: "y"}, inplace=True)
             self.drop(
@@ -160,7 +162,8 @@ class Biogen_Subset(Biogen, BaseDataFrame):
             self.dropna(subset=["y"], inplace=True)
             self["original_index"] = self.index
             self.reset_index(drop=True, inplace=True)
-            self.save(csv)
+            if csv is not None:
+                self.save(csv)
         else:
             BaseDataFrame.__init__(
                 self,
@@ -188,21 +191,31 @@ class Biogen_Subset(Biogen, BaseDataFrame):
         """
         Get molecules only in subset.
         """
-        if self.mols_path is not None and self.mols_path.exists():
+        if "original_index" in self.columns:
+            # for when the subset is created from the full dataset
+            index = self["original_index"].values
+        else:
+            # for before the subset is created from the full dataset, when the index is the same as the original dataset
+            index = self.index.values
+        if self._rdkit_mols is not None:
+            return self._rdkit_mols[index]
+        elif self.mols_path is not None and self.mols_path.exists():
             mols = np.load(file=self.mols_path, allow_pickle=True)
             mols = mols["arr_0"]
-            mols = mols[self["original_index"].values]
+            mols = mols[index]
             return mols
-
         elif "SMILES" in self.columns:
             print(
                 "Running standardization check of molecules"
             ) if self.verbose else None
-            mols = self["SMILES"].values
+
+            mols = self.iloc[index]["SMILES"].values
             mols = [Chem.MolFromSmiles(m, sanitize=False) for m in mols]
             mols = self.standardizer(mols)
             if self.mols_path is not None:
                 np.savez_compressed(self.mols_path, mols)
+            else:
+                self._rdkit_mols = np.array(mols, dtype=object)
             return mols
         else:
             raise ValueError(
