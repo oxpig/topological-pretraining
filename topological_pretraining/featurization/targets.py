@@ -4,7 +4,8 @@ import torch
 import torch_geometric as pyg
 from rdkit import Chem
 
-from topological_pretraining.featurization import ECFP, FCFP, PDV, SNS, read_from_dict
+from topological_pretraining.featurization import ECFP, FCFP, PDV, SNS
+from topological_pretraining.featurization.load_featurizers import read_from_dict
 
 possible_targets_ = {
     "SNS": {

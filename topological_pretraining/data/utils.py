@@ -7,11 +7,54 @@ import pandas as pd
 from rdkit import Chem, DataStructs
 from tqdm import tqdm
 
-from topological_pretraining.data.datasets import __dict__ as dataset_classes
-from topological_pretraining.data.mol import Standardizer
+from .datasets import __dict__ as dataset_classes
+from .mol import Standardizer
 
 if TYPE_CHECKING:
-    from topological_pretraining.data.datasets import BaseDataFrame
+    from .datasets import BaseDataFrame
+
+available_datasets: list[str] = [
+    "BaseDataFrame",
+    "Biogen",
+    "Efflux",
+    "HClint",
+    "HPPB",
+    "RClint",
+    "RPPB",
+    "Solu",
+    "DRD2",
+    "FactorXA",
+    "BACE",
+    "BBBP",
+    "ClinTox",
+    "ESOL",
+    "FreeSolv",
+    "HIV",
+    "Lipo",
+    "MoleculeNet",
+    "MUV",
+    "MUV466",
+    "MUV548",
+    "MUV600",
+    "MUV644",
+    "MUV652",
+    "MUV689",
+    "MUV692",
+    "MUV712",
+    "MUV713",
+    "MUV733",
+    "MUV737",
+    "MUV810",
+    "MUV832",
+    "MUV846",
+    "MUV852",
+    "MUV858",
+    "MUV859",
+    "SIDER",
+    "Tox21",
+    "ToxCast",
+    "QMugs",
+]
 
 
 def load_dataset(
@@ -30,54 +73,19 @@ def load_dataset(
         The name of the dataset to load.
     root: Optional[str]
         The path to the dataset. Default is None.
+    compression: bool
+        Whether to save the dataset with compression. Default is True.
+    verbose: bool
+        Whether to print verbose output. Default is False.
+    standardizer: Standardizer
+        The standardizer to use. Default is a new Standardizer instance.
 
     Returns
     -------
     out: BaseDataFrame
         The dataset.
     """
-    available_datasets = [
-        "BaseDataFrame",
-        "Biogen",
-        "Efflux",
-        "HClint",
-        "HPPB",
-        "RClint",
-        "RPPB",
-        "Solu",
-        "DRD2",
-        "FactorXA",
-        "BACE",
-        "BBBP",
-        "ClinTox",
-        "ESOL",
-        "FreeSolv",
-        "HIV",
-        "Lipo",
-        "MoleculeNet",
-        "MUV",
-        "MUV466",
-        "MUV548",
-        "MUV600",
-        "MUV644",
-        "MUV652",
-        "MUV689",
-        "MUV692",
-        "MUV712",
-        "MUV713",
-        "MUV733",
-        "MUV737",
-        "MUV810",
-        "MUV832",
-        "MUV846",
-        "MUV852",
-        "MUV858",
-        "MUV859",
-        "SIDER",
-        "Tox21",
-        "ToxCast",
-        "QMugs",
-    ]
+
     print(f"Loading {name}...") if verbose else None
     if name not in available_datasets:
         raise ValueError(

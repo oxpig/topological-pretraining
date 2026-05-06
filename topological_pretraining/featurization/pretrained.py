@@ -5,8 +5,8 @@ import torch
 import torch_geometric as pyg
 from rdkit import Chem
 
-from topological_pretraining.featurization.base import BaseFeaturizer
-from topological_pretraining.featurization.load import read_from_dict
+from .base import BaseFeaturizer
+from .load_featurizers import read_from_dict
 from topological_pretraining.nn import get_nn
 
 

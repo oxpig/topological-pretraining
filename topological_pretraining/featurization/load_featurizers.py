@@ -1,14 +1,10 @@
 import torch
 
-from . import (
-    ECFP,
-    FCFP,
-    PDV,
-    SNS,
-    AtomGraphFeaturizer,
-    BaseFeaturizer,
-    MorganGraphFeaturizer,
-)
+from .morgan_graph import MorganGraphFeaturizer
+from .baseline import ECFP, FCFP, PDV, SNS
+from .atom_graph import AtomGraphFeaturizer
+from .base import BaseFeaturizer
+
 
 all_featurizers = {
     "AtomGraphFeaturizer": AtomGraphFeaturizer,
