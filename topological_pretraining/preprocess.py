@@ -332,6 +332,8 @@ def preprocess(config: dict):
     """
     Preprocess the data.
 
+    Generates splits for benchmark datasets and applies Tanimoto filters to the pretraining dataset based on the benchmark datasets.
+
     Parameters:
     ----------
     config: dict
