@@ -36,7 +36,9 @@ def max_tanimoto(
         Default is True.
     """
     out = np.zeros(len(fps_1))
-    pbar = tqdm(total=len(fps_1), disable=not verbose)
+    pbar = tqdm(
+        total=len(fps_1), disable=not verbose, desc="Calculating Tanimoto similarity"
+    )
     for i, fp_1 in enumerate(fps_1):
         sims = FPOps.bulk_tanimoto(fp_1, fps_2)
         out[i] = np.max(sims)
@@ -216,8 +218,10 @@ def repeat_groupkfold(
     Returns:
     -------
     out: np.ndarray
-        Array of splits. Each column represents a split, where 1 is the test set and 0 is the
-        train set. Each row represents a data point. Total number of splits is kfolds * repeats.
+        Array of splits.
+        Each column represents a split, with string values "Train" and "Test"
+        indicating the split assignment for each data point.
+        Each row represents a data point. Total number of splits is kfolds * repeats.
     """
     total_splits = kfolds * repeats
     out = np.full((len(X), total_splits), fill_value="Train")
@@ -242,7 +246,7 @@ def butina_splitting(
     kfolds: int = 5,
     verbose: bool = True,
     stratified=False,
-) -> np.ndarray:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Split the data using Butina clustering and GroupKFold.
 
@@ -266,8 +270,10 @@ def butina_splitting(
     Returns:
     -------
     out: np.ndarray
-        Array of splits. Each column represents a split, where 1 is the test set and 0 is the
-        train set. Each row represents a data point. Total number of splits is kfolds * repeats.
+        Array of splits.
+        Each column represents a split, with string values "Train" and "Test"
+        indicating the split assignment for each data point.
+        Each row represents a data point. Total number of splits is kfolds * repeats.
     """
     clusters = FPOps.butina(fps, threshold=threshold, verbose=verbose)
     splits = repeat_groupkfold(
