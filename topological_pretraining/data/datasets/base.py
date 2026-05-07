@@ -22,6 +22,12 @@ class BaseDataFrame(pd.DataFrame):
     compression: bool
         Whether to compress the dataset or not.
         Default is True.
+    verbose: bool
+        Whether to print verbose messages during initialization and saving.
+        Default is False.
+    standardizer: Standardizer or dict
+        Standardizer object or dict of standardizer arguments to initialize a Standardizer with.
+        Default is an instance of Standardizer with default arguments.
 
     Attributes
     ----------
@@ -31,6 +37,28 @@ class BaseDataFrame(pd.DataFrame):
         The URL to download the csv file.
     compression: bool
         Whether the saved csv is compressed or not.
+    verbose: bool
+        Whether to print verbose messages during initialization and saving.
+    standardizer: Standardizer
+        Standardizer object to standardize molecules with.
+
+    Properties
+    ----------
+    name: str
+        The name of the dataset.
+    task: str
+        The task of the dataset, e.g., 'regression' or 'classification'.
+    rdkit_mols: list[rdkit.Chem.Mol | None]
+        A list of rdkit molecule objects.
+    splits: generator
+        Generator for yielding pre-defined train-test splits.
+    num_splits: int
+        The number of pre-defined train-test splits in the dataset.
+    mols_path: str | None
+        The path where RDKit molecules are saved to or loaded from.
+    splits_to_exclude_for_metrics: numpy.ndarray
+        Return list of splits where `Test` labels are all identical,
+        useful for excluding splits which aren't informative.
     """
 
     # hold molecules in memory if no path given
@@ -65,7 +93,9 @@ class BaseDataFrame(pd.DataFrame):
             df = pd.read_csv(url)
         else:
             print("Reading csv from path...") if verbose else None
-            df = pd.read_csv(csv)
+            df = pd.read_csv(
+                csv,
+            )
 
         if csv is not None and not os.path.exists(csv):
             # Save the csv file
