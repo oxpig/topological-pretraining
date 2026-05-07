@@ -26,6 +26,13 @@ class QMugs(BaseDataFrame):
     compression: bool
         Whether to compress the dataset or not.
         Default is True.
+    verbose: bool
+        Whether to print verbose messages during initialization and saving.
+        Default is True.
+    standardizer: Standardizer or dict
+        Standardizer object or dict of standardizer arguments to initialize a Standardizer with.
+        Default is an instance of Standardizer with default arguments.
+
 
     Attributes
     ----------
@@ -51,7 +58,7 @@ class QMugs(BaseDataFrame):
         suffix = "csv.gz" if compression else "csv"
 
         # Set the path to the csv file
-        csv = Path(root) / f"qmugs.{suffix}"
+        csv = Path(root) / f"qmugs.{suffix}" if root is not None else None
         # Initialize the BaseDataFrame
         super().__init__(
             csv=csv,
