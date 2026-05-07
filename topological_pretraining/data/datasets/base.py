@@ -201,7 +201,7 @@ class BaseDataFrame(pd.DataFrame):
         if "rdkit_pass" in self.columns:
             return
         mols = self.rdkit_mols
-        out = np.where(np.array(mols) is None, False, True)
+        out = np.array([m is not None for m in mols], dtype=bool)
         self["rdkit_pass"] = out
         self.save()
 
