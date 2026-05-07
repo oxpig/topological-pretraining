@@ -1,3 +1,4 @@
+from joblib import Parallel, delayed
 import numpy as np
 from rdkit import Chem, DataStructs, RDLogger
 from rdkit.Chem import Draw
@@ -718,7 +719,7 @@ class Standardizer:
         canonical_tautomer (bool): Whether to canonicalize the tautomer.
         keep_chirality (bool): Whether to keep chirality in the tautomer.
         verbose (bool): Whether to print progress.
-        break_at_none (bool): Whether to end the standardization process at the first None molecule.
+        n_jobs (int): Number of parallel jobs to run when standardizing a list of molecules.
 
     Attributes:
     ----------
@@ -746,7 +747,7 @@ class Standardizer:
         canonical_tautomer: bool = True,
         keep_chirality: bool = True,
         verbose: bool = False,
-        break_at_none: bool = False,
+        n_jobs: int = 1,
     ):
         self.sanitize = sanitize
         self.cleanup = cleanup
@@ -756,7 +757,7 @@ class Standardizer:
         self.canonical_tautomer = canonical_tautomer
         self.tautomer_keep_chirality = keep_chirality
         self.verbose = verbose
-        self.break_at_none = break_at_none
+        self.n_jobs = n_jobs
 
     def standardize(self, mol: Chem.Mol) -> Chem.Mol:
         """
@@ -771,6 +772,8 @@ class Standardizer:
             Chem.Mol: Standardized RDKit molecule.
         """
         print("Running standardizer") if self.verbose else None
+        if mol is None:
+            return None
         try:
             mol.UpdatePropertyCache()
             if self.sanitize:
@@ -803,11 +806,11 @@ class Standardizer:
 
         Parameters:
         ----------
-            mol (Chem.Mol): RDKit molecule.
+            mol (Chem.Mol | list[Chem.Mol]): RDKit molecule or a list of RDKit molecules.
 
         Returns:
         -------
-            Chem.Mol: Standardized RDKit molecule.
+            Chem.Mol | list[Chem.Mol]: Standardized RDKit molecule or a list of standardized RDKit molecules.
         """
         print(f"Standardizer: {self}") if self.verbose else None
         if isinstance(mol, Chem.Mol):
@@ -816,22 +819,15 @@ class Standardizer:
             verb = self.verbose
             self.verbose = False
             out = []
-            self.pbar = tqdm(mol, disable=not verb, desc="Standardizing molecules")
-            for idx, m in enumerate(mol):
-                if m is None:
-                    print(f"None provide at: {idx}") if verb else None
-                    out.append(None)
-                    continue
-                if not isinstance(m, Chem.Mol):
-                    raise ValueError("Input must be an RDKit molecule.")
-                m = self.standardize(m)
-                out.append(m)
-                self.pbar.update()
-                if self.break_at_none and m is None:
-                    print(f"Failed at: {idx}") if verb else None
-                    break
-            self.pbar.close()
-            self.pbar = None
+            out = Parallel(n_jobs=self.n_jobs)(
+                delayed(self.standardize)(m)
+                for m in tqdm(
+                    mol,
+                    disable=not verb,
+                    total=len(mol),
+                    desc="Standardizing molecules",
+                )
+            )
             self.verbose = verb
             return out
         else:
@@ -947,7 +943,7 @@ class Standardizer:
             "canonical_tautomer": self.canonical_tautomer,
             "keep_chirality": self.tautomer_keep_chirality,
             "verbose": self.verbose,
-            "break_at_none": self.break_at_none,
+            "n_jobs": self.n_jobs,
         }
 
 
