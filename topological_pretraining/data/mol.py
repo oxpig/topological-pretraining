@@ -352,6 +352,18 @@ class MorganGenerator:
         """
         self.generator.GetOptions().countSimulation = value
 
+    def __repr__(self) -> str:
+        out = "".join(
+            [
+                f"MorganGenerator(radius={self.radius}, ",
+                f"fpsize={self.fpsize}, ",
+                f"chirality={self.chirality}, ",
+                f"count_sim={self.counts}, ",
+                f"redundant_envs={self.redundant_envs})",
+            ]
+        )
+        return out
+
 
 class SortAndSlice:
     """
