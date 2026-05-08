@@ -1,0 +1,29 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.8
+    hooks:
+      - id: ruff-check
+        name: Lint with Ruff
+        args: [ "--config", "pyproject.toml" ]
+        types_or: [ python, pyi ]
+
+      - id: ruff-format
+        name: Format with Ruff
+        args: [ "--config", "pyproject.toml" ]
+        types_or: [ python, pyi ]
+
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout
+        files: '\.ipynb$'
