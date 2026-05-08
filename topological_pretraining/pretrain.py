@@ -166,6 +166,8 @@ def pretrain(config: dict):
     else:
         mols = df.rdkit_mols
 
+    if isinstance(mols, np.ndarray):
+        mols = mols.tolist()
     # prepare and save raw graphs
     raw_dataset = GraphDataset(
         root=root,
