@@ -4,5 +4,6 @@ channels:
 dependencies:
   - python=3.12
   - pip
+  - rdkit=2024.09.03
   - pip:
     - -e .
