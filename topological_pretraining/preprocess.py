@@ -439,7 +439,6 @@ def preprocess(config: dict):
         print(f"Processing filters for {pretrain_data.name}") if verbose else None
         print(f"Data shape: {pretrain_data.shape}") if verbose else None
         rdkit_passes = pretrain_data[pretrain_data["rdkit_pass"]]
-        rdkit_fails = pretrain_data[~pretrain_data["rdkit_pass"]]
         pretrain_mols = pretrain_data.rdkit_mols[rdkit_passes.index]
 
         # fps as explicitbitvect
@@ -455,24 +454,39 @@ def preprocess(config: dict):
             pretrain_filter = float_to_binary(
                 max_tanimote_scores_all, threshold=threshold, below=True
             )
-            for fail in rdkit_fails.index:
-                pretrain_filter = np.insert(pretrain_filter, fail, 0, axis=0)
+            fails = 0
+            pretrain_filter_with_fails = np.empty(len(pretrain_data))
+            for i, rd_pass in enumerate(pretrain_data["rdkit_pass"]):
+                if rd_pass:
+                    pretrain_filter_with_fails[i] = pretrain_filter[i - fails]
+                else:
+                    pretrain_filter_with_fails[i] = 0
+                    fails += 1
             if num_keep is None:
+                # set num_keep to the number of data points that pass the filter for the first threshold (0.5)
                 num_keep = int(np.sum(pretrain_filter))
             else:
-                filter_indices = np.where(pretrain_filter == 1)[0]
+                filter_indices = np.where(pretrain_filter_with_fails == 1)[0]
                 filter_indices = subset_indices(filter_indices, num_keep)
-                pretrain_filter = indices_to_binary(
-                    filter_indices, len(pretrain_filter)
+                pretrain_filter_with_fails = indices_to_binary(
+                    filter_indices, len(pretrain_filter_with_fails)
                 )
 
-            pretrain_data[f"tanimoto_filter_{threshold}"] = pretrain_filter
+            pretrain_data[f"tanimoto_filter_{threshold}"] = pretrain_filter_with_fails
 
-        for fail in rdkit_fails.index:
-            max_tanimote_scores_all = np.insert(
-                max_tanimote_scores_all, fail, np.nan, axis=0
-            )
-            max_tanimote_scores = np.insert(max_tanimote_scores, fail, np.nan, axis=0)
+        new_scores_all = np.empty(len(pretrain_data))
+        new_scores = np.empty((len(pretrain_data), max_tanimote_scores_all.shape[1]))
+        fails = 0
+        for i, rd_pass in enumerate(pretrain_data["rdkit_pass"]):
+            if rd_pass:
+                new_scores[i, :] = max_tanimote_scores_all[i - fails]
+                new_scores_all[i] = max_tanimote_scores[i - fails, :]
+            else:
+                new_scores[i, :] = np.nan
+                new_scores_all[i] = np.nan
+                fails += 1
+        max_tanimote_scores_all = new_scores_all
+        max_tanimote_scores = new_scores
         pretrain_data["max_tanimoto"] = max_tanimote_scores_all
         for i, benchmark in enumerate(benchmark_fps.keys()):
             pretrain_data[f"max_tanimoto_{benchmark}"] = max_tanimote_scores[:, i]
