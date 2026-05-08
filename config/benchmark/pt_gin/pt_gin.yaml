@@ -3,7 +3,7 @@ process: benchmark
 benchmark: all
 featurizer: PreTrainedFeaturizer
 extra_transform_kwargs: {}
-logging: True
+logging: false
 verbose: True
 featurizer_kwargs:
     transform_kwargs:

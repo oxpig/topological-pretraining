@@ -1,6 +1,6 @@
 experiment: scratch_morgan_graph_radius_0
 model: SklearnGIN
-logging: true
+logging: false
 process: benchmark
 featurizer: MorganGraphFeaturizer
 featurizer_kwargs:

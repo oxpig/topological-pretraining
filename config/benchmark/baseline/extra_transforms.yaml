@@ -1,4 +1,4 @@
 extra_transform_kwargs:
-  variance_threshold: 
+  variance_threshold:
     threshold: 0.0
-logging: True
+logging: false

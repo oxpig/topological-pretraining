@@ -31,4 +31,4 @@ warmup_epochs: 2
 lr_decay_half_life: 5
 batch_size: 128
 epochs: 50
-logging: True
+logging: false

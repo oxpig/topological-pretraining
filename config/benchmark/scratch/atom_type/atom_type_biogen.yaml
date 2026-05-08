@@ -1,6 +1,6 @@
 experiment: scratch_atom_type
 model: SklearnGIN
-logging: true
+logging: false
 process: benchmark
 featurizer: AtomGraphFeaturizer
 featurizer_kwargs:
