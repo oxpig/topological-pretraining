@@ -142,7 +142,12 @@ class MUV_Subset(MUV, BaseDataFrame):
 	@property
 	def rdkit_mols(self):
 		mols = BaseDataFrame.rdkit_mols.fget(self)
-		if self.mols_path is not None and self.mols_path.exists():
+		# if subset has been preprocessed with original_index column, select subset mols
+		if (
+			self.mols_path is not None
+			and self.mols_path.exists()
+			and 'original_index' in self.columns
+		):
 			mols = mols[self['original_index'].values]
 		return mols
 
