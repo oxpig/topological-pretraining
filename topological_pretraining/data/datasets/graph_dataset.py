@@ -14,508 +14,501 @@ from topological_pretraining.featurization import load_featurizer
 from topological_pretraining.featurization.targets import Targets
 
 if TYPE_CHECKING:
-    from topological_pretraining.featurization import GraphFeaturizer
+	from topological_pretraining.featurization import GraphFeaturizer
 
 
 class PreFilter:
-    """
-    Class for filtering dataset based on split indicies
+	"""
+	Class for filtering dataset based on split indicies
 
-    Parameters:
-    ----------
-    split : tuple[str, torch.Tensor])
-        Tuple with a split name at 0 and split indices at 1.
-    """
+	Parameters:
+	----------
+	split : tuple[str, torch.Tensor])
+	    Tuple with a split name at 0 and split indices at 1.
+	"""
 
-    def __init__(self, split: tuple[str, torch.Tensor] = None):
-        if split:
-            self.split_name, self.indices = split
-        else:
-            self.split_name, self.indices = None, None
+	def __init__(self, split: tuple[str, torch.Tensor] = None):
+		if split:
+			self.split_name, self.indices = split
+		else:
+			self.split_name, self.indices = None, None
 
-    def _pre_filter(self, data: pyg.data.Data):
-        """
-        Check if graph is in split.
+	def _pre_filter(self, data: pyg.data.Data):
+		"""
+		Check if graph is in split.
 
-        Parameters:
-        ----------
-        data : torch_geometric.data.Data
-            A PyTorch Geometric Data object. Must have an `idx` attribute
-            (int) that indicates the object's position in the dataset.
+		Parameters:
+		----------
+		data : torch_geometric.data.Data
+		    A PyTorch Geometric Data object. Must have an `idx` attribute
+		    (int) that indicates the object's position in the dataset.
 
-        Returns:
-        -------
-        bool
-            True if `data.idx` is in the split, or if no split is provided.
-            Otherwise False.
+		Returns:
+		-------
+		bool
+		    True if `data.idx` is in the split, or if no split is provided.
+		    Otherwise False.
 
-        Raises:
-        ------
-        AttributeError
-            If `data` does not have an `idx` attribute.
-        TypeError
-            If `data.idx` is not an integer.
-        """
-        if self.indices is None:
-            return True
-        else:
-            if "idx" not in data:
-                raise AttributeError(
-                    "`data`, requires an integer `idx` attribute "
-                    "indicating the objects position in the dataset."
-                )
-            if not isinstance(data.idx, int):
-                raise TypeError("`data` attribute `idx` must be an integer.")
-            return self.indices[data.idx]
+		Raises:
+		------
+		AttributeError
+		    If `data` does not have an `idx` attribute.
+		TypeError
+		    If `data.idx` is not an integer.
+		"""
+		if self.indices is None:
+			return True
+		else:
+			if 'idx' not in data:
+				raise AttributeError(
+					'`data`, requires an integer `idx` attribute '
+					'indicating the objects position in the dataset.'
+				)
+			if not isinstance(data.idx, int):
+				raise TypeError('`data` attribute `idx` must be an integer.')
+			return self.indices[data.idx]
 
-    def __call__(self, data: pyg.data.Data):
-        return self._pre_filter(data)
+	def __call__(self, data: pyg.data.Data):
+		return self._pre_filter(data)
 
 
 class GraphDataset(pyg.data.InMemoryDataset):
-    """
-    Graph dataset for pretraining.
-    Works for datasets upto ~1,000,000 samples with 32Gb of memory.
+	"""
+	Graph dataset for pretraining.
+	Works for datasets upto ~1,000,000 samples with 32Gb of memory.
 
-    Parameters:
-    ----------
-    root : str
-        Path to store or retrieve molecular dataset.
-    featurizer : GraphFeaturizer
-        Featurizer that converts molecules into PyTorch Geometric Data objects.
-        See `topological_pretraining/featurizers.py` for definition
-    molecules : Optional[List[rdkit.Chem.Mol]]
-        A list of RDKit molecules.
-    split : Optional[tuple[str, torch.Tensor]]
-        A tuple containing a name for the split for saving, and a tensor of indices.
-    fit_featurizer : bool
-        Boolean for whether to fit the GraphFeaturizer.
-        Defaults to True unless the input featurizer or saved featurizer has already been fitted.
-    run_id : Optional[str]
-        Optional id name for save paths.
-    targets : dict[str, dict[str, str]] | None
-        Nested dictionary of self-supervised target labels to generate.
-        Keys are target names; can be `ECFP`, `SNS`, `PDV`, or `FCFP`
-        Values are dictionaries of target variables, such as `radius` and `fpsize`.
-        REVISIT
-    verbose : bool
-        Verbosity. Default is `False`.
-    """
+	Parameters:
+	----------
+	root : str
+	    Path to store or retrieve molecular dataset.
+	featurizer : GraphFeaturizer
+	    Featurizer that converts molecules into PyTorch Geometric Data objects.
+	    See `topological_pretraining/featurizers.py` for definition
+	molecules : Optional[List[rdkit.Chem.Mol]]
+	    A list of RDKit molecules.
+	split : Optional[tuple[str, torch.Tensor]]
+	    A tuple containing a name for the split for saving, and a tensor of indices.
+	fit_featurizer : bool
+	    Boolean for whether to fit the GraphFeaturizer.
+	    Defaults to True unless the input featurizer or saved featurizer has already been fitted.
+	run_id : Optional[str]
+	    Optional id name for save paths.
+	targets : dict[str, dict[str, str]] | None
+	    Nested dictionary of self-supervised target labels to generate.
+	    Keys are target names; can be `ECFP`, `SNS`, `PDV`, or `FCFP`
+	    Values are dictionaries of target variables, such as `radius` and `fpsize`.
+	    REVISIT
+	verbose : bool
+	    Verbosity. Default is `False`.
+	"""
 
-    _indexes = None
+	_indexes = None
 
-    def __init__(
-        self,
-        root: str,
-        featurizer: GraphFeaturizer = None,
-        molecules: list[Chem.Mol] | None = None,
-        split: tuple[str, torch.Tensor] | None = None,
-        fit_featurizer: bool = True,
-        run_id: str | None = None,
-        targets: dict[str, dict[str, str]] | None = None,
-        verbose: bool = False,
-    ):
-        Path(root).mkdir(parents=True, exist_ok=True)
-        if run_id is None:
-            run_id = ""
-        else:
-            run_id = f"_{run_id}"
-        if split is not None:
-            split = (f"_{split[0]}", split[1])
-        else:
-            split = ("", None)
+	def __init__(
+		self,
+		root: str,
+		featurizer: GraphFeaturizer = None,
+		molecules: list[Chem.Mol] | None = None,
+		split: tuple[str, torch.Tensor] | None = None,
+		fit_featurizer: bool = True,
+		run_id: str | None = None,
+		targets: dict[str, dict[str, str]] | None = None,
+		verbose: bool = False,
+	):
+		Path(root).mkdir(parents=True, exist_ok=True)
+		run_id = '' if run_id is None else f'_{run_id}'
+		split = ('', None) if split is None else (f'_{split[0]}', split[1])
 
-        self.split_name, self.split_indices = split
-        self._molecules = molecules
-        self.run_id = run_id
-        self.verbose = verbose
+		self.split_name, self.split_indices = split
+		self._molecules = molecules
+		self.run_id = run_id
+		self.verbose = verbose
 
-        featurizer_path = (
-            Path(root) / "processed" / f"featurizer{run_id}{self.split_name}.pt"
-        )
-        if featurizer_path.exists():
-            warnings.warn(
-                "Saved featurizer found. Using saved featurizer.", UserWarning
-            )
-            featurizer = load_featurizer(featurizer_path)
+		featurizer_path = (
+			Path(root) / 'processed' / f'featurizer{run_id}{self.split_name}.pt'
+		)
+		if featurizer_path.exists():
+			print(
+				'Saved featurizer found. Using saved featurizer.'
+			) if self.verbose else None
+			featurizer = load_featurizer(featurizer_path)
 
-        if featurizer is None:
-            raise ValueError("Featurizer not found.")
+		if featurizer is None:
+			raise ValueError('Featurizer not found.')
 
-        self.featurizer = featurizer
-        self.fit_featurizer = fit_featurizer or not featurizer.is_fitted_
+		self.featurizer = featurizer
+		self.fit_featurizer = fit_featurizer or not featurizer.is_fitted_
 
-        targets_path = Path(root) / "processed" / f"targets{run_id}{self.split_name}.pt"
-        if targets_path.exists():
-            print("Loading targets...") if self.verbose else None
-            self.targets = Targets(targets_path=targets_path)
-        elif isinstance(targets, dict):
-            print("Creating targets...") if self.verbose else None
-            self.targets = Targets(targets=targets.copy())
-        else:
-            self.targets = None
+		targets_path = Path(root) / 'processed' / f'targets{run_id}{self.split_name}.pt'
+		if targets_path.exists():
+			print('Loading targets...') if self.verbose else None
+			self.targets = Targets(targets_path=targets_path)
+		elif isinstance(targets, dict):
+			print('Creating targets...') if self.verbose else None
+			self.targets = Targets(targets=targets.copy())
+		else:
+			self.targets = None
 
-        super().__init__(
-            root=root,
-            pre_filter=PreFilter(split),
-        )
+		super().__init__(
+			root=root,
+			pre_filter=PreFilter(split),
+		)
 
-        self.load(self.processed_graphs_path)
-        if self.targets is not None:
-            if not self.targets.is_fitted_:
-                print("Targets not fitted. Fitting...") if self.verbose else None
-                self.fit_targets([graph for graph in self])
+		self.load(self.processed_graphs_path)
+		if self.targets is not None and not self.targets.is_fitted_:
+			print('Targets not fitted. Fitting...') if self.verbose else None
+			self.fit_targets([graph for graph in self])
 
-    def get(self, idx: int):
-        """
-        Retrieve molecular graph object at index `idx`.
-        Altered version of the native method in PyTorch Geometric that
-        computes target values.
+	def get(self, idx: int):
+		"""
+		Retrieve molecular graph object at index `idx`.
+		Altered version of the native method in PyTorch Geometric that
+		computes target values.
 
-        Parameters:
-        ----------
-        idx : int
-            Index of the graph object.
+		Parameters:
+		----------
+		idx : int
+		    Index of the graph object.
 
-        Returns:
-        -------
-        torch_geometric.data.Data
-            A molecule as a PyTorch graph object.
-        """
-        if self.len() == 1:
-            return copy.copy(self._data)
+		Returns:
+		-------
+		torch_geometric.data.Data
+		    A molecule as a PyTorch graph object.
+		"""
+		if self.len() == 1:
+			return copy.copy(self._data)
 
-        if not hasattr(self, "_data_list") or self._data_list is None:
-            self._data_list = self.len() * [None]
-        elif self._data_list[idx] is not None:
-            return copy.copy(self._data_list[idx])
+		if not hasattr(self, '_data_list') or self._data_list is None:
+			self._data_list = self.len() * [None]
+		elif self._data_list[idx] is not None:
+			return copy.copy(self._data_list[idx])
 
-        data = pyg.data.separate.separate(
-            cls=self._data.__class__,
-            batch=self._data,
-            idx=idx,
-            slice_dict=self.slices,
-            decrement=False,
-        )
-        if self.targets is not None:
-            if self.targets.is_fitted_:
-                data = self.compute_graph_targets(data)
-                self._data_list[idx] = copy.copy(data)
+		data = pyg.data.separate.separate(
+			cls=self._data.__class__,
+			batch=self._data,
+			idx=idx,
+			slice_dict=self.slices,
+			decrement=False,
+		)
+		if self.targets is not None and self.targets.is_fitted_:
+			data = self.compute_graph_targets(data)
+			self._data_list[idx] = copy.copy(data)
 
-        return data
+		return data
 
-    def compute_graph_targets(self, graph: pyg.data.Data):
-        """
-        Compute the target labels for molecule and add to graph object.
+	def compute_graph_targets(self, graph: pyg.data.Data):
+		"""
+		Compute the target labels for molecule and add to graph object.
 
-        Parameters:
-        ----------
-        graph : torch_geometric.data.Data
-            A molecule as a PyTorch graph object.
+		Parameters:
+		----------
+		graph : torch_geometric.data.Data
+		    A molecule as a PyTorch graph object.
 
-        Returns:
-        -------
-        torch_geometric.data.Data
-            The input graph with target labels as attributes.
-        """
-        idx = graph.idx.item()
-        # Retrieve RDKit molecule for graph
-        mol = self.molecules[idx]
-        graph = self.targets.transform(mol, graph)
-        return graph
+		Returns:
+		-------
+		torch_geometric.data.Data
+		    The input graph with target labels as attributes.
+		"""
+		idx = graph.idx.item()
+		# Retrieve RDKit molecule for graph
+		mol = self.molecules[idx]
+		graph = self.targets.transform(mol, graph)
+		return graph
 
-    @property
-    def featurizer_path(self):
-        """
-        Path to save and retrieve graph featurizer.
+	@property
+	def featurizer_path(self):
+		"""
+		Path to save and retrieve graph featurizer.
 
-        Returns:
-        -------
-        pathlib.Path
-            Path to saved GraphFeaturizer.
-        """
-        return Path(self.processed_dir) / f"featurizer{self.run_id}{self.split_name}.pt"
+		Returns:
+		-------
+		pathlib.Path
+		    Path to saved GraphFeaturizer.
+		"""
+		return Path(self.processed_dir) / f'featurizer{self.run_id}{self.split_name}.pt'
 
-    @property
-    def targets_path(self):
-        """
-        Path to save and retrieve graph target generator.
+	@property
+	def targets_path(self):
+		"""
+		Path to save and retrieve graph target generator.
 
-        Returns:
-        pathlib.Path
-            Path to saved Target.
-        """
-        return Path(self.processed_dir) / f"targets{self.run_id}{self.split_name}.pt"
+		Returns:
+		pathlib.Path
+		    Path to saved Target.
+		"""
+		return Path(self.processed_dir) / f'targets{self.run_id}{self.split_name}.pt'
 
-    @property
-    def processed_file_names(self):
-        """
-        Path for processed files.
-        Only one file for saving all graphs.
+	@property
+	def processed_file_names(self):
+		"""
+		Path for processed files.
+		Only one file for saving all graphs.
 
-        Returns:
-        -------
-        list[str]
-            Path to processed graphs in a List.
-        """
-        return [f"processed{self.run_id}{self.split_name}.pt"]
+		Returns:
+		-------
+		list[str]
+		    Path to processed graphs in a List.
+		"""
+		return [f'processed{self.run_id}{self.split_name}.pt']
 
-    def fit_targets(self, data_list: list[pyg.data.Data]):
-        """
-        Fit the target object to a list of molecular graphs.
-        Target object gets save to self.targets_path
-        This is for instances where the target depends on a set of
-        data, e.g., Sort and Slice fingerprints.
+	def fit_targets(self, data_list: list[pyg.data.Data]):
+		"""
+		Fit the target object to a list of molecular graphs.
+		Target object gets save to self.targets_path
+		This is for instances where the target depends on a set of
+		data, e.g., Sort and Slice fingerprints.
 
-        Parameters:
-        ----------
-        data_list : list[pyg.data.Data]
-            List of molecules as PyTorch graph objects.
+		Parameters:
+		----------
+		data_list : list[pyg.data.Data]
+		    List of molecules as PyTorch graph objects.
 
-        Returns:
-        -------
-        None
-        """
-        print("Fitting targets...") if self.verbose else None
-        molecules = [self.molecules[data.idx] for data in data_list]
-        self.targets.fit((molecules, data_list))
-        if self.targets_path.exists():
-            warnings.warn("Overwriting existing Targets object.")
-        self.targets.save(self.targets_path)
+		Returns:
+		-------
+		None
+		"""
+		print('Fitting targets...') if self.verbose else None
+		molecules = [self.molecules[data.idx] for data in data_list]
+		self.targets.fit((molecules, data_list))
+		if self.targets_path.exists():
+			warnings.warn(
+				'Overwriting existing Targets object.', UserWarning, stacklevel=2
+			)
+		self.targets.save(self.targets_path)
 
-    def process(self):
-        """
-        Process raw molecular data.
-        Makes raw graphs if they do not exist.
-        Filters graphs using split indices.
-        Fits GraphFeaturizer to filtered raw graphs.
-        Saves GraphFeaturizer as a dictionary.
-        Tokenizes filtered raw graphs and saves to processed path.
-        Fits Targets to tokenized graphs
-        """
-        self.make_raw_dir()
-        self.save_molecules(self._molecules)
-        self.make_raw_graphs()
-        data_list = self.load_raw_graphs()
-        data_list = [graph for graph in data_list if self.pre_filter(graph)]
-        if self.fit_featurizer:
-            self.run_featurizer_fitting(data_list)
+	def process(self):
+		"""
+		Process raw molecular data.
+		Makes raw graphs if they do not exist.
+		Filters graphs using split indices.
+		Fits GraphFeaturizer to filtered raw graphs.
+		Saves GraphFeaturizer as a dictionary.
+		Tokenizes filtered raw graphs and saves to processed path.
+		Fits Targets to tokenized graphs
+		"""
+		self.make_raw_dir()
+		self.save_molecules(self._molecules)
+		self.make_raw_graphs()
+		data_list = self.load_raw_graphs()
+		data_list = [graph for graph in data_list if self.pre_filter(graph)]
+		if self.fit_featurizer:
+			self.run_featurizer_fitting(data_list)
 
-        data_list = [self.featurizer.encode(graph) for graph in data_list]
-        self.save(data_list, self.processed_graphs_path)
+		data_list = [self.featurizer.encode(graph) for graph in data_list]
+		self.save(data_list, self.processed_graphs_path)
 
-    def make_raw_dir(self):
-        """
-        Make raw directory.
-        """
-        raw_dir = Path(self.raw_dir)
-        raw_dir.mkdir(parents=True, exist_ok=True)
+	def make_raw_dir(self):
+		"""
+		Make raw directory.
+		"""
+		raw_dir = Path(self.raw_dir)
+		raw_dir.mkdir(parents=True, exist_ok=True)
 
-    def run_featurizer_fitting(self, data_list: list[pyg.data.Data]):
-        """
-        Fit featurizer on input graphs.
+	def run_featurizer_fitting(self, data_list: list[pyg.data.Data]):
+		"""
+		Fit featurizer on input graphs.
 
-        Parameters:
-        ----------
-        data_list : list[torch_geometric.data.Data]
-            List of raw molecular graphs.
-        """
-        self.featurizer.fit(data_list)
-        self.featurizer.save(self.featurizer_path, params_only=True)
+		Parameters:
+		----------
+		data_list : list[torch_geometric.data.Data]
+		    List of raw molecular graphs.
+		"""
+		self.featurizer.fit(data_list)
+		self.featurizer.save(self.featurizer_path, params_only=True)
 
-    @property
-    def raw_file_names(self):
-        """
-        File names for raw graphs and RDKit molecules.
+	@property
+	def raw_file_names(self):
+		"""
+		File names for raw graphs and RDKit molecules.
 
-        Returns:
-        -------
-        List[str]
-            List of file names. 0th elements is the file name for raw graphs.
-            1st element is the file name for RDKit molecules.
-        """
-        return ["graphs.pt", "molecules.pt"]
+		Returns:
+		-------
+		List[str]
+		    List of file names. 0th elements is the file name for raw graphs.
+		    1st element is the file name for RDKit molecules.
+		"""
+		return ['graphs.pt', 'molecules.pt']
 
-    @property
-    def molecules_path(self):
-        return Path(self.raw_paths[1])
+	@property
+	def molecules_path(self):
+		return Path(self.raw_paths[1])
 
-    @property
-    def raw_graphs_path(self):
-        return Path(self.raw_paths[0])
+	@property
+	def raw_graphs_path(self):
+		return Path(self.raw_paths[0])
 
-    @property
-    def processed_graphs_path(self):
-        return Path(self.processed_paths[0])
+	@property
+	def processed_graphs_path(self):
+		return Path(self.processed_paths[0])
 
-    def check_raw_graphs(self):
-        """
-        Method to check raw graphs have been made.
+	def check_raw_graphs(self):
+		"""
+		Method to check raw graphs have been made.
 
-        Returns:
-        -------
-        bool
-            `False` if saved raw graphs do not exist
-            `True` if saved raw graphs do exist
+		Returns:
+		-------
+		bool
+		    `False` if saved raw graphs do not exist
+		    `True` if saved raw graphs do exist
 
-        Raises:
-        ------
-        FileNotFoundError
-            If no paths for raw graphs or molecules exist.
-            If path for raw graphs does not exist, molecules are needed to create graphs.
-        """
-        if not self.raw_graphs_path.exists() and not self.molecules_path.exists():
-            # if no files raise an Error
-            raise FileNotFoundError(
-                "No molecules or graphs found in the raw directory."
-            )
-        elif not self.raw_graphs_path.exists() and self.molecules_path.exists():
-            # If raw graphs do not exist return False
-            return False
-        else:
-            # If raw graphs exist
-            return True
+		Raises:
+		------
+		FileNotFoundError
+		    If no paths for raw graphs or molecules exist.
+		    If path for raw graphs does not exist, molecules are needed to create graphs.
+		"""
+		if not self.raw_graphs_path.exists() and not self.molecules_path.exists():
+			# if no files raise an Error
+			raise FileNotFoundError(
+				'No molecules or graphs found in the raw directory.'
+			)
+		# If raw graphs do not exist return False
+		return self.raw_graphs_path.exists()
 
-    def make_raw_graphs(self):
-        """
-        Method for making raw graphs and saving to disk.
-        E.g., with an AtomGraphFeaturizer raw node features are atomic numbers.
+	def make_raw_graphs(self):
+		"""
+		Method for making raw graphs and saving to disk.
+		E.g., with an AtomGraphFeaturizer raw node features are atomic numbers.
 
-        Raw graphs are saved as dictionaries.
-        """
-        if self.check_raw_graphs():
-            return
-        molecules = self.molecules
-        data_list = []
-        with tqdm(
-            total=len(self.molecules),
-            desc="Making raw graphs",
-            disable=not self.verbose,
-        ) as pbar:
-            for idx in range(len(molecules)):
-                raw_graph = self.get_raw(idx)
-                data_list.append(raw_graph.to_dict())
-                pbar.update(1)
-        torch.save(data_list, self.raw_graphs_path)
-        print(
-            f"Saved {len(data_list)} raw graphs to {self.raw_graphs_path}."
-        ) if self.verbose else None
+		Raw graphs are saved as dictionaries.
+		"""
+		if self.check_raw_graphs():
+			return
+		molecules = self.molecules
+		data_list = []
+		with tqdm(
+			total=len(self.molecules),
+			desc='Making raw graphs',
+			disable=not self.verbose,
+		) as pbar:
+			for idx in range(len(molecules)):
+				raw_graph = self.get_raw(idx)
+				data_list.append(raw_graph.to_dict())
+				pbar.update(1)
+		torch.save(data_list, self.raw_graphs_path)
+		print(
+			f'Saved {len(data_list)} raw graphs to {self.raw_graphs_path}.'
+		) if self.verbose else None
 
-    def load_raw_graphs(self):
-        """
-        Load all raw graphs from file.
+	def load_raw_graphs(self):
+		"""
+		Load all raw graphs from file.
 
-        Returns:
-        -------
-        list[torch_geometric.data.Data]
-            List of molecules as raw graphs.
-        """
-        graphs = torch.load(self.raw_graphs_path, weights_only=False)
-        graphs = [pyg.data.Data(**data_dict) for data_dict in graphs]
-        return graphs
+		Returns:
+		-------
+		list[torch_geometric.data.Data]
+		    List of molecules as raw graphs.
+		"""
+		graphs = torch.load(self.raw_graphs_path, weights_only=False)
+		graphs = [pyg.data.Data(**data_dict) for data_dict in graphs]
+		return graphs
 
-    def get_raw(self, idx: int):
-        """
-        Compute the raw graph of a molecule on the fly.
+	def get_raw(self, idx: int):
+		"""
+		Compute the raw graph of a molecule on the fly.
 
-        Parameters:
-        ----------
-        idx : int
-            The index of a graph in the dataset.
+		Parameters:
+		----------
+		idx : int
+		    The index of a graph in the dataset.
 
-        Returns:
-        -------
-        torch_geometric.data.Data
-            A molecule as a graph data object.
-        """
-        molecule = self.molecules[idx]
-        graph = self.featurizer.raw(molecule)
-        graph.idx = idx
-        return graph
+		Returns:
+		-------
+		torch_geometric.data.Data
+		    A molecule as a graph data object.
+		"""
+		molecule = self.molecules[idx]
+		graph = self.featurizer.raw(molecule)
+		graph.idx = idx
+		return graph
 
-    def __getitem__(self, idx: int):
-        """
-        Retrieve a processed molecular graph.
+	def __getitem__(self, idx: int):
+		"""
+		Retrieve a processed molecular graph.
 
-        Parameters:
-        ----------
-        idx : int
-            The index of a graph in the dataset.
+		Parameters:
+		----------
+		idx : int
+		    The index of a graph in the dataset.
 
-        Returns:
-        -------
-        torch_geometric.data.Data
-            A molecule as a graph data object.
-        """
-        graph = super().__getitem__(idx)
-        if isinstance(graph, GraphDataset):
-            for G in graph:
-                if not isinstance(G, pyg.data.Data):
-                    raise TypeError("Graph must be a PyG Data object.")
-                if "x" not in G:
-                    raise Warning(f"Graph {int(G.idx)} does not contain node features.")
-            return graph
-        elif isinstance(graph, pyg.data.Data):
-            if "x" not in graph:
-                raise Warning(f"Graph {int(graph.idx)} does not contain node features.")
-            return graph
-        else:
-            raise ValueError(
-                "Graph must be a PyG Data object or subset of GraphDataset."
-            )
+		Returns:
+		-------
+		torch_geometric.data.Data
+		    A molecule as a graph data object.
+		"""
+		graph = super().__getitem__(idx)
+		if isinstance(graph, GraphDataset):
+			for G in graph:
+				if not isinstance(G, pyg.data.Data):
+					raise TypeError('Graph must be a PyG Data object.')
+				if 'x' not in G:
+					raise Warning(f'Graph {int(G.idx)} does not contain node features.')
+			return graph
+		elif isinstance(graph, pyg.data.Data):
+			if 'x' not in graph:
+				raise Warning(f'Graph {int(graph.idx)} does not contain node features.')
+			return graph
+		else:
+			raise ValueError(
+				'Graph must be a PyG Data object or subset of GraphDataset.'
+			)
 
-    def save_molecules(self, molecules: list[Chem.Mol | None] = None):
-        """
-        Save a list of molecules to disk.
-        Skips saving if path to molecules already exists.
+	def save_molecules(self, molecules: list[Chem.Mol | None] = None):
+		"""
+		Save a list of molecules to disk.
+		Skips saving if path to molecules already exists.
 
-        Parameters:
-        ----------
-        molecules : list[rdkit.Chem.Mol | None]
-            A list of rdkit molecules to save.
-            Accepts `None` in list to preserve index positions in raw graph list of molecules that
-            fail RDKit parsing.
+		Parameters:
+		----------
+		molecules : list[rdkit.Chem.Mol | None]
+		    A list of rdkit molecules to save.
+		    Accepts `None` in list to preserve index positions in raw graph list of molecules that
+		    fail RDKit parsing.
 
-        Raises:
-        ------
-        TypeError
-            If `molecules` is not a list and a saved version of molecules does not exist.
-        TypeError
-            If any type other than rdkit molecules or None appears in the input list.
-        """
-        if self.molecules_path.exists():
-            warnings.warn(
-                "Path to molecules already exists. Skipping save.", UserWarning
-            )
-        if not isinstance(molecules, list):
-            raise TypeError(f"Expect `list`. Got: {type(molecules)}")
-        if not all(isinstance(m, Chem.Mol | None) for m in molecules):
-            raise TypeError(
-                "Found type other than `rdkit.Chem.Mol` and `None` in molecules"
-            )
-        torch.save(molecules, self.molecules_path)
-        print(
-            f"Saved {len(molecules)} molecules to {self.molecules_path}."
-        ) if self.verbose else None
+		Raises:
+		------
+		TypeError
+		    If `molecules` is not a list and a saved version of molecules does not exist.
+		TypeError
+		    If any type other than rdkit molecules or None appears in the input list.
+		"""
+		if self.molecules_path.exists():
+			warnings.warn(
+				'Path to molecules already exists. Skipping save.',
+				UserWarning,
+				stacklevel=2,
+			)
+			return
+		if not isinstance(molecules, list):
+			raise TypeError(f'Expect `list`. Got: {type(molecules)}')
+		if not all(isinstance(m, Chem.Mol | None) for m in molecules):
+			raise TypeError(
+				'Found type other than `rdkit.Chem.Mol` and `None` in molecules'
+			)
+		torch.save(molecules, self.molecules_path)
+		print(
+			f'Saved {len(molecules)} molecules to {self.molecules_path}.'
+		) if self.verbose else None
 
-    @property
-    def molecules(self):
-        """
-        Load the original RDKit molecules.
+	@property
+	def molecules(self):
+		"""
+		Load the original RDKit molecules.
 
-        Returns:
-        -------
-        List[rdkit.Chem.Mol | None]
+		Returns:
+		-------
+		List[rdkit.Chem.Mol | None]
 
-        Raises:
-        ------
-        ValueError
-            If no molecules are found in memory or on disk.
-        """
-        if self._molecules is not None:
-            return self._molecules
-        elif self.molecules_path.exists():
-            self._molecules = torch.load(self.molecules_path, weights_only=False)
-            return self._molecules
-        else:
-            raise ValueError("Molecules not found.")
+		Raises:
+		------
+		ValueError
+		    If no molecules are found in memory or on disk.
+		"""
+		if self._molecules is not None:
+			return self._molecules
+		elif self.molecules_path.exists():
+			self._molecules = torch.load(self.molecules_path, weights_only=False)
+			return self._molecules
+		else:
+			raise ValueError('Molecules not found.')

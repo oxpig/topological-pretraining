@@ -4,10 +4,10 @@ from .gin import GIN
 from .pred_head import BinaryHead, PredHead, RegressionHead
 
 __all__ = [
-    "AutoEncoder",
-    "GIN",
-    "BinaryHead",
-    "PredHead",
-    "RegressionHead",
-    "get_nn",
+	'AutoEncoder',
+	'GIN',
+	'BinaryHead',
+	'PredHead',
+	'RegressionHead',
+	'get_nn',
 ]

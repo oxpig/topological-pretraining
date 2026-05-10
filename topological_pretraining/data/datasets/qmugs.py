@@ -7,99 +7,99 @@ from .base import BaseDataFrame
 
 
 class QMugs(BaseDataFrame):
-    """
-    Pandas DataFrame class for QMugs dataset.
+	"""
+	Pandas DataFrame class for QMugs dataset.
 
-    QMugs is a dataset of quantum mechanical properties of drug-like molecules.
-    Some SMILES strings in QMugs csv have incorrect stereochemistry; to account for this
-    canonical SMILES are also obtained directly from CHEMBL v.27 using CHEMBL IDs in QMugs csv.
+	QMugs is a dataset of quantum mechanical properties of drug-like molecules.
+	Some SMILES strings in QMugs csv have incorrect stereochemistry; to account for this
+	canonical SMILES are also obtained directly from CHEMBL v.27 using CHEMBL IDs in QMugs csv.
 
-    Paper:
-        Isert, C., Atz, K., Jiménez-Luna, J. et al.
-        QMugs, quantum mechanical properties of drug-like molecules.
-        Sci Data 9, 273 (2022). https://doi.org/10.1038/s41597-022-01390-7
+	Paper:
+	    Isert, C., Atz, K., Jiménez-Luna, J. et al.
+	    QMugs, quantum mechanical properties of drug-like molecules.
+	    Sci Data 9, 273 (2022). https://doi.org/10.1038/s41597-022-01390-7
 
-    Parameters
-    ----------
-    root: str
-        The root directory to store the dataset.
-    compression: bool
-        Whether to compress the dataset or not.
-        Default is True.
-    verbose: bool
-        Whether to print verbose messages during initialization and saving.
-        Default is True.
-    standardizer: Standardizer or dict
-        Standardizer object or dict of standardizer arguments to initialize a Standardizer with.
-        Default is an instance of Standardizer with default arguments.
+	Parameters
+	----------
+	root: str
+	    The root directory to store the dataset.
+	compression: bool
+	    Whether to compress the dataset or not.
+	    Default is True.
+	verbose: bool
+	    Whether to print verbose messages during initialization and saving.
+	    Default is True.
+	standardizer: Standardizer or dict
+	    Standardizer object or dict of standardizer arguments to initialize a Standardizer with.
+	    Default is an instance of Standardizer with default arguments.
 
 
-    Attributes
-    ----------
-    root: str
-        The root directory to store the dataset.
-    csv: str
-        The path to the dataset.
-    """
+	Attributes
+	----------
+	root: str
+	    The root directory to store the dataset.
+	csv: str
+	    The path to the dataset.
+	"""
 
-    url = "https://libdrive.ethz.ch/index.php/s/X5vOBNSITAG5vzM/download?path=%2F&files=summary.csv"
+	url = 'https://libdrive.ethz.ch/index.php/s/X5vOBNSITAG5vzM/download?path=%2F&files=summary.csv'
 
-    def __init__(
-        self,
-        root: str | None = None,
-        compression: bool = True,
-        verbose: bool = True,
-        standardizer: Standardizer = Standardizer(),
-    ):
-        """
-        Initialize the QMugs dataset.
-        """
-        # Set the suffix and compression
-        suffix = "csv.gz" if compression else "csv"
+	def __init__(
+		self,
+		root: str | None = None,
+		compression: bool = True,
+		verbose: bool = True,
+		standardizer: Standardizer = None,
+	):
+		"""
+		Initialize the QMugs dataset.
+		"""
+		# Set the suffix and compression
+		suffix = 'csv.gz' if compression else 'csv'
 
-        # Set the path to the csv file
-        csv = Path(root) / f"qmugs.{suffix}" if root is not None else None
-        # Initialize the BaseDataFrame
-        super().__init__(
-            csv=csv,
-            url=self.url,
-            compression=compression,
-            verbose=verbose,
-            standardizer=standardizer,
-        )
+		# Set the path to the csv file
+		csv = Path(root) / f'qmugs.{suffix}' if root is not None else None
+		# Initialize the BaseDataFrame
+		super().__init__(
+			csv=csv,
+			url=self.url,
+			compression=compression,
+			verbose=verbose,
+			standardizer=standardizer,
+		)
 
-        # obtain canonical smiles from CHEMBL v.27
-        if "SMILES" not in self.columns:
-            # Drop all columns except 'chembl_id' and 'smiles'
-            self.drop(
-                self.columns.difference(["chembl_id", "smiles"]), axis=1, inplace=True
-            )
+		# obtain canonical smiles from CHEMBL v.27
+		if 'SMILES' not in self.columns:
+			# Drop all columns except 'chembl_id' and 'smiles'
+			self.drop(
+				self.columns.difference(['chembl_id', 'smiles']), axis=1, inplace=True
+			)
 
-            # Keep only one conformer row for each molecule
-            self.drop_duplicates(subset="chembl_id", inplace=True)
+			# Keep only one conformer row for each molecule
+			self.drop_duplicates(subset='chembl_id', inplace=True)
 
-            # Download CHEMBL v.27 chemreps file
-            chembl_url = "https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_27/chembl_27_chemreps.txt.gz"
-            chemble_v27 = pd.read_csv(chembl_url, sep="\t")
+			# Download CHEMBL v.27 chemreps file
+			chembl_url = 'https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_27/chembl_27_chemreps.txt.gz'
+			chemble_v27 = pd.read_csv(chembl_url, sep='\t')
 
-            # Map CHEMBL IDs to canonical SMILES
-            self["SMILES"] = self["chembl_id"].map(
-                chemble_v27.set_index("chembl_id")["canonical_smiles"]
-            )
+			# Map CHEMBL IDs to canonical SMILES
+			self['SMILES'] = self['chembl_id'].map(
+				chemble_v27.set_index('chembl_id')['canonical_smiles']
+			)
 
-            # Drop rows where canonical SMILES are duplicates.
-            # This is to account for cases where multiple CHEMBL IDs map to the same
-            # canonical SMILES.
-            # The inchi keys are different; when read into RDKit the molecules are the same
-            # Differences between inchi keys are due to stereocenters being identified in one
-            # molecule and not in the other; type of stereochemistry is not specified,
-            # hence why the molecules are the same.
-            # 32 molecules are removed by this step.
-            self.drop_duplicates(subset="SMILES", inplace=True)
-            self.drop(
-                self.columns.difference(["chembl_id", "SMILES"]), axis=1, inplace=True
-            )
-            self.mol_standardize_check()
-            # Reset the index and save the dataset
-            self.reset_index(drop=True, inplace=True)
-            self.save()
+			# Drop rows where canonical SMILES are duplicates.
+			# This is to account for cases where multiple CHEMBL IDs map to the same
+			# canonical SMILES.
+			# The inchi keys are different; when read into RDKit the molecules are the same
+			# Differences between inchi keys are due to stereocenters being identified in one
+			# molecule and not in the other; type of stereochemistry is not specified,
+			# hence why the molecules are the same.
+			# 32 molecules are removed by this step.
+			self.drop_duplicates(subset='SMILES', inplace=True)
+			self.drop(
+				self.columns.difference(['chembl_id', 'SMILES']), axis=1, inplace=True
+			)
+			self.mol_standardize_check()
+			# Reset the index and save the dataset
+			self.reset_index(drop=True, inplace=True)
+			self.save()

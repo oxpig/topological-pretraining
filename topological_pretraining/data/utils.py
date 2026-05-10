@@ -68,7 +68,7 @@ def load_dataset(
 	root: str | None = None,
 	compression: bool = True,
 	verbose: bool = False,
-	standardizer: Standardizer | None = None,
+	standardizer: Standardizer | dict = None,
 ) -> BaseDataFrame:
 	"""
 	Load a dataset from dataset module.
@@ -83,7 +83,7 @@ def load_dataset(
 	    Whether to save the dataset with compression. Default is True.
 	verbose: bool
 	    Whether to print verbose output. Default is False.
-	standardizer: Standardizer
+	standardizer: Standardizer | dict
 	    The standardizer to use. Default is a new Standardizer instance.
 
 	Returns
