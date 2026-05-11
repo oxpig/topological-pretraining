@@ -97,7 +97,7 @@ def pretrain(config: dict):
 	data_path: str = config['data']
 	results_path: str = config['results']
 	verbose: bool = config['verbose']
-	pretrain_data: list[str] | str = config['pretrain_data']
+	pretrain_data: list[str] | str = config['pretrain']
 	featurizer_class = config['featurizer']
 	featurizer_kwargs = config.get('featurizer_kwargs', {})
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
