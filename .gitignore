@@ -1,19 +1,27 @@
 # ignore
+# ignore environment variables
 .env
-.servers.yaml
-bin/cache/
-/temp
-*.ipynb
+
+# ignore temporary files
+*temp/
+*archive/
+
+# ignore Python cache files
 *__pycache__/
-figures
-*archive
+
+# ignore figures
+*figures
+
+# ignore model checkpoints
 *epoch*
+
+# ignore preprocessed molecule data
 data/*molecules.npz
-data/temp/*
+
+# ignore symlinks - put "symlink" in the name of the symlink to ignore it
 *symlink*
 
-
+# ignore Jupyter notebooks for now
+*.ipynb
 # except
 !evaluation.ipynb
-!visualization_2.ipynb
-!visualization.ipynb
