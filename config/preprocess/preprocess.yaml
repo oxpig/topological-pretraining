@@ -1,6 +1,12 @@
 process: preprocess
 verbose: True
-filter_threshold: 0.5
+filter_thresholds:
+  - 0.5
+  - 0.6
+  - 0.7
+  - 0.8
+  - 0.9
+  - 1.0
 splitting:
   kind: butina
   params:
