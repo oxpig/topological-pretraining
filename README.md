@@ -1,6 +1,6 @@
 # topological-pretraining
 
-This repository contains the code for "Improving Graph Neural Networks for QSAR via pre-training on Extended-Connectivity Fingerprints".
+This repository contains the code for "On Improving Graph Neural Networks for QSAR via pre-training on Extended-Connectivity Fingerprints".
 
 ## Installing within conda env
 
