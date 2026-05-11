@@ -20,8 +20,3 @@ data/*molecules.npz
 
 # ignore symlinks - put "symlink" in the name of the symlink to ignore it
 *symlink*
-
-# ignore Jupyter notebooks for now
-*.ipynb
-# except
-!evaluation.ipynb
