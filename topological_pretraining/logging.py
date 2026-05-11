@@ -31,9 +31,9 @@ class Logger(dict):
 
 	def save(self):
 		if self.path is not None:
-			if self.path.endswith('.npy'):
+			if self.path.suffix == '.npy':
 				np.save(self.path, self)
-			elif self.path.endswith('.npz'):
+			elif self.path.suffix == '.npz':
 				np.savez_compressed(self.path, **self)
 			else:
 				raise ValueError(
@@ -42,9 +42,9 @@ class Logger(dict):
 
 	def load(self):
 		if self.path is not None:
-			if self.path.endswith('.npy'):
+			if self.path.suffix == '.npy':
 				loaded = np.load(self.path, allow_pickle=True).item()
-			elif self.path.endswith('.npz'):
+			elif self.path.suffix == '.npz':
 				loaded = np.load(self.path, allow_pickle=True)
 				loaded = {key: loaded[key] for key in loaded.files}
 			else:
