@@ -14,8 +14,8 @@ conda activate topological-pretraining
 ## Notebooks
 
 See:
-    - [Quickstart notebook](./notebooks/00_quickstart.ipynb) for basic usage.
-    - [Dataset notebook](./notebooks/01_datasets.ipynb) for loading and setting up datasets.
-    - [Models notebook](./notebooks/02_models.ipynb) for basic model demonstrations.
-    - [Benchmark evaluations](./notebooks/03_benchmark_evaluation.ipynb) for statistical tests and visualisations.
-    - [Substructure importance notebook](./notebooks/04_substructure_importance.ipynb) for estimating pre-trained GIN substructure importance.
+- [Quickstart notebook](./notebooks/00_quickstart.ipynb) for basic usage.
+- [Dataset notebook](./notebooks/01_datasets.ipynb) for loading and setting up datasets.
+- [Models notebook](./notebooks/02_models.ipynb) for basic model demonstrations.
+- [Benchmark evaluations](./notebooks/03_benchmark_evaluation.ipynb) for statistical tests and visualisations.
+- [Substructure importance notebook](./notebooks/04_substructure_importance.ipynb) for estimating pre-trained GIN substructure importance.
