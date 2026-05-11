@@ -448,7 +448,7 @@ def preprocess(config: dict):
 			pretrain_fps, benchmark_fps.values(), verbose=verbose
 		)
 		max_tanimote_scores_all = np.max(max_tanimote_scores, axis=1)
-		thresholds = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+		thresholds = config.get('filter_thresholds', [0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
 		num_keep = None
 		for threshold in thresholds:
 			pretrain_filter = float_to_binary(
