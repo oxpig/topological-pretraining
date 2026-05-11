@@ -459,7 +459,7 @@ def benchmark(config: dict):
 			print('Using default HP search space') if verbose else None
 
 		splits: list = list(df.splits)
-		num_splits = df.num_splits
+		num_splits = min(df.num_splits, config.get('num_splits', df.num_splits))
 		if df.task == 'regression':
 			scorer = mean_absolute_error
 			direction = 'minimize'
@@ -629,6 +629,8 @@ def benchmark(config: dict):
 			logging['train_score'] = []
 			logging['test_score'] = []
 		for idx, (train, test) in enumerate(splits):
+			if idx > num_splits - 1:
+				break
 			if idx in complete:
 				# If the split is already complete, skip to the next split. This allows for resuming from checkpoints.
 				train_y = df.y[train]
