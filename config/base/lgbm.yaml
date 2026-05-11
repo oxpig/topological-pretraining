@@ -1,6 +1,7 @@
-LGBM: 
+LGBM:
   model_kwargs:
-    verbose: 1
+    verbose: -1
+    n_jobs: -1
   model_hyperparameters:
     tuning: True
     trials: 50

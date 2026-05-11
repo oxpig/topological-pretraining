@@ -5,3 +5,4 @@ standardizer:
   reionize: False
   canonical_tautomer: True
   keep_chirality: True
+  n_jobs: -1
