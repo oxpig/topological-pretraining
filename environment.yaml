@@ -6,4 +6,10 @@ dependencies:
   - pip
   - rdkit=2024.09.03
   - pip:
+    - torch==2.8.0
+    - torch-geometric
+    - -f https://data.pyg.org/whl/torch-2.8.0+cpu.html # for CPU-only installation – for CUDA-enabled installation, change "cpu" to "cu124" or the appropriate CUDA version
+    - pyg-lib
+    - torch-scatter
+    - torch-sparse
     - -e .

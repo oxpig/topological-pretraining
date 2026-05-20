@@ -11,6 +11,8 @@ conda env create --file environment.yaml
 conda activate topological-pretraining
 ```
 
+For using CUDA, change `cpu` in `https://data.pyg.org/whl/torch-2.8.0+cpu.html` to `cu{CUDA VERSION}` (e.g., `cu124`) in the [environment.yaml](./environment.yaml).
+
 ## Notebooks
 
 See:
